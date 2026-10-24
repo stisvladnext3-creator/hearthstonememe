@@ -162,7 +162,7 @@ export class RoomAdvertisement {
       else this.connect();
     } else {
       send(this.connection, { type: 'withdraw', protocol: ROOM_PROTOCOL });
-      this.drop();
+      this.drop(100);
     }
   }
   private connect() {
@@ -181,13 +181,19 @@ export class RoomAdvertisement {
     connection.on('close', () => { if (this.connection === connection) this.retry(); });
     connection.on('error', () => { if (this.connection === connection) this.retry(); });
   }
-  private drop() {
+  private drop(flushMs = 0) {
     clearTimeout(this.deadline); clearTimeout(this.retryTimer); this.retryTimer = undefined;
-    const connection = this.connection; this.connection = undefined; connection?.close();
+    const connection = this.connection; this.connection = undefined;
+    // PeerJS packs binary messages asynchronously. Keep the channel alive long
+    // enough to send a final withdrawal before destroying the room peer.
+    if (flushMs) setTimeout(() => connection?.close(), flushMs); else connection?.close();
   }
   retry() {
     this.drop();
     if (!this.disposed && this.room) this.retryTimer = setTimeout(() => { this.retryTimer = undefined; this.connect(); }, 1500);
   }
-  close() { this.disposed = true; this.room = null; clearInterval(this.pulse); this.drop(); }
+  close() {
+    this.disposed = true; this.room = null; clearInterval(this.pulse);
+    send(this.connection, { type: 'withdraw', protocol: ROOM_PROTOCOL }); this.drop(100);
+  }
 }

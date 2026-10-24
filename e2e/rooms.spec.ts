@@ -38,6 +38,7 @@ async function start(host: Page, guest: Page) {
   await expect(host.getByRole('button', { name: 'Начать бой', exact: true })).toBeEnabled({ timeout: 25000 });
   await host.getByRole('button', { name: 'Начать бой', exact: true }).click();
   await expect(host.locator('.battle-arena')).toBeVisible(); await expect(guest.locator('.battle-arena')).toBeVisible({ timeout: 15000 });
+  for (const player of [host, guest]) await expect(player.locator('.player-hand .game-card').first()).toHaveAttribute('data-card-id', 'rash-quest');
 }
 async function close(...contexts: BrowserContext[]) { await Promise.all(contexts.map(c => c.close())); }
 
@@ -138,14 +139,21 @@ for (const owner of ['player', 'bot'] as Side[]) test(`repeated Maxim echo from 
   const { host, guest, hostContext, guestContext } = await participants(browser);
   // A real game advanced by legal engine actions to a six-mana echo turn.
   // Its history already exceeds the old limit before either browser reconnects.
-  let game = createRoomGame(STARTER_DECK, STARTER_DECK, 'Хозяин', 'Гость', owner === 'player' ? 15 : 1, 'echo-regression');
+  let game!: Game;
   let found = false;
-  for (let i = 0; i < 200 && !game.winner; i++) {
-    const action = nextAction(game);
-    const card = action.type === 'play' ? game[game.active].hand.find(c => c.uid === action.uid) : undefined;
-    if (game.active === owner && card?.id === 'echo-maxim' && card.expiresTurn !== undefined && game[owner].mana >= 4 && game[owner].board.length <= 5
-      && Buffer.byteLength(JSON.stringify(roomGameView(game, 'bot'))) > 16300) { found = true; break; }
-    game = act(game, game.active, action).state;
+  // Find a valid shuffled game instead of relying on a seed whose exact hand
+  // changes when the opening-deal rules change. Keep the large-history and
+  // two-consecutive-echo requirements intact.
+  for (let seed = 1; seed <= 100 && !found; seed++) {
+    game = createRoomGame(STARTER_DECK, STARTER_DECK, 'Хозяин', 'Гость', seed, 'echo-regression');
+    for (let i = 0; i < 200 && !game.winner; i++) {
+      const action = nextAction(game);
+      const card = action.type === 'play' ? game[game.active].hand.find(c => c.uid === action.uid) : undefined;
+      const enemy = game[owner === 'player' ? 'bot' : 'player'];
+      if (game.active === owner && card?.id === 'echo-maxim' && card.expiresTurn !== undefined && game[owner].mana >= 4 && game[owner].board.length <= 5
+        && !game.briefing && enemy.health + enemy.armor > 4 && Buffer.byteLength(JSON.stringify(roomGameView(game, 'bot'))) > 16300) { found = true; break; }
+      game = act(game, game.active, action).state;
+    }
   }
   expect(found).toBe(true);
   const code = roomCode();

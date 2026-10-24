@@ -54,6 +54,18 @@ test('collection searches, categories and mana filters work together', async ({ 
   await page.getByRole('button', { name: 'Сбросить фильтры' }).click();
   await expect(page.locator('.card-grid .game-card')).toHaveCount(8);
 });
+test('a new solo match puts its quest first and activates it only after playing', async ({ page }) => {
+  await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  const hand = page.locator('.player-hand .game-card');
+  await expect(hand).toHaveCount(4);
+  await expect(hand.first()).toHaveAttribute('data-card-id', 'rash-quest');
+  await expect(hand.nth(1)).toHaveAttribute('data-card-id', 'casino');
+  await expect(page.locator('.quest-progress.player')).toHaveCount(0);
+  await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  await expect(hand.first()).toHaveAttribute('data-card-id', 'rash-quest');
+  await hand.first().click(); await expect(page.locator('.quest-progress.player')).toContainText('0/8');
+  await expect(hand).toHaveCount(3);
+});
 test('deck editor saves an actual changed 30-card deck and survives reload', async ({ page }) => {
   const expectedBolts = STARTER_DECK.filter(id => id === 'bolt').length + 1;
   await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();

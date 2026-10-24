@@ -4,7 +4,7 @@ export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
-  art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean;
+  art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean;
   effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage';
 }
 
@@ -44,7 +44,7 @@ export const CARDS: CardDef[] = [
   { id: 'masik', name: 'Масик, уничтожитель миров', cost: 7, kind: 'minion', attack: 6, health: 4, text: 'Рывок. Боевой клич: немота выбранного персонажа. На героя действует 2 хода.', flavor: 'Рывок позволяет атаковать сразу, включая героя, но не обходит провокацию. Немота существа снимает его способности; немота героя отключает его силу на 2 его хода.', rarity: 'legendary', art: 9, custom: true, charge: true, effect: 'masik', tribe: 'Мяу' },
   { id: 'paper-army', name: 'Армия бумажек', cost: 7, kind: 'spell', text: 'Заполняет стол обоих игроков Бумажками 2/2.', flavor: 'Занимает только свободные места. Во время «Держать в курсе» учитывает ограничение в одно существо.', rarity: 'legendary', art: 5, custom: true, effect: 'paperArmy' },
   { id: 'briefing', name: 'Держать в курсе!', cost: 10, kind: 'spell', text: 'На 5 ходов каждого игрока: не больше одного существа на стороне. Силы героев: взять карту за 6 маны.', flavor: 'Текущий ход считается первым ходом разыгравшего. На каждой стороне остаётся случайное существо, остальные уничтожаются. После пяти ходов обоих игроков возвращаются обычный лимит и прежние силы героев.', rarity: 'legendary', art: 9, custom: true, effect: 'briefing' },
-  { id: 'rash-quest', name: 'Сам ты говно', cost: 1, kind: 'spell', text: 'Задача: призовите 8 РДШ. Награда: Волонтер-босс в руку.', flavor: 'Считает только ваших РДШ, призванных после начала задачи. Превращения не считаются призывами. Если рука полна, награда сгорает.', rarity: 'legendary', art: 11, custom: true, effect: 'rashQuest' },
+  { id: 'rash-quest', name: 'Сам ты говно', cost: 1, kind: 'spell', text: 'Задача: призовите 8 РДШ. Награда: Волонтер-босс в руку.', flavor: 'Всегда приходит первой картой в стартовую руку, если есть в колоде. Считает только ваших РДШ, призванных после начала задачи. Превращения не считаются призывами. Если рука полна, награда сгорает.', rarity: 'legendary', art: 11, custom: true, quest: true, effect: 'rashQuest' },
   { id: 'echo-maxim', name: 'Забивной Максимка', cost: 2, kind: 'minion', attack: 2, health: 2, text: 'Эхо. Боевой клич: 2 урона случайному врагу. Даёт +1 к атаке выбранному своему существу.', flavor: 'Эхо добавляет повторную копию в руку до конца хода. Если других своих существ нет, Максимка усиливает себя. Случайный урон может попасть в героя или существо врага.', rarity: 'epic', art: 5, custom: true, echo: true, effect: 'echoMaxim', tribe: 'Максим' },
   { id: 'paper', name: 'Бумажка', cost: 1, kind: 'token', attack: 2, health: 2, text: 'Призвана «Армией бумажек».', flavor: 'Безобидна, пока не порежешься.', rarity: 'common', art: 5 },
   { id: 'briefing-power', name: 'Взять карту', cost: 6, kind: 'power', text: 'Вы берёте одну карту. Один раз за ход.', flavor: 'Временная сила обоих героев во время «Держать в курсе». При пустой колоде наносит усталость.', rarity: 'common', art: 9, custom: true, effect: 'briefingDraw' },

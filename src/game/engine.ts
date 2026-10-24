@@ -207,9 +207,15 @@ export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck 
   g.player.deck = shuffled(g, deckError(deck) ? STARTER_DECK : deck);
   g.bot.deck = shuffled(g, deckError(opponentDeck) ? BOT_DECK : opponentDeck);
   for (const side of ['player', 'bot'] as Side[]) {
-    const i = g[side].deck.indexOf('casino');
-    if (i >= 0) addToHand(g, side, g[side].deck.splice(i, 1)[0]);
-    draw(g, side, (side === 'player' ? 3 : 4) - g[side].hand.length);
+    const p = g[side], openingSize = side === 'player' ? 3 : 4;
+    // Reserve quests before other guaranteed cards, then deal the random
+    // remainder. Move the actual copy out of the deck; never create an extra.
+    const guaranteed = [...new Set(p.deck.filter(id => CARD[id].quest)), 'casino'];
+    for (const id of guaranteed.slice(0, openingSize)) {
+      const i = p.deck.indexOf(id);
+      if (i >= 0) addToHand(g, side, p.deck.splice(i, 1)[0]);
+    }
+    draw(g, side, openingSize - p.hand.length);
   }
   g.player.maxMana = 1;
   g.player.mana = 1;

@@ -763,6 +763,21 @@ for (const width of [1440, 390]) test(`every card fits its full name and effect 
           && box.y >= bands[model][0] && box.y + box.height <= bands[model][1];
       })).toBe(true);
       await expect(card.locator('.card-copy h3')).toHaveCount(0);
+      await expect(card.locator('.card-copy p')).toHaveCSS('font-weight', '400');
+      const abilities = def.text.match(/боевой клич|предсмертный хрип|натиск|рывок|эхо|провокаци[а-яё]*|немот[а-яё]*|задача|награда|раскоп[а-яё]*/giu) ?? [];
+      for (const ability of abilities) {
+        const bold = card.locator('.card-copy p strong').filter({ hasText: new RegExp(`^${ability}$`, 'i') }).first();
+        await expect(bold).toHaveCSS('font-weight', '700');
+      }
+      if (def.kind === 'minion' || def.kind === 'token') {
+        const type = card.locator('.card-type');
+        await expect(type).toHaveAttribute('aria-label', `Тип существа: ${def.tribe ?? (def.kind === 'token' ? 'Призыв' : 'Существо')}`);
+        expect(await type.locator('text').evaluate(t => {
+          const box = t.getBBox();
+          return box.x >= 349 && box.x + box.width <= 750 && box.y >= 1307 && box.y + box.height <= 1360;
+        })).toBe(true);
+        await expect(card.locator('.card-kind')).toHaveCount(0);
+      }
       const gem = card.locator('.card-rarity'); await expect(gem).toHaveCount(1);
       await expect(gem).toHaveAttribute('aria-label', `Редкость: ${RARITY_NAMES[def.rarity]}`);
       expect(await gem.evaluate(e => getComputedStyle(e).getPropertyValue('--gem-main').trim())).toBe(colors[def.rarity]);
@@ -781,6 +796,72 @@ for (const width of [1440, 390]) test(`every card fits its full name and effect 
     if (await next.isDisabled()) break; await next.click();
   }
   expect(visited.size).toBe(CARDS.length);
+});
+
+for (const width of [1440, 390]) for (const appearance of ['signature', 'diamond']) test(`all legendary ${appearance} frames fit their names, rules and types at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 });
+  const legends = CARDS.filter(c => c.rarity === 'legendary');
+  await page.addInitScript(choices => localStorage.setItem('memestone.v1.card-appearances', JSON.stringify(choices)), Object.fromEntries(legends.map(c => [c.id, appearance])));
+  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.getByRole('tab', { name: 'Легендарные', exact: true }).click();
+  await page.evaluate(() => document.fonts.ready);
+  const visited = new Set<string>();
+  for (;;) {
+    for (const card of await page.locator('.album-card-grid .game-card').all()) {
+      const def = CARD[(await card.getAttribute('data-card-id'))!]; visited.add(def.id);
+      await expect(card).toHaveClass(new RegExp(`model-${appearance}`));
+      await expect(card.locator('.card-frame')).toHaveAttribute('data-frame-model', appearance);
+      await expect(card.locator('.card-rarity')).toHaveCount(1);
+      await expect(card.locator('.card-name textPath')).toHaveText(def.name);
+      expect(await card.locator('.card-name').evaluate((svg, appearance) => {
+        const text = svg.querySelector('text')!, path = svg.querySelector('path')!, box = text.getBBox();
+        const band = appearance === 'diamond' ? [530, 635] : [635, 702];
+        return text.getComputedTextLength() <= path.getTotalLength() * .94 + 1 && box.y >= band[0] && box.y + box.height <= band[1];
+      }, appearance)).toBe(true);
+      await expect(card.locator('.card-copy p')).toHaveText(def.text);
+      expect(await card.locator('.card-copy p .card-fit').evaluate(s => s.scrollHeight <= s.parentElement!.clientHeight + 1 && s.scrollWidth <= s.parentElement!.clientWidth + 1)).toBe(true);
+      if (def.kind === 'minion' || def.kind === 'token') {
+        await expect(card.locator('.card-type text')).toHaveText(def.tribe ?? (def.kind === 'token' ? 'Призыв' : 'Существо'));
+        expect(await card.locator('.card-type text').evaluate((t, appearance) => {
+          const b = t.getBBox();
+          const r = appearance === 'diamond' ? [1014, 942, 228, 40] : [324, 934, 156, 40];
+          return b.x >= r[0] && b.y >= r[1] && b.x + b.width <= r[0] + r[2] && b.y + b.height <= r[1] + r[3];
+        }, appearance)).toBe(true);
+      }
+    }
+    const next = page.getByRole('button', { name: 'Следующая страница', exact: true });
+    if (await next.isDisabled()) break; await next.click();
+  }
+  expect(visited.size).toBe(legends.length);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('legendary appearance is selected per card, persists, can be reset and follows the card into a hand', async ({ page }) => {
+  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.getByLabel('Поиск карт').fill('Масик'); await page.locator('.album-card-grid .game-card').click();
+  await page.getByRole('button', { name: 'Алмазное', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Алмазное', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.detail-card-area .game-card')).toHaveClass(/model-diamond/);
+  await page.keyboard.press('Escape'); await expect(page.locator('.album-card-grid .game-card')).toHaveClass(/model-diamond/);
+  await page.reload(); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.getByLabel('Поиск карт').fill('Масик'); await expect(page.locator('.album-card-grid .game-card')).toHaveClass(/model-diamond/);
+  await page.getByLabel('Поиск карт').fill('Василий'); await page.locator('.album-card-grid .game-card').click();
+  await expect(page.getByRole('button', { name: 'Классическое', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Тёмное', exact: true }).click(); await page.keyboard.press('Escape');
+  const g = fixture(); g.player.hand = [{ id: 'masik', uid: g.nextUid++ }, { id: 'vasiliy', uid: g.nextUid++ }];
+  await seed(page, g);
+  await expect(page.locator('.player-hand [data-card-id="masik"]')).toHaveClass(/model-diamond/);
+  await expect(page.locator('.player-hand [data-card-id="vasiliy"]')).toHaveClass(/model-signature/);
+  const card = page.locator('.player-hand [data-card-id="masik"]');
+  const before = await card.locator('.card-type text').evaluate(e => ({ x: e.getAttribute('x'), y: e.getAttribute('y'), size: e.getAttribute('font-size') }));
+  await card.hover();
+  expect(await card.locator('.card-type text').evaluate(e => ({ x: e.getAttribute('x'), y: e.getAttribute('y'), size: e.getAttribute('font-size') }))).toEqual(before);
+  await card.dispatchEvent('pointerdown', { pointerType: 'touch', button: 0, clientX: 50, clientY: 50 });
+  await expect(page.getByRole('dialog', { name: CARD.masik.name })).toBeVisible();
+  await page.getByRole('button', { name: 'Классическое', exact: true }).click();
+  await expect(page.locator('.detail-card-area .game-card')).toHaveClass(/model-dragon/);
+  await page.keyboard.press('Escape'); await expect(card).toHaveClass(/model-dragon/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.card-appearances')!))).toEqual({ vasiliy: 'signature' });
 });
 
 test('new instigator and both Slimes have generated art and inspectable rules', async ({ page }) => {

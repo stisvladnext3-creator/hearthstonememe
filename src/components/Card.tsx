@@ -1,7 +1,9 @@
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import { ImagePlus } from 'lucide-react';
 import { CARD, type CardDef } from '../game/cards';
-import { CardFrame, CardName, frameModel } from './CardFrame';
+import { CardFrame, CardName, CardTribe, frameModel } from './CardFrame';
+import { useCardAppearances } from '../card-appearance';
+import { CardRules } from './CardRules';
 import { useArtwork } from '../artwork';
 import { useLongPress } from '../useLongPress';
 
@@ -13,7 +15,6 @@ export function Art({ index, className = '', cardId }: { index: number; classNam
   return <div className={`portrait-art ${className}`} style={{ '--art-x': `${(index % 4) * 100 / 3}%`, '--art-y': `${Math.floor(index / 4) * 50}%` } as CSSProperties} />;
 }
 export const kindLabel = (kind: CardDef['kind']) => ({ minion: 'Существо', spell: 'Заклинание', hero: 'Герой', power: 'Сила героя', token: 'Призыв' })[kind];
-const keywords = /^(Рывок\.|Натиск\.|Предсмертный хрип:|Эхо\.|Задача:|Награда:|Боевой клич:|Провокация\.|ВСЕХ|Начало матча:)$/;
 function FittedText({ text, maximum, minimum = 2.8, rich = false }: { text: string; maximum: number; minimum?: number; rich?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -35,26 +36,28 @@ function FittedText({ text, maximum, minimum = 2.8, rich = false }: { text: stri
     void document.fonts.ready.then(fit); document.fonts.addEventListener('loadingdone', fit);
     return () => { alive = false; resize.disconnect(); document.fonts.removeEventListener('loadingdone', fit); };
   }, [text, maximum, minimum]);
-  return <span ref={ref} className="card-fit">{rich ? text.split(/(Рывок\.|Натиск\.|Предсмертный хрип:|Эхо\.|Задача:|Награда:|Боевой клич:|Провокация\.|ВСЕХ|Начало матча:)/g).map((part, i) => keywords.test(part) ? <b key={i}>{part}</b> : part) : text}</span>;
+  return <span ref={ref} className="card-fit">{rich ? <CardRules text={text} /> : text}</span>;
 }
 export function Card({ card, onClick, onInspect, className = '', playable = false, compact = false, cost }: {
   card: CardDef; onClick?: () => void; onInspect?: () => void; className?: string; playable?: boolean; compact?: boolean; cost?: number;
 }) {
   const gesture = useLongPress(onInspect ?? onClick);
   const { images } = useArtwork();
+  const { choices } = useCardAppearances();
+  const appearance = card.rarity === 'legendary' ? choices[card.id] ?? 'standard' : 'standard';
   const image = images[card.id];
   const scanned = image && image.format !== 'portrait';
   const spell = card.kind === 'spell';
   const shownCost = cost ?? card.printedCost ?? card.cost;
   const content = <>
     {scanned ? <><span className={`scanned-card ${image.format}`}><img src={image.url} alt={`Оригинальная карта ${card.name}`} draggable="false" /></span><span className="visually-hidden">{card.text}</span></>
-      : <><div className="card-art"><Art index={card.art} cardId={card.id} /></div><CardFrame card={card} />
-        <div className="card-copy"><CardName card={card} /><p><FittedText text={card.text} maximum={spell ? 5.3 : 4.8} rich /></p><span className="card-kind"><FittedText text={card.tribe || kindLabel(card.kind)} maximum={4.8} /></span></div>
+      : <><div className="card-art"><Art index={card.art} cardId={card.id} /></div><CardFrame card={card} appearance={appearance} />
+        <div className="card-copy"><CardName card={card} appearance={appearance} /><p><FittedText text={card.text} maximum={spell ? 5.3 : 4.8} rich /></p><CardTribe card={card} appearance={appearance} /></div>
         <div className="card-bottom">{card.attack !== undefined ? <><span className="attack-stat">{card.attack}</span><span className="health-stat">{card.health}</span></> : card.armor ? <span className="armor-stat">{card.armor}</span> : null}</div>
       </>}
     {(!scanned || (cost !== undefined && cost !== card.cost)) && <span className={`card-cost ${scanned ? 'override-cost' : ''} ${cost !== undefined && cost < card.cost ? 'discounted' : ''}`}>{shownCost}</span>}
   </>;
-  const classes = `game-card classic-card ${card.rarity} kind-${card.kind} model-${frameModel(card)} ${card.tribe ? 'has-tribe' : ''} ${card.name.length > 18 ? 'long-name' : ''} ${scanned ? 'has-original' : ''} ${compact ? 'compact' : ''} ${playable ? 'playable' : ''} ${className}`;
+  const classes = `game-card classic-card ${card.rarity} kind-${card.kind} model-${frameModel(card, appearance)} ${card.tribe ? 'has-tribe' : ''} ${card.name.length > 18 ? 'long-name' : ''} ${scanned ? 'has-original' : ''} ${compact ? 'compact' : ''} ${playable ? 'playable' : ''} ${className}`;
   return onClick ? <button className={classes} data-card-id={card.id} onClick={onClick} {...gesture} aria-label={`${card.name}, ${shownCost} маны`} title={card.text}>{content}</button>
     : <div className={classes} data-card-id={card.id}>{content}</div>;
 }

@@ -423,3 +423,28 @@ test('mobile Тихий час targets friendly sleeping minions and animates on
   await page.getByRole('button', { name: 'Завершить', exact: true }).click();
   await expect(page.locator('.player-board .board-unit')).toHaveCount(1);
 });
+
+for (const ready of [true, false]) {
+  test(`Тихий час removes Русланчик restriction, attack readiness ${ready}`, async ({ page }) => {
+    const g = fixture(); const ruslan = unit(g, 'ruslan'); ruslan.ready = ready;
+    g.player.hand = [{ id: 'silence', uid: g.nextUid++ }];
+    await seed(page, g);
+    await page.getByRole('button', { name: 'Тихий час, 1 маны', exact: true }).click();
+    const target = page.getByRole('button', { name: 'Русланчик: 10 атаки, 10 здоровья', exact: true });
+    await expect(target).toHaveClass(/targetable/); await target.click();
+    const silenced = page.getByRole('button', { name: /Русланчик: 10 атаки, 10 здоровья/ });
+    await expect(silenced.locator('.silence-mark')).toBeVisible();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!));
+    expect(saved.player.board[0]).toMatchObject({ silenced: true, cannotAttack: false, ready });
+    if (ready) {
+      await expect(silenced).toHaveAttribute('aria-label', /готов атаковать/);
+      await silenced.click();
+      await page.getByRole('button', { name: /Герой противника: 30 здоровья, атаковать/ }).click();
+      await expect(page.getByRole('button', { name: 'Герой противника: 20 здоровья', exact: true })).toBeVisible();
+    } else {
+      await expect(silenced).not.toHaveAttribute('aria-label', /готов атаковать/);
+      await silenced.click();
+      await expect(page.getByRole('button', { name: 'Герой противника: 30 здоровья', exact: true })).toHaveAttribute('aria-disabled', 'true');
+    }
+  });
+}

@@ -309,8 +309,8 @@ export function act(input: Game, side: Side, action: Action): Result {
       case 'draw': draw(g, side, 2); record('Гениальный план: попытка добрать 2 карты. При пустой колоде — усталость.'); break;
       case 'silence': {
         const m = g[targetSide].board.find(x => x.uid === action.target)!;
-        if (CARD[m.id].immuneSilence) record('Русланчик всегда прав. Немота не действует.', { target: cardEntity(m.id, targetSide, m) });
-        else { m.taunt = false; m.cannotAttack = false; m.ephemeral = false; m.silenced = true; record(`Тихий час накладывает немоту на ${CARD[m.id].name}.`, { target: cardEntity(m.id, targetSide, m) }); }
+        m.taunt = false; m.cannotAttack = false; m.ephemeral = false; m.silenced = true;
+        record(`Тихий час накладывает немоту на ${CARD[m.id].name}.`, { target: cardEntity(m.id, targetSide, m) });
         break;
       }
     }
@@ -376,8 +376,8 @@ export function act(input: Game, side: Side, action: Action): Result {
 export function chooseBotAction(g: Game): Action {
   if (g.winner || g.active !== 'bot') return { type: 'end' };
   const p = g.bot;
-  const silenceTarget = g.player.board.find(m => !CARD[m.id].immuneSilence && (m.taunt || !m.silenced && !!CARD[m.id].auraAttack))
-    ?? p.board.find(m => m.ephemeral && !m.silenced && !m.taunt && !CARD[m.id].immuneSilence && !CARD[m.id].auraAttack);
+  const silenceTarget = g.player.board.find(m => m.taunt || !m.silenced && !!CARD[m.id].auraAttack)
+    ?? p.board.find(m => (m.cannotAttack || m.ephemeral) && !m.silenced && !m.taunt && !CARD[m.id].auraAttack);
   if (g.discovery?.side === 'bot') {
     const score = (id: string) => {
       const c = CARD[id];

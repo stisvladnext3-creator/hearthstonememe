@@ -122,11 +122,11 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     n[side].power = 'oy'; n[side].mana = 10;
     expect(act(n, side, { type: 'power' }).error).toBeTruthy(); expect(n[side].mana).toBe(10);
   });
-  it('Русланчик remains unsilenced when targeted by either player', () => {
+  it('silences an opposing Русланчик for either player', () => {
     const g = setup(side); const target = creature(g, other(side), 'ruslan'); const uid = g.nextUid++;
     g[side].hand = [{ id: 'silence', uid }];
     const n = act(g, side, { type: 'play', uid, target: target.uid }).state;
-    expect(n[other(side)].board[0]).toMatchObject({ silenced: false, cannotAttack: true, attack: 10, health: 10 });
+    expect(n[other(side)].board[0]).toMatchObject({ silenced: true, cannotAttack: false, attack: 10, health: 10 });
   });
   it('silences a friendly sleeping Deathwing and preserves it at the end of the turn', () => {
     const g = setup(side); const target = creature(g, side, 'deathwing'); target.ready = false;
@@ -152,13 +152,25 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     expect(result.state[side].board[0]).toMatchObject({ taunt: false, silenced: true, auraBonus: 0 });
     expect(result.state[other(side)].board[0]).toMatchObject({ silenced: false, taunt: true, attack: 4 });
   });
-  it('keeps a friendly Ruslan immune to silence', () => {
+  it('silences a friendly Ruslan and lets him attack for 10 damage', () => {
     const g = setup(side); const target = creature(g, side, 'ruslan'); const uid = g.nextUid++;
     g[side].hand = [{ id: 'silence', uid }];
     const result = act(g, side, { type: 'play', uid, target: target.uid });
     expect(result.error).toBeUndefined();
-    expect(result.state[side].board[0]).toMatchObject({ silenced: false, cannotAttack: true, attack: 10 });
+    expect(result.state[side].board[0]).toMatchObject({ silenced: true, cannotAttack: false, attack: 10 });
     expect(result.state.log.at(-1)?.target?.side).toBe(side);
+    const attack = act(result.state, side, { type: 'attack', uid: target.uid, target: 'hero' });
+    expect(attack.error).toBeUndefined(); expect(attack.state[other(side)].health).toBe(18);
+  });
+  it('does not grant a newly summoned Руслан an immediate attack when silenced', () => {
+    const g = setup(side); const target = creature(g, side, 'ruslan'); target.ready = false;
+    const uid = g.nextUid++; g[side].hand = [{ id: 'silence', uid }];
+    const n = act(g, side, { type: 'play', uid, target: target.uid }).state;
+    expect(n[side].board[0]).toMatchObject({ silenced: true, cannotAttack: false, ready: false });
+    expect(act(n, side, { type: 'attack', uid: target.uid, target: 'hero' }).error).toBeTruthy();
+    const turn2 = act(n, side, { type: 'end' }).state;
+    const turn3 = act(turn2, other(side), { type: 'end' }).state;
+    expect(act(turn3, side, { type: 'attack', uid: target.uid, target: 'hero' }).error).toBeUndefined();
   });
   it('continues to reject friendly targets for damage spells, attacks and hero power', () => {
     const g = setup(side); const friend = creature(g, side, 'mage'); const attacker = creature(g, side, 'dragon');
@@ -195,4 +207,22 @@ it('the bot can use Тихий час on its own Deathwing to prevent its disapp
   const result = act(g, 'bot', action);
   expect(result.error).toBeUndefined(); expect(result.state.bot.board[0].ephemeral).toBe(false);
   expect(act(result.state, 'bot', { type: 'end' }).state.bot.board[0].id).toBe('deathwing');
+});
+
+it('the bot silences its ready Русланчик and then uses him for lethal damage', () => {
+  const g = setup('bot'); const ruslan = creature(g, 'bot', 'ruslan'); g.player.health = 10;
+  const uid = g.nextUid++; g.bot.hand = [{ id: 'silence', uid }];
+  const action = chooseBotAction(g);
+  expect(action).toEqual({ type: 'play', uid, target: ruslan.uid });
+  const silenced = act(g, 'bot', action).state;
+  const attack = chooseBotAction(silenced);
+  expect(attack).toEqual({ type: 'attack', uid: ruslan.uid, target: 'hero' });
+  expect(act(silenced, 'bot', attack).state.winner).toBe('bot');
+});
+
+it('the bot avoids freeing an opposing Русланчик with no harmful abilities to remove', () => {
+  const g = setup('bot'); creature(g, 'player', 'ruslan'); const uid = g.nextUid++;
+  g.bot.hand = [{ id: 'silence', uid }];
+  const action = chooseBotAction(g);
+  expect(action.type === 'play' && action.uid === uid).toBe(false);
 });

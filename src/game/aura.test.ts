@@ -47,11 +47,11 @@ describe.each<Side>(['player', 'bot'])('Василий aura on %s', side => {
     expect(n[side].board.map(m => m.attack)).toEqual([4, 1]);
     expect(n[side].board[0]).toMatchObject({ taunt: false, silenced: true, auraBonus: 0 });
   });
-  it('silencing another ally leaves the external aura active and Руслан still cannot attack', () => {
+  it('silencing Руслан removes his attack restriction while the external aura remains active', () => {
     const g = setup(side); unit(g, side, 'vasiliy'); const ruslan = unit(g, side, 'ruslan'); refreshAuras(g);
     expect(ruslan.attack).toBe(12); g.active = other(side);
     const n = play(g, other(side), 'silence', ruslan.uid);
-    expect(n[side].board[1]).toMatchObject({ attack: 12, cannotAttack: true, silenced: false });
+    expect(n[side].board[1]).toMatchObject({ attack: 12, cannotAttack: false, silenced: true });
   });
   it('transformation removes the aura and buffs a zero-attack minion only while present', () => {
     const g = setup(side); unit(g, side, 'vasiliy'); unit(g, side, 'galinka'); refreshAuras(g);

@@ -134,12 +134,13 @@ describe('custom meme cards and powers', () => {
     const next = play(g, 'goodgame').state;
     expect(next.winner).toBe('bot'); expect(next.player.board[0].attack).toBe(99);
   });
-  it('Русланчик cannot attack and is immune to silence', () => {
+  it('Русланчик can attack after silence removes his attack restriction', () => {
     const g = fixture(), ruslan = unit(g, 'ruslan', 'bot');
     const next = play(g, 'silence', ruslan.uid).state;
-    expect(next.bot.board[0].silenced).toBe(false); expect(next.bot.board[0].cannotAttack).toBe(true);
+    expect(next.bot.board[0].silenced).toBe(true); expect(next.bot.board[0].cannotAttack).toBe(false);
     next.active = 'bot';
-    expect(act(next, 'bot', { type: 'attack', uid: ruslan.uid, target: 'hero' }).error).toBeTruthy();
+    const attack = act(next, 'bot', { type: 'attack', uid: ruslan.uid, target: 'hero' });
+    expect(attack.error).toBeUndefined(); expect(attack.state.player.health).toBe(20);
     expect(next.bot.board[0].attack).toBe(10);
   });
   it('silence removes taunt and cancels Смертокрыл end-of-turn destruction', () => {

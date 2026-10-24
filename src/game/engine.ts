@@ -169,7 +169,7 @@ export function targetNeeded(g: Game, uid?: number): boolean {
 }
 export function legalTargets(g: Game, action: 'attack' | 'bolt' | 'silence' | 'spark'): Target[] {
   const enemies = g[other(g.active)].board;
-  if (action === 'silence') return enemies.map(m => m.uid);
+  if (action === 'silence') return [...g[g.active].board, ...enemies].map(m => m.uid);
   const taunts = enemies.filter(m => m.taunt);
   if (action === 'attack' && taunts.length) return taunts.map(m => m.uid);
   return ['hero', ...enemies.map(m => m.uid)];
@@ -228,7 +228,8 @@ export function act(input: Game, side: Side, action: Action): Result {
     actor = cardEntity(c.id, side);
     record(`Разыграна карта «${c.name}» за ${cost} маны.`, { kind: 'play' });
     const body = c.kind === 'minion' ? summon(g, side, c.id, action.uid, c.id) : undefined;
-    if ((c.kind === 'spell' || c.kind === 'hero') && c.effect !== 'discoverBlast') emit(g, { kind: 'spell', side, source: action.uid, cardId: c.id, target: { side: action.target !== undefined ? enemySide : side, uid: action.target ?? 'hero' } });
+    const targetSide = c.effect === 'silence' && p.board.some(m => m.uid === action.target) ? side : enemySide;
+    if ((c.kind === 'spell' || c.kind === 'hero') && c.effect !== 'discoverBlast') emit(g, { kind: 'spell', side, source: action.uid, cardId: c.id, target: { side: action.target !== undefined ? targetSide : side, uid: action.target ?? 'hero' } });
     switch (c.effect) {
       case 'galinka': {
         const pushkin = summon(g, side, 'pushkin', undefined, 'galinka');
@@ -307,9 +308,9 @@ export function act(input: Game, side: Side, action: Action): Result {
       case 'heal': { const amount = Math.min(5, 30 - p.health); p.health += amount; record(`Чай с мёдом восстанавливает герою ${amount} здоровья.`, { target: heroEntity(p, side), amount }); break; }
       case 'draw': draw(g, side, 2); record('Гениальный план: попытка добрать 2 карты. При пустой колоде — усталость.'); break;
       case 'silence': {
-        const m = enemy.board.find(x => x.uid === action.target)!;
-        if (CARD[m.id].immuneSilence) record('Русланчик всегда прав. Немота не действует.', { target: cardEntity(m.id, enemySide, m) });
-        else { m.taunt = false; m.cannotAttack = false; m.ephemeral = false; m.silenced = true; record(`Тихий час накладывает немоту на ${CARD[m.id].name}.`, { target: cardEntity(m.id, enemySide, m) }); }
+        const m = g[targetSide].board.find(x => x.uid === action.target)!;
+        if (CARD[m.id].immuneSilence) record('Русланчик всегда прав. Немота не действует.', { target: cardEntity(m.id, targetSide, m) });
+        else { m.taunt = false; m.cannotAttack = false; m.ephemeral = false; m.silenced = true; record(`Тихий час накладывает немоту на ${CARD[m.id].name}.`, { target: cardEntity(m.id, targetSide, m) }); }
         break;
       }
     }
@@ -375,6 +376,8 @@ export function act(input: Game, side: Side, action: Action): Result {
 export function chooseBotAction(g: Game): Action {
   if (g.winner || g.active !== 'bot') return { type: 'end' };
   const p = g.bot;
+  const silenceTarget = g.player.board.find(m => !CARD[m.id].immuneSilence && (m.taunt || !m.silenced && !!CARD[m.id].auraAttack))
+    ?? p.board.find(m => m.ephemeral && !m.silenced && !m.taunt && !CARD[m.id].immuneSilence && !CARD[m.id].auraAttack);
   if (g.discovery?.side === 'bot') {
     const score = (id: string) => {
       const c = CARD[id];
@@ -395,7 +398,7 @@ export function chooseBotAction(g: Game): Action {
     if (cardCost(g, c.id) > p.mana || c.effect === 'concede') return false;
     if (c.kind === 'minion' && p.board.length >= 7) return false;
     if (c.effect === 'heal' && p.health > 25) return false;
-    if (c.effect === 'silence' && !g.player.board.some(m => m.taunt && !CARD[m.id].immuneSilence)) return false;
+    if (c.effect === 'silence' && !silenceTarget) return false;
     if (c.effect === 'deathwing' && g.player.board.length <= p.board.length) return false;
     return true;
   }).sort((a, b) => cardCost(g, b.id) - cardCost(g, a.id));
@@ -409,7 +412,7 @@ export function chooseBotAction(g: Game): Action {
     const effect = CARD[card.id].effect;
     let target: Target | undefined;
     if (effect === 'bolt' || effect === 'discoverBlast') target = [...g.player.board].filter(m => m.health <= (effect === 'bolt' ? 3 : 4)).sort((a, b) => b.attack - a.attack)[0]?.uid ?? 'hero';
-    if (effect === 'silence') target = g.player.board.find(m => m.taunt && !CARD[m.id].immuneSilence)!.uid;
+    if (effect === 'silence') target = silenceTarget!.uid;
     return { type: 'play', uid: card.uid, target };
   }
   if (attacks.length) {

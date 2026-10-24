@@ -396,3 +396,30 @@ test('Василий buffs the board, shows the British cat and records the aura
   await page.getByRole('button', { name: 'История сражения', exact: true }).click();
   await expect(page.locator('.battle-log')).toContainText('Аура Василия: Завсегдатай, атака 1 → 3');
 });
+
+test('mobile Тихий час targets friendly sleeping minions and animates on their side', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const g = fixture(); const ally = unit(g, 'deathwing'); ally.ready = false; ally.ephemeral = true;
+  unit(g, 'bouncer', true); g.player.hand = [{ id: 'silence', uid: g.nextUid++ }]; g.bot.deck = ['regular']; g.bot.hand = [];
+  await seed(page, g, true);
+  await page.getByRole('button', { name: 'Тихий час, 1 маны', exact: true }).click();
+  await expect(page.locator('.battle-hint')).toContainText('своё или вражеское');
+  const friendly = page.getByRole('button', { name: 'Смертокрыл: 1 атаки, 1 здоровья', exact: true });
+  await expect(friendly).toHaveClass(/targetable/);
+  await expect(page.locator('.enemy-board .board-unit')).toHaveClass(/targetable/);
+  await friendly.click();
+  await expect(friendly.locator('.silence-mark')).toBeVisible();
+  await expect(page.locator('[data-fx="spell"]')).toBeAttached();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!));
+  expect(saved.player.mana).toBe(9); expect(saved.player.hand).toHaveLength(0);
+  expect(saved.player.board[0]).toMatchObject({ silenced: true, ephemeral: false, ready: false });
+  expect(saved.bot.board[0].silenced).toBe(false); expect(saved.bot.health).toBe(30);
+  expect(saved.events.find((e: { cardId?: string }) => e.cardId === 'silence').target).toEqual({ side: 'player', uid: ally.uid });
+  await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  await expect(page.locator('.history-entry').first()).toContainText('Тихий час накладывает немоту на Смертокрыл.');
+  await expect(page.locator('.history-entry').first().locator('.history-entity').last()).toContainText('Смертокрыл');
+  await page.getByRole('button', { name: 'Закрыть журнал', exact: true }).click();
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click();
+  await expect(page.locator('.player-board .board-unit')).toHaveCount(1);
+});

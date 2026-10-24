@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BOT_DECK, CARD, COLLECTIBLE, STARTER_DECK, deckError } from './cards';
-import { act, cardCost, createGame, other, powerCost, type Game, type Minion, type Side } from './engine';
+import { act, cardCost, chooseBotAction, createGame, legalTargets, other, powerCost, type Game, type Minion, type Side } from './engine';
 
 function creature(g: Game, side: Side, id: string): Minion {
   const c = CARD[id];
@@ -128,6 +128,49 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     const n = act(g, side, { type: 'play', uid, target: target.uid }).state;
     expect(n[other(side)].board[0]).toMatchObject({ silenced: false, cannotAttack: true, attack: 10, health: 10 });
   });
+  it('silences a friendly sleeping Deathwing and preserves it at the end of the turn', () => {
+    const g = setup(side); const target = creature(g, side, 'deathwing'); target.ready = false;
+    const enemy = creature(g, other(side), 'guardian');
+    expect(legalTargets(g, 'silence')).toEqual([target.uid, enemy.uid]);
+    const uid = g.nextUid++; g[side].hand = [{ id: 'silence', uid }]; const before = structuredClone(g);
+    const result = act(g, side, { type: 'play', uid, target: target.uid });
+    expect(result.error).toBeUndefined(); expect(g).toEqual(before);
+    const n = result.state;
+    expect(n[side].board[0]).toMatchObject({ silenced: true, ephemeral: false, ready: false, attack: 1, health: 1 });
+    expect(n[other(side)].board[0]).toMatchObject({ silenced: false, taunt: true, health: 6 });
+    expect(n[side].mana).toBe(9);
+    expect(n.events.find(e => e.cardId === 'silence')).toMatchObject({ kind: 'spell', side, target: { side, uid: target.uid } });
+    expect(n.log.at(-1)).toMatchObject({ actor: { id: 'silence', side }, target: { id: 'deathwing', side } });
+    expect(act(n, side, { type: 'end' }).state[side].board.some(m => m.uid === target.uid)).toBe(true);
+  });
+  it('removes a friendly Vasiliy aura and taunt without silencing the opponent', () => {
+    const g = setup(side); const cat = creature(g, side, 'vasiliy'); creature(g, side, 'regular');
+    creature(g, other(side), 'guardian'); const uid = g.nextUid++; g[side].hand = [{ id: 'silence', uid }];
+    const result = act(g, side, { type: 'play', uid, target: cat.uid });
+    expect(result.error).toBeUndefined();
+    expect(result.state[side].board.map(m => m.attack)).toEqual([4, 1]);
+    expect(result.state[side].board[0]).toMatchObject({ taunt: false, silenced: true, auraBonus: 0 });
+    expect(result.state[other(side)].board[0]).toMatchObject({ silenced: false, taunt: true, attack: 4 });
+  });
+  it('keeps a friendly Ruslan immune to silence', () => {
+    const g = setup(side); const target = creature(g, side, 'ruslan'); const uid = g.nextUid++;
+    g[side].hand = [{ id: 'silence', uid }];
+    const result = act(g, side, { type: 'play', uid, target: target.uid });
+    expect(result.error).toBeUndefined();
+    expect(result.state[side].board[0]).toMatchObject({ silenced: false, cannotAttack: true, attack: 10 });
+    expect(result.state.log.at(-1)?.target?.side).toBe(side);
+  });
+  it('continues to reject friendly targets for damage spells, attacks and hero power', () => {
+    const g = setup(side); const friend = creature(g, side, 'mage'); const attacker = creature(g, side, 'dragon');
+    for (const id of ['bolt', 'dog-spell']) {
+      const uid = g.nextUid++; g[side].hand = [{ id, uid }];
+      const result = act(g, side, { type: 'play', uid, target: friend.uid });
+      expect(result.error).toBeTruthy(); expect(result.state).toBe(g);
+    }
+    expect(act(g, side, { type: 'power', target: friend.uid }).error).toBeTruthy();
+    expect(act(g, side, { type: 'attack', uid: attacker.uid, target: friend.uid }).error).toBeTruthy();
+    expect(g[side].mana).toBe(10); expect(friend.health).toBe(4);
+  });
   it('stops a two-card draw at lethal fatigue for the acting side', () => {
     const g = setup(side); g[side].deck = []; g[side].health = 1; g[side].armor = 0;
     const uid = g.nextUid++; g[side].hand = [{ id: 'draw', uid }];
@@ -142,4 +185,14 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     const lethal = act(n, side, { type: 'power', target: 'hero' }).state;
     expect(lethal.winner).toBe(side); expect(lethal[foe].health).toBe(0);
   });
+});
+
+it('the bot can use Тихий час on its own Deathwing to prevent its disappearance', () => {
+  const g = setup('bot'); const target = creature(g, 'bot', 'deathwing');
+  const uid = g.nextUid++; g.bot.hand = [{ id: 'silence', uid }];
+  const action = chooseBotAction(g);
+  expect(action).toEqual({ type: 'play', uid, target: target.uid });
+  const result = act(g, 'bot', action);
+  expect(result.error).toBeUndefined(); expect(result.state.bot.board[0].ephemeral).toBe(false);
+  expect(act(result.state, 'bot', { type: 'end' }).state.bot.board[0].id).toBe('deathwing');
 });

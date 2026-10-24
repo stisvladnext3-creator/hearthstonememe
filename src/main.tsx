@@ -7,6 +7,7 @@ import './classic.css';
 import './readability.css';
 import './spell-cards.css';
 import './discover.css';
+import './battle-layout.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ArtworkProvider><App /></ArtworkProvider></React.StrictMode>,

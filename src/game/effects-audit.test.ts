@@ -27,11 +27,12 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     if (id === 'deathwing' || id === 'volunteer') { creature(g, side, 'rash'); creature(g, foe, 'rash'); }
     if (id === 'maxim') { creature(g, side, 'zhanna'); creature(g, foe, 'zhanna'); g[foe].hand = [{ id: 'zhanna', uid: g.nextUid++ }]; }
     if (id === 'jaina') g.rashDeaths = 2;
+    const echoAlly = id === 'echo-maxim' ? creature(g, side, 'regular') : undefined;
     const uid = g.nextUid++; g[side].hand = [{ id, uid }];
     if (id === 'deathwing' || id === 'me') g[side].hand.push({ id: 'heal', uid: g.nextUid++ });
     if (id === 'maxim') g[side].hand.push({ id: 'zhanna', uid: g.nextUid++ });
     const before = structuredClone(g);
-    const result = act(g, side, { type: 'play', uid, target: ['bolt', 'silence', 'dog-spell', 'masik'].includes(id) ? target.uid : undefined });
+    const result = act(g, side, { type: 'play', uid, target: echoAlly?.uid ?? (['bolt', 'silence', 'dog-spell', 'masik'].includes(id) ? target.uid : undefined) });
     expect(result.error).toBeUndefined();
     expect(g).toEqual(before);
     const n = result.state, p = n[side], e = n[foe];
@@ -62,6 +63,10 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
       draw: () => { expect(p.hand).toHaveLength(2); expect(p.deck).toHaveLength(8); },
       silence: () => { expect(e.board[0]).toMatchObject({ taunt: false, silenced: true, attack: 4, health: 6 }); },
       masik: () => { expect(e.board[0]).toMatchObject({ taunt: false, silenced: true }); expect(body).toMatchObject({ charge: true, ready: true, attack: 6, health: 4 }); },
+      'paper-army': () => { expect(p.board).toHaveLength(7); expect(e.board).toHaveLength(7); expect(p.board.every(m => m.id === 'paper' && m.attack === 2 && m.health === 2)).toBe(true); expect(e.board.filter(m => m.id === 'paper')).toHaveLength(6); },
+      briefing: () => { expect(n.briefing?.remainingTurns).toEqual({ player: 5, bot: 5 }); expect(e.board).toHaveLength(1); expect(p.board).toHaveLength(0); expect(n.log.some(l => l.text.includes('Взять карту'))).toBe(true); },
+      'rash-quest': () => { expect(p.quest).toEqual({ id: 'rash-quest', progress: 0 }); },
+      'echo-maxim': () => { expect(p.board[0].attack).toBe(2); expect(p.hand[0]).toMatchObject({ id: 'echo-maxim', expiresTurn: g.turn }); expect(e.health).toBe(26); },
       dragonslayer: () => { expect(e.health).toBe(24); expect(p.health).toBe(17); expect(n.log.find(l => l.actor?.id === id && l.amount === 4)?.target?.side).toBe(foe); },
       'dog-spell': () => {
         expect(n.discovery).toMatchObject({ side, sourceId: id, target: target.uid });

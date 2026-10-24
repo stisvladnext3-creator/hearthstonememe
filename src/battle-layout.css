@@ -1,0 +1,160 @@
+/* The battle owns the viewport. Sizes follow the available arena, including browser chrome. */
+body:has(.in-battle) { min-width: 280px; overflow: hidden; }
+.app.in-battle { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); background: #211224; }
+.in-battle > .site-header, .in-battle > .site-footer { display: none; }
+.in-battle > .main-container { width: 100%; max-width: 1800px; height: 100%; padding: 0; margin: auto; }
+.in-battle .battle-page { height: 100%; padding: 0; margin: 0; display: flex; flex-direction: column; animation: none; }
+.battle-topbar { flex: 0 0 46px; min-height: 46px; padding: 0 16px; gap: 8px; background: linear-gradient(#352633, #1d1721); border-bottom: 1px solid #bb98664d; }
+.battle-topbar > div { align-items: center; gap: 7px; }
+.battle-topbar .icon-button { min-width: 36px; height: 36px; }
+.battle-topbar .text-button { min-height: 36px; font-size: 14px; }
+.battle-topbar .history-toggle, .battle-topbar .field-toggle { width: auto; padding: 0 8px; gap: 6px; }
+.battle-topbar .history-toggle > span, .battle-topbar .field-toggle > span { font-size: 13px; }
+.battle-arena { flex: 1 1 0; min-height: 0; width: 100%; height: auto; margin: 0; border: 0; border-radius: 0; container-type: size; background-size: 100% 100%; background-position: center; background-repeat: no-repeat; box-shadow: inset 0 0 20px #120e1b80; --unit-width: min(10.2cqw, 12cqh, 86px); --hero-height: min(14cqh, 110px); --footer-height: clamp(26px, 4.4cqh, 36px); --hand-card-height: min(18cqh, 150px); --hand-card-width: calc(var(--hand-card-height) * .72); }
+.arena-glow, .table-corner { display: none; }
+.enemy-hero-row, .own-hero-row { position: absolute; left: 50%; width: 1px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 0; height: var(--hero-height); }
+.enemy-hero-row { top: 4%; }
+.own-hero-row { top: auto; bottom: calc(var(--footer-height) + var(--hand-card-height) + 20px); }
+.hero-panel, .hero-panel.bot, .own-hero-row > .hero-panel { position: absolute; left: 0; top: 0; width: calc(var(--hero-height) * .85); height: var(--hero-height); transform: translateX(-50%); display: flex; align-items: center; flex-direction: column; }
+.hero-portrait, .own-hero-row .hero-portrait { height: var(--hero-height); width: calc(var(--hero-height) * .82); padding: 3px; flex-shrink: 0; }
+.hero-label, .hero-panel.bot .hero-label, .own-hero-row .hero-label { top: 30%; right: calc(100% + 14px); width: min(18cqw, 185px); gap: 4px; }
+.hero-label strong, .hero-panel.bot .hero-label strong, .own-hero-row .hero-label strong { font-size: clamp(12px, 2.1cqh, 20px); line-height: 1.1; }
+.hero-label span, .hero-panel.bot .hero-label span, .own-hero-row .hero-label span { font-size: clamp(10px, 1.5cqh, 12px); line-height: 1.15; white-space: normal; padding: 3px 5px; }
+.hero-health-track { display: none; }
+.hero-hp { height: clamp(22px, 4cqh, 34px); min-width: clamp(25px, 4cqh, 36px); font-size: clamp(18px, 3.1cqh, 28px); right: -8px; bottom: -4px; }
+.hero-armor { height: clamp(22px, 3.8cqh, 32px); min-width: clamp(24px, 3.8cqh, 32px); font-size: clamp(16px, 2.8cqh, 24px); left: -9px; }
+.hero-power { position: absolute; left: calc(var(--hero-height) * .62); top: 8%; width: clamp(60px, 9cqw, 105px); margin: 0; }
+.power-orb { width: clamp(34px, 7cqh, 58px); height: clamp(34px, 7cqh, 58px); overflow: visible; background: #254956; padding: 3px; }
+.power-orb > .portrait-art { border-radius: 50%; }
+.power-orb > span { width: clamp(18px, 2.6cqh, 24px); height: clamp(20px, 2.9cqh, 26px); font-size: clamp(15px, 2.3cqh, 20px); z-index: 2; }
+.hero-power > strong { font-size: clamp(10px, 1.6cqh, 13px); line-height: 1.1; margin-top: 6px; white-space: nowrap; max-width: none; }
+.hero-power > small { font-size: clamp(9px, 1.4cqh, 11px); margin-top: 2px; }
+.hero-power.silenced-power .power-orb, .hero-power.used-power .power-orb { filter: grayscale(.8); opacity: .65; }
+.hero-power.silenced-power > small { color: #ffd7cc; background: #602d3bee; }
+.enemy-power .power-orb { border-color: #c3a1ce; }
+.opponent-hand { top: -3%; max-width: 50%; gap: 3px; pointer-events: none; }
+.card-back { height: min(8cqh, 60px); width: min(5cqw, 36px); flex-shrink: 1; }
+.card-back > span { width: 20px; height: 20px; line-height: 18px; font-size: 16px; }
+.enemy-status { top: 4%; left: 3%; gap: 5px; }
+.enemy-status > span { font-size: clamp(10px, 1.5cqh, 12px); }
+.enemy-status .mana-bar { background: #14241ae8; padding: 4px 6px; border-radius: 4px; }
+.enemy-status .mana-bar.small > div { max-width: none; flex-wrap: nowrap; gap: 2px; }
+.mana-bar.small i { width: 6px; height: 9px; }
+.last-action { top: 5%; right: 2%; width: min(21cqw, 240px); max-height: 12cqh; font-size: clamp(10px, 1.5cqh, 12px); line-height: 1.3; background: #20162be8; padding: 7px 9px; color: #fff0d4; }
+.last-action > span { font-size: 9px; color: #edd09b; letter-spacing: .5px; }
+.battle-board { left: 4%; right: 4%; min-height: 0; height: 17%; gap: clamp(5px, 1.1cqw, 17px); flex-wrap: nowrap; align-items: center; align-content: center; }
+.enemy-board { top: 23%; }
+.player-board { top: 42%; }
+.unit-wrap { width: var(--unit-width); flex: 0 0 var(--unit-width); }
+.board-unit { width: var(--unit-width); height: calc(var(--unit-width) * 1.3); padding: 2px; }
+.unit-name { font-size: clamp(8px, 1.6cqh, 12px); bottom: 17%; left: 3px; right: 3px; line-height: 1.05; }
+.board-unit .unit-attack, .board-unit .unit-health { width: clamp(19px, 3.4cqh, 29px); height: clamp(19px, 3.4cqh, 29px); font-size: clamp(15px, 2.7cqh, 23px); bottom: -5px; }
+.board-unit .unit-attack { left: -5px; }.board-unit .unit-health { right: -5px; }
+.unit-info { right: -6px; top: 20%; }.unit-info svg { width: 11px; height: 11px; }
+.sleep-mark { font-size: 10px; right: -5px; }.silence-mark { font-size: 8px; bottom: 36%; padding: 2px; }
+.taunt-icon { width: 16px; height: 16px; top: -10px; }
+.charge-badge { width: 18px; height: 18px; top: 13%; left: -6px; }
+.board-divider { top: 42%; left: 10%; right: 10%; height: 1px; }
+.board-divider > i { display: none; }
+.board-divider > span { background: #c5ab7955; }
+.empty-board-hint, .battle-board .empty-board-hint, .summon-hint { color: #fbe7bee0; text-shadow: 0 1px 3px #120d08, 0 1px 6px #120d08; }
+.empty-board-hint, .summon-hint > span { font-size: clamp(11px, 1.8cqh, 14px) !important; }
+.summon-hint { gap: 4px; }.summon-hint > svg { width: 21px; height: 21px; }
+.turn-control { top: 38%; right: 2%; gap: 5px; z-index: 8; }
+.turn-control > span { font-size: 10px; background: #231c25ed; color: #ffe5b2; border-radius: 3px; padding: 2px 5px; }
+.end-turn { width: clamp(88px, 10cqw, 136px); height: clamp(32px, 5.5cqh, 46px); font-size: clamp(10px, 1.6cqh, 13px); }
+.end-turn.waiting { font-size: clamp(10px, 1.6cqh, 12px); }.end-turn > svg { display: block; width: 14px; }
+.battle-hint { top: auto; bottom: calc(var(--footer-height) + var(--hand-card-height) + var(--hero-height) + 24px); left: 50%; width: max-content; max-width: 94%; min-height: 22px; padding: 4px 9px; font-size: clamp(10px, 1.6cqh, 13px); line-height: 1.2; z-index: 9; margin: 0; white-space: normal; }
+.battle-hint .icon-button { width: 24px; height: 24px; }
+.battle-hint > svg { flex-shrink: 0; }
+.player-hand { bottom: calc(var(--footer-height) + 6px); left: 50%; right: auto; width: min(calc(var(--hand-count, 10) * var(--hand-card-width)), calc(100% - var(--hand-card-width) - 20px)); height: var(--hand-card-height); transform: translateX(-50%); padding: 0; gap: 0; overflow: visible; align-items: flex-end; justify-content: center; scrollbar-width: none; }
+.hand-card-wrap { width: var(--hand-card-width); flex: 1 1 var(--hand-card-width); min-width: 0; margin: 0; transform: none; height: var(--hand-card-height); }
+.hand-card-wrap .game-card.classic-card { position: relative; width: var(--hand-card-width); height: var(--hand-card-height); left: 50%; margin-left: calc(var(--hand-card-width) / -2); touch-action: manipulation; }
+.hand-card-wrap:hover, .hand-card-wrap:focus-within { transform: translateY(-7px); z-index: 10; }
+.hand-card-wrap.selected { transform: translateY(-10px); z-index: 9; }
+.hand-info { right: calc((100% - var(--hand-card-width)) / 2 + 5px); bottom: 21%; width: 18px; height: 18px; }
+.arena-bottom { height: var(--footer-height); min-height: 0; padding: 0 12px; justify-content: center; background: #1c1823ed; }
+.arena-bottom .mana-bar { gap: 8px; }.arena-bottom .mana-bar > div { gap: 3px; }
+.arena-bottom .mana-bar i { width: 10px; height: 12px; }
+.arena-bottom .mana-bar > strong { font-size: 15px; }.arena-bottom .mana-bar > strong > span { font-size: 12px; }
+.deck-counter { left: 14px; font-size: 14px; gap: 4px; }.deck-counter > span, .hand-counter { font-size: 11px; }.hand-counter { right: 14px; }
+.illustrated-history { top: 0; bottom: var(--footer-height); max-width: 94%; }
+.in-battle .toast { bottom: calc(env(safe-area-inset-bottom) + 40px); z-index: 140; }
+
+.board-picker { border: 0; padding: 0; margin: 26px 0; min-width: 0; }
+.board-picker legend { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; margin-bottom: 14px; color: #ffe2a5; }
+.board-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.board-option { position: relative; padding: 8px; border: 2px solid #7b6d554d; border-radius: 8px; background: #111f1d; cursor: pointer; display: flex; flex-direction: column; gap: 8px; }
+.board-option.chosen { border-color: #edc77b; box-shadow: 0 0 12px #ecc27222; background: #383025; }
+.board-option:focus-within { outline: 2px solid #ffe0a0; outline-offset: 3px; }
+.board-option > input { position: absolute; opacity: 0; width: 100%; height: 100%; inset: 0; margin: 0; cursor: pointer; z-index: 2; }
+.board-preview { display: block; aspect-ratio: 16 / 9; width: 100%; background-size: cover; background-position: center; border-radius: 4px; position: relative; }
+.board-preview > span { position: absolute; right: 5px; top: 5px; background: #edc77b; color: #281a0e; border-radius: 50%; padding: 3px; display: flex; }
+.board-option > strong { font-size: 16px; color: #fff1d0; line-height: 1.2; }
+.board-option > small { font-size: 13px; line-height: 1.3; color: #d2d8c9; }
+.board-picker > p { font-size: 13px; color: #c2cbbd; margin-top: 12px; line-height: 1.4; }
+.fields-modal { width: 700px; }.fields-modal h2 { margin-top: 12px; }.fields-modal > .button { width: 100%; }
+@media (max-aspect-ratio: 1/1) {
+  .battle-arena.board-knights { background-image: url('/art/knights-board-portrait.png') !important; background-size: cover; }
+}
+
+@media (max-width: 600px) {
+  .battle-topbar { flex-basis: 42px; min-height: 42px; padding: 0 6px; }
+  .battle-topbar > div { gap: 1px; }.battle-topbar .icon-button { min-width: 32px; width: 32px; height: 34px; }
+  .battle-topbar .text-button { font-size: 12px; gap: 4px; }.battle-topbar .text-button > svg { width: 15px; }
+  .battle-topbar .history-toggle, .battle-topbar .field-toggle { padding: 0 4px; gap: 4px; }
+  .battle-topbar .history-toggle > span, .battle-topbar .field-toggle > span { font-size: 11px; }
+  .enemy-status { top: 2%; left: 2%; gap: 2px; }.enemy-status .mana-bar.small > div { display: none; }
+  .enemy-status > span { padding: 2px 4px; }.enemy-status .mana-bar { padding: 2px 4px; }
+  .last-action { display: none; }
+  .battle-arena { --hero-height: min(12cqh, 90px); }
+  .hero-label, .hero-panel.bot .hero-label, .own-hero-row .hero-label { right: calc(100% + 9px); width: min(22cqw, 100px); }
+  .hero-panel.bot .hero-label { top: 45%; }
+  .hero-power { left: calc(var(--hero-height) * .56); width: 72px; }
+  .turn-control { right: 3%; top: 38.5%; flex-direction: row; gap: 5px; }
+  .turn-control > span { font-size: 9px; }.end-turn { height: 32px; width: 96px; font-size: 10px; }
+  .battle-board { left: 3%; right: 3%; gap: 2.4cqw; }
+  .unit-info { display: none; }.unit-name { font-size: 8px; bottom: 17%; }
+  .sleep-mark { right: -4px; top: -8px; }.silence-mark { font-size: 7px; }
+  .battle-hint { max-width: 96%; font-size: 11px; gap: 5px; }
+  .arena-bottom .mana-bar i { width: 8px; height: 10px; }.arena-bottom .mana-bar > div { gap: 2px; }
+  .deck-counter > span, .deck-counter > em { display: none; }.deck-counter { left: 8px; }.hand-counter { right: 8px; font-size: 10px; }
+  .board-options { gap: 8px; }.board-option { padding: 6px; }.board-option > strong { font-size: 14px; }.board-option > small { font-size: 12px; }
+}
+.briefing-status, .quest-progress { position: absolute; display: flex; align-items: center; gap: 6px; border: 1px solid #dbb67d; border-radius: 6px; background: #2a1936ee; color: #ffe6b7; padding: 5px 8px; z-index: 7; text-align: left; font-size: 12px; line-height: 1.15; }
+.briefing-status { top: 17%; left: 2%; }.briefing-status small { display: block; font-size: 10px; margin-top: 2px; }
+.quest-progress.bot { top: 18%; right: 2%; }
+.quest-progress.player { top: auto; bottom: 0; left: 8px; height: var(--footer-height); padding: 2px 4px; gap: 3px; border: 0; border-radius: 0; font-size: 11px; z-index: 16; }
+.quest-progress.player > svg { width: 13px; height: 13px; }
+.battle-arena:has(.quest-progress.player) .deck-counter { display: none; }
+.hand-card-wrap.echo-copy .game-card { filter: drop-shadow(0 0 5px #b0a3ff); }
+@media (max-width: 420px) {
+  .battle-topbar .field-toggle > span { display: none; }
+}
+@media (max-width: 360px) {
+  .battle-topbar .history-toggle > span { display: none; }
+}
+/* Short landscape screens keep the hand to the right of the friendly hero. */
+@media (max-height: 540px) and (min-aspect-ratio: 6/5) {
+  .battle-topbar { flex-basis: 36px; min-height: 36px; padding: 0 10px; }
+  .battle-topbar .icon-button, .battle-topbar .text-button { height: 32px; min-height: 32px; }
+  .battle-arena { --hero-height: 20cqh; --unit-width: min(8cqw, 17cqh, 68px); --hand-card-height: 24cqh; --footer-height: 26px; }
+  .enemy-hero-row { top: 2%; }.enemy-status { top: 4%; }
+  .enemy-board { top: 24%; height: 22%; }.player-board { top: 49%; height: 22%; }
+  .board-divider { top: 47%; }.battle-board { left: 7%; right: 18%; }
+  .turn-control { top: 42%; right: 2%; }.turn-control > span { display: none; }
+  .end-turn { height: 34px; width: 100px; font-size: 11px; }
+  .own-hero-row { top: auto; bottom: calc(var(--footer-height) + 10px); left: 25%; }
+  .own-hero-row .hero-label { right: calc(100% + 12px); width: 110px; }
+  .hero-label strong, .hero-panel.bot .hero-label strong, .own-hero-row .hero-label strong { font-size: 13px; }
+  .hero-label span, .hero-panel.bot .hero-label span, .own-hero-row .hero-label span { font-size: 10px; }
+  .hero-power { left: calc(var(--hero-height) * .6); width: 72px; top: 0; }
+  .power-orb { width: 32px; height: 32px; }.hero-power > strong { font-size: 10px; margin-top: 4px; }.hero-power > small { font-size: 9px; }
+  .player-hand { left: 70%; width: min(calc(var(--hand-count, 10) * var(--hand-card-width)), calc(52% - var(--hand-card-width))); bottom: calc(var(--footer-height) + 4px); }
+  .battle-hint { top: 2%; bottom: auto; left: 79%; width: 34%; max-width: 34%; padding: 4px 7px; font-size: 11px; }
+  .battle-hint > svg { display: none; }.last-action { display: none; }
+  .unit-name { font-size: 9px; }.empty-board-hint, .summon-hint > span { font-size: 11px !important; }.summon-hint > svg { display: none; }
+  .illustrated-history { width: 360px; }.illustrated-history .history-header { padding-bottom: 4px; }.illustrated-history h3 { font-size: 16px; }
+  .briefing-status { top: 14%; left: 2%; font-size: 10px; padding: 3px 5px; }.briefing-status small { font-size: 9px; }
+  .quest-progress.bot { top: 24%; right: 2%; }
+}

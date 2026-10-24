@@ -7,7 +7,7 @@ export const HEROES: Record<string, { name: string; art: number; title: string }
   maratik: { name: 'Маратик', art: 7, title: 'Повелитель «Ой»' },
   jaina: { name: 'Джайна-ассасин', art: 10, title: 'Сила РДШ' },
 };
-export const POWER_CARDS = { spark: 'spark-power', fool: 'fool-power', oy: 'oy', rds: 'rds-power' } as const;
+export const POWER_CARDS = { spark: 'spark-power', fool: 'fool-power', oy: 'oy', rds: 'rds-power', briefing: 'briefing-power' } as const;
 export function heroCard(id: string): CardDef {
   if (CARD[id]?.kind === 'hero') return CARD[id];
   const hero = HEROES[id] ?? HEROES.mage;

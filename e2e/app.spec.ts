@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createGame, type Game, type Minion } from '../src/game/engine';
-import { CARD, CARDS } from '../src/game/cards';
+import { CARD, CARDS, STARTER_DECK } from '../src/game/cards';
 
 function fixture(): Game {
   const g = createGame(undefined, 951);
@@ -55,6 +55,7 @@ test('collection searches, categories and mana filters work together', async ({ 
   await expect(page.locator('.card-grid .game-card')).toHaveCount(8);
 });
 test('deck editor saves an actual changed 30-card deck and survives reload', async ({ page }) => {
+  const expectedBolts = STARTER_DECK.filter(id => id === 'bolt').length + 1;
   await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
   await page.getByRole('button', { name: 'Изменить колоду' }).click();
   await page.getByRole('button', { name: 'Убрать Завсегдатай', exact: true }).click();
@@ -62,10 +63,10 @@ test('deck editor saves an actual changed 30-card deck and survives reload', asy
   await page.getByLabel('Поиск карт').fill('Искра хаоса');
   await page.getByRole('button', { name: 'Добавить Искра хаоса', exact: true }).click();
   await page.getByRole('button', { name: 'Сохранить колоду' }).click();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.deck')!).filter((id: string) => id === 'bolt').length)).toBe(3);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.deck')!).filter((id: string) => id === 'bolt').length)).toBe(expectedBolts);
   await page.reload();
   await page.getByRole('button', { name: 'В бой', exact: true }).click();
-  expect(await page.evaluate(() => { const g = JSON.parse(localStorage.getItem('memestone.v1.game')!); return [...g.player.deck, ...g.player.hand.map((c: { id: string }) => c.id)].filter(id => id === 'bolt').length; })).toBe(3);
+  expect(await page.evaluate(() => { const g = JSON.parse(localStorage.getItem('memestone.v1.game')!); return [...g.player.deck, ...g.player.hand.map((c: { id: string }) => c.id)].filter(id => id === 'bolt').length; })).toBe(expectedBolts);
 });
 test('targeted spell bypasses taunt, minion attack obeys taunt and damage is rendered', async ({ page }) => {
   const g = fixture(); g.player.hand.push({ id: 'bolt', uid: g.nextUid++ });
@@ -525,4 +526,119 @@ test('bot plays Masik, silences taunt, and wins using charge', async ({ page }) 
   await expect(page.getByRole('dialog', { name: 'Результат боя' })).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole('heading', { name: 'Ещё по одной?' })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+for (const [width, height] of [[1440, 900], [1366, 768], [390, 844], [320, 568], [844, 390], [667, 375]]) {
+  test(`full battle controls and ten cards remain reachable without scrolling at ${width}x${height}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    const g = fixture();
+    g.player.power = 'fool'; g.bot.power = 'rds';
+    for (let i = 0; i < 7; i++) { unit(g, 'bouncer'); unit(g, 'bouncer', true); }
+    g.player.hand = Array.from({ length: 10 }, (_, i) => ({ id: i % 2 ? 'regular' : 'masik', uid: g.nextUid++ }));
+    await seed(page, g);
+    const layout = await page.evaluate(() => {
+      const inside = (e: Element) => { const r = e.getBoundingClientRect(); return r.left >= -1 && r.top >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; };
+      const controls = [...document.querySelectorAll('.battle-topbar button,.hero-power,.hero-portrait,.end-turn,.battle-board .board-unit')];
+      const hand = [...document.querySelectorAll('.player-hand .game-card')].map(e => {
+        const r = e.getBoundingClientRect();
+        for (let x = r.left + 4; x < r.right - 4; x += 4) for (let y = r.top + 8; y < r.bottom - 8; y += 8) {
+          if (document.elementFromPoint(x, y)?.closest('.game-card') === e) return true;
+        }
+        return false;
+      });
+      const hp = document.querySelector('.own-hero-row .hero-hp')!; const r = hp.getBoundingClientRect();
+      return { noScroll: document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight,
+        controls: controls.every(inside), hand, ownHealthVisible: !!document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('.hero-portrait') };
+    });
+    expect(layout).toEqual({ noScroll: true, controls: true, hand: Array(10).fill(true), ownHealthVisible: true });
+    await page.getByRole('button', { name: 'Выбор игрового поля', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Выбор игрового поля' })).toBeVisible();
+    await page.getByRole('radio', { name: /Стол в трактире/ }).check();
+    await page.getByRole('button', { name: 'Вернуться в бой' }).click();
+    await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'tavern');
+  });
+}
+
+test('field choice persists, changes the image, and never resets the current match', async ({ page }) => {
+  const g = fixture(); unit(g, 'dragon');
+  await seed(page, g);
+  await page.getByRole('button', { name: 'Выбор игрового поля' }).click();
+  await page.getByRole('radio', { name: /Стол в трактире/ }).check();
+  await page.getByRole('button', { name: 'Вернуться в бой' }).click();
+  expect(await page.locator('.battle-arena').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('battlefield.png');
+  await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'tavern');
+  await expect(page.locator('.player-board .board-unit')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Выбор игрового поля' }).click();
+  await page.getByRole('radio', { name: /Фиолетовая цитадель/ }).check();
+  await page.getByRole('button', { name: 'Вернуться в бой' }).click();
+  expect(await page.locator('.battle-arena').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('knights-board.png');
+  const image = await page.request.get('/art/knights-board.png'); expect(image.status()).toBe(200);
+});
+
+test('opponent power exposes the current ability, cost, used status and silence', async ({ page }) => {
+  const g = fixture(); g.bot.power = 'oy'; g.bot.powerUsed = true; g.bot.powerSilenceTurns = 2;
+  await seed(page, g);
+  const power = page.getByRole('button', { name: 'Сила героя противника Ой, 6 маны' });
+  await expect(power).toContainText('Немота: 2'); await power.click();
+  const dialog = page.getByRole('dialog', { name: 'Ой', exact: true });
+  await expect(dialog.locator('.effect-description')).toContainText('Смертокрыла');
+  await expect(dialog.locator('.inspection-context')).toContainText('Осталось своих ходов: 2');
+});
+
+test('briefing displays a countdown and temporary powers, persists, and restores after five own turns per player', async ({ page }) => {
+  const g = fixture(); g.player.hand = [{ id: 'briefing', uid: g.nextUid++ }]; g.bot.hand = []; g.bot.deck = Array(20).fill('regular');
+  g.bot.power = 'oy'; g.player.power = 'rds';
+  unit(g, 'bouncer'); unit(g, 'dragon'); unit(g, 'guardian', true); unit(g, 'regular', true);
+  await seed(page, g);
+  await page.getByRole('button', { name: 'Держать в курсе!, 10 маны', exact: true }).click();
+  await expect(page.locator('.briefing-status')).toContainText('Вы: 5 · Борис: 5');
+  await expect(page.locator('.player-board .board-unit')).toHaveCount(1); await expect(page.locator('.enemy-board .board-unit')).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Сила героя Взять карту, 6 маны', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Сила героя противника Взять карту, 6 маны', exact: true })).toBeVisible();
+  await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  await expect(page.locator('.briefing-status')).toContainText('Вы: 5 · Борис: 5');
+  for (let i = 0; i < 5; i++) {
+    await page.getByRole('button', { name: 'Завершить', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled({ timeout: 12000 });
+  }
+  await expect(page.locator('.briefing-status')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Сила героя Сила РДШ, 4 маны', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Сила героя противника Ой, 6 маны', exact: true })).toBeVisible();
+});
+
+test('paper army produces both full boards with bundled paper artwork', async ({ page }) => {
+  const g = fixture(); g.player.hand = [{ id: 'paper-army', uid: g.nextUid++ }];
+  await seed(page, g); await page.getByRole('button', { name: 'Армия бумажек, 7 маны' }).click();
+  await expect(page.locator('.player-board .board-unit')).toHaveCount(7); await expect(page.locator('.enemy-board .board-unit')).toHaveCount(7);
+  await expect(page.locator('.player-board .original-portrait')).toHaveCount(7);
+  await page.locator('.player-board .board-unit').first().click({ button: 'right' });
+  await expect(page.getByRole('dialog', { name: 'Бумажка', exact: true }).locator('.effect-description')).toContainText('Армией бумажек');
+});
+
+test('quest progress survives reload and the eighth RASH grants the reward', async ({ page }) => {
+  const g = fixture(); g.player.quest = { id: 'rash-quest', progress: 7 }; g.player.power = 'rds';
+  await seed(page, g); await expect(page.locator('.quest-progress.player')).toContainText('7/8');
+  await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  await expect(page.locator('.quest-progress.player')).toContainText('7/8');
+  await page.getByRole('button', { name: 'Сила героя Сила РДШ, 4 маны', exact: true }).click();
+  await expect(page.locator('.quest-progress.player')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Волонтер-босс, 5 маны', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'История сражения' }).click();
+  await expect(page.locator('.battle-log')).toContainText('Задача выполнена!');
+});
+
+test('Maxim chooses an ally, creates a reusable echo, and temporary copies disappear at end of turn', async ({ page }) => {
+  const g = fixture(); unit(g, 'guardian'); g.player.hand = [{ id: 'echo-maxim', uid: g.nextUid++ }]; g.bot.hand = []; g.bot.deck = ['regular'];
+  await seed(page, g);
+  await page.getByRole('button', { name: 'Забивной Максимка, 2 маны', exact: true }).click();
+  await expect(page.locator('.battle-hint')).toContainText('+1 к атаке');
+  await page.getByRole('button', { name: /Страж трактира: 4 атаки/ }).click();
+  await expect(page.getByRole('button', { name: /Страж трактира: 5 атаки/ })).toBeVisible();
+  await expect(page.locator('.echo-copy')).toHaveCount(1);
+  await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  await expect(page.locator('.echo-copy')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click();
+  await expect(page.locator('.echo-copy')).toHaveCount(0);
+  expect((await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!))).player.hand).toHaveLength(0);
 });

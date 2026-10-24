@@ -22,4 +22,4 @@ export function heroEntity(player: Player, side: Side): HistoryEntity {
   const hero = HEROES[player.hero] ?? HEROES.mage;
   return { type: 'hero', id: player.hero, name: hero.name, art: hero.art, side, health: player.health, armor: player.armor };
 }
-export const powerEntity = (player: Player, side: Side) => cardEntity(POWER_CARDS[player.power], side);
+export const powerEntity = (player: Player, side: Side, power = player.power) => cardEntity(POWER_CARDS[power], side);

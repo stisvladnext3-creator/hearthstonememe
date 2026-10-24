@@ -1,11 +1,11 @@
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
-export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik';
+export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw';
 export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean;
-  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean;
+  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; echo?: boolean;
 }
 
 export const CARDS: CardDef[] = [
@@ -42,18 +42,24 @@ export const CARDS: CardDef[] = [
   { id: 'dog-spell', name: 'Такая вот хуйня, собачка', cost: 2, kind: 'spell', text: 'Раскопайте копию карты из своей колоды. Наносит 4 урона выбранному врагу.', flavor: 'Выберите одну из трёх разных карт своей колоды. Копия попадёт в руку, оригинал останется в колоде. Затем выбранный враг получит 4 урона. При пустой колоде остаётся урон.', rarity: 'epic', art: 11, custom: true, effect: 'discoverBlast', tribe: 'Чел' },
   { id: 'vasiliy', name: 'Василий — хранитель мультивселенных', cost: 3, kind: 'minion', attack: 4, health: 5, text: 'Провокация. Все ваши существа получают +2 к атаке.', flavor: 'Аура действует на всех союзных существ, включая Василия, пока он на столе без немоты. Бонусы нескольких Василиев складываются. После его гибели, превращения или немоты бонус исчезает.', rarity: 'legendary', art: 9, custom: true, taunt: true, auraAttack: 2, tribe: 'Мяу' },
   { id: 'masik', name: 'Масик, уничтожитель миров', cost: 7, kind: 'minion', attack: 6, health: 4, text: 'Рывок. Боевой клич: немота выбранного персонажа. На героя действует 2 хода.', flavor: 'Рывок позволяет атаковать сразу, включая героя, но не обходит провокацию. Немота существа снимает его способности; немота героя отключает его силу на 2 его хода.', rarity: 'legendary', art: 9, custom: true, charge: true, effect: 'masik', tribe: 'Мяу' },
+  { id: 'paper-army', name: 'Армия бумажек', cost: 7, kind: 'spell', text: 'Заполняет стол обоих игроков Бумажками 2/2.', flavor: 'Занимает только свободные места. Во время «Держать в курсе» учитывает ограничение в одно существо.', rarity: 'legendary', art: 5, custom: true, effect: 'paperArmy' },
+  { id: 'briefing', name: 'Держать в курсе!', cost: 10, kind: 'spell', text: 'На 5 ходов каждого игрока: не больше одного существа на стороне. Силы героев: взять карту за 6 маны.', flavor: 'Текущий ход считается первым ходом разыгравшего. На каждой стороне остаётся случайное существо, остальные уничтожаются. После пяти ходов обоих игроков возвращаются обычный лимит и прежние силы героев.', rarity: 'legendary', art: 9, custom: true, effect: 'briefing' },
+  { id: 'rash-quest', name: 'Сам ты говно', cost: 1, kind: 'spell', text: 'Задача: призовите 8 РАШ. Награда: Волонтер-босс в руку.', flavor: 'Считает только ваших РАШ, призванных после начала задачи. Превращения не считаются призывами. Если рука полна, награда сгорает.', rarity: 'legendary', art: 11, custom: true, effect: 'rashQuest' },
+  { id: 'echo-maxim', name: 'Забивной Максимка', cost: 2, kind: 'minion', attack: 2, health: 2, text: 'Эхо. Боевой клич: 2 урона случайному врагу. Даёт +1 к атаке выбранному своему существу.', flavor: 'Эхо добавляет повторную копию в руку до конца хода. Если других своих существ нет, Максимка усиливает себя. Случайный урон может попасть в героя или существо врага.', rarity: 'epic', art: 5, custom: true, echo: true, effect: 'echoMaxim', tribe: 'Максим' },
+  { id: 'paper', name: 'Бумажка', cost: 1, kind: 'token', attack: 2, health: 2, text: 'Призвана «Армией бумажек».', flavor: 'Безобидна, пока не порежешься.', rarity: 'common', art: 5 },
+  { id: 'briefing-power', name: 'Взять карту', cost: 6, kind: 'power', text: 'Вы берёте одну карту. Один раз за ход.', flavor: 'Временная сила обоих героев во время «Держать в курсе». При пустой колоде наносит усталость.', rarity: 'common', art: 9, custom: true, effect: 'briefingDraw' },
 ];
 export const CARD = Object.fromEntries(CARDS.map(c => [c.id, c])) as Record<string, CardDef>;
 export const COLLECTIBLE = CARDS.filter(c => c.kind !== 'power' && c.kind !== 'token');
 export const STARTER_DECK = [
   'casino', 'galinka', 'goodgame', 'ruslan', 'ruslan', 'trachukcha', 'me', 'deathwing', 'maratik',
-  'regular', 'regular', 'bouncer', 'bouncer', 'goblin', 'dragonslayer', 'mage', 'mage', 'guardian', 'vasiliy',
-  'masik', 'jaina', 'bolt', 'bolt', 'heal', 'dog-spell', 'draw', 'maxim', 'silence', 'volunteer', 'zhanna',
+  'regular', 'echo-maxim', 'bouncer', 'bouncer', 'goblin', 'dragonslayer', 'mage', 'paper-army', 'guardian', 'vasiliy',
+  'masik', 'jaina', 'bolt', 'briefing', 'heal', 'dog-spell', 'draw', 'maxim', 'silence', 'volunteer', 'rash-quest',
 ];
 export const BOT_DECK = [
-  'regular', 'regular', 'regular', 'volunteer', 'bouncer', 'bouncer', 'bouncer', 'goblin', 'goblin', 'dragonslayer',
-  'mage', 'mage', 'mage', 'guardian', 'guardian', 'vasiliy', 'dragon', 'masik', 'bolt', 'bolt',
-  'heal', 'dog-spell', 'draw', 'draw', 'silence', 'silence', 'ruslan', 'casino', 'galinka', 'deathwing',
+  'regular', 'echo-maxim', 'regular', 'volunteer', 'bouncer', 'bouncer', 'bouncer', 'goblin', 'rash-quest', 'dragonslayer',
+  'mage', 'paper-army', 'mage', 'guardian', 'guardian', 'vasiliy', 'dragon', 'masik', 'bolt', 'bolt',
+  'heal', 'dog-spell', 'draw', 'briefing', 'silence', 'silence', 'ruslan', 'casino', 'galinka', 'deathwing',
 ];
 export function deckError(ids: string[]): string | undefined {
   if (ids.length !== 30) return 'В колоде должно быть ровно 30 карт.';

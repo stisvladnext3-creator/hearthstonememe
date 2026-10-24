@@ -4,6 +4,12 @@ export type ImageFormat = 'card' | 'editor' | 'portrait';
 export interface ArtCredit { title: string; author: string; source: string; license: string; licenseUrl: string }
 export interface SharedArtwork { path: string; format: ImageFormat; position?: string; size?: string; credit?: ArtCredit }
 export const ORIGINAL_ART: Record<string, SharedArtwork> = {
+  'paper-army': { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '0% 0%', size: '200% 200%' },
+  paper: { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '0% 0%', size: '200% 200%' },
+  briefing: { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '100% 0%', size: '200% 200%' },
+  'briefing-power': { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '100% 0%', size: '200% 200%' },
+  'rash-quest': { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '0% 100%', size: '200% 200%' },
+  'echo-maxim': { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '100% 100%', size: '200% 200%' },
   masik: { path: 'art/user/masik-portrait.png', format: 'portrait', position: 'center 30%' },
   vasiliy: { path: 'art/web/vasiliy.jpg', format: 'portrait', position: '68% 25%', size: '180% auto', credit: {
     title: 'Mystica from British Empire Cattery', author: 'BritishEmpire',

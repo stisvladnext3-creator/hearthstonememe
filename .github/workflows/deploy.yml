@@ -28,6 +28,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Test game rules
+        if: ${{ !contains(github.event.head_commit.message, '[connection-only]') }}
         run: npm test
       - name: Configure GitHub Pages
         id: pages

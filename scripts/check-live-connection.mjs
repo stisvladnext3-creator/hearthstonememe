@@ -1,0 +1,105 @@
+import { chromium, expect } from '@playwright/test';
+import WebSocket from 'ws';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+
+// Two independent browsers use the production relay, never ?localRooms=1.
+// In the managed environment Node supplies the configured proxy and trusted CA
+// to the WSS tunnel. Frames still go to the real public broker, without mocks.
+const origin = process.env.CONNECTION_TEST_URL || 'http://127.0.0.1:4173';
+const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', args: ['--no-sandbox'] });
+const errors = [];
+async function participant(viewport) {
+  const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+  if (proxy) await context.routeWebSocket(/^wss:\/\/public\.cloud\.shiftr\.io(?:\/.*)?$/, route => {
+    const upstream = new WebSocket(route.url(), 'mqtt', { agent: new HttpsProxyAgent(proxy) });
+    const pending = [];
+    let stopped = false;
+    route.onMessage(data => { if (upstream.readyState === WebSocket.OPEN) upstream.send(data); else if (!stopped) pending.push(data); });
+    route.onClose(() => { stopped = true; if (upstream.readyState === WebSocket.CONNECTING) upstream.terminate(); else upstream.close(); });
+    upstream.on('open', () => { if (stopped) upstream.close(); else for (const data of pending.splice(0)) upstream.send(data); });
+    upstream.on('message', (data, binary) => { if (!stopped) route.send(binary ? data : data.toString()); });
+    upstream.on('close', () => { if (!stopped) { stopped = true; route.close(); } });
+    upstream.on('error', error => { if (!stopped) { errors.push(`WSS: ${error.message}`); stopped = true; route.close(); } });
+  });
+  const page = await context.newPage();
+  page.setDefaultTimeout(15_000);
+  page.on('pageerror', error => errors.push(error.message));
+  return { context, page };
+}
+async function lobby(page, name) {
+  await page.goto(origin);
+  await page.getByRole('button', { name: 'Комнаты', exact: true }).click();
+  await page.getByLabel('Имя игрока').fill(name);
+}
+async function findRoom(page, code) {
+  const row = page.locator(`.public-rooms [data-room-code="${code}"]`);
+  await expect(async () => {
+    const previous = page.getByRole('button', { name: 'Предыдущая страница комнат' });
+    while (await previous.count() && await previous.isEnabled()) await previous.click();
+    while (!await row.count()) {
+      const next = page.getByRole('button', { name: 'Следующая страница комнат' });
+      if (!await next.count() || !await next.isEnabled()) break;
+      await next.click();
+    }
+    await expect(row).toHaveCount(1, { timeout: 500 });
+  }).toPass({ timeout: 20_000 });
+  return row;
+}
+async function flow(listed) {
+  const host = await participant({ width: 1440, height: 900 });
+  const guest = await participant({ width: 390, height: 844 });
+  const name = `Проверка-${crypto.randomUUID().slice(0, 5)}`;
+  try {
+    await lobby(host.page, name);
+    await host.page.getByLabel('Показывать в списке комнат', { exact: true }).setChecked(listed);
+    await host.page.getByRole('button', { name: 'Создать комнату', exact: true }).click();
+    await expect(host.page.locator('.room-code-heading strong')).toBeVisible({ timeout: 25_000 });
+    const code = (await host.page.locator('.room-code-heading strong').innerText()).trim();
+    await lobby(guest.page, 'Гость-проверка');
+    if (listed) {
+      const row = await findRoom(guest.page, code);
+      await row.getByRole('button', { name: `Войти в комнату ${name}`, exact: true }).click();
+    } else {
+      await guest.page.getByLabel('Код комнаты', { exact: true }).fill(code);
+      await guest.page.getByRole('button', { name: 'Войти по коду', exact: true }).click();
+    }
+    await expect(host.page.getByRole('button', { name: 'Начать бой', exact: true })).toBeEnabled({ timeout: 25_000 });
+    console.log(`${listed ? 'Public list' : 'Room code'}: two players connected`);
+    await host.page.getByRole('button', { name: 'Начать бой', exact: true }).click();
+    for (const { page } of [host, guest]) {
+      await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible({ timeout: 15_000 });
+      await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
+    }
+    for (const { page } of [host, guest]) await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0, { timeout: 15_000 });
+    const first = await host.page.locator('.end-turn').isEnabled() ? host.page : guest.page;
+    const second = first === host.page ? guest.page : host.page;
+    await first.getByRole('button', { name: 'Завершить', exact: true }).click();
+    await expect(second.locator('.end-turn')).toBeEnabled({ timeout: 15_000 });
+    await second.getByRole('button', { name: 'Завершить', exact: true }).click();
+    await expect(first.locator('.end-turn')).toBeEnabled({ timeout: 15_000 });
+    console.log(`${listed ? 'Public list' : 'Room code'}: shared battle and both turn transfers received`);
+    if (!listed) {
+      await guest.page.reload();
+      if (await guest.page.getByRole('button', { name: 'Комнаты', exact: true }).isVisible()) await guest.page.getByRole('button', { name: 'Комнаты', exact: true }).click();
+      await guest.page.getByRole('button', { name: `Вернуться в комнату ${code}`, exact: true }).click();
+      await expect(guest.page.locator('.battle-arena')).toBeVisible({ timeout: 25_000 });
+      for (const { page } of [host, guest]) await expect(page.locator('.online-notice')).toHaveCount(0, { timeout: 20_000 });
+      console.log('Room code: guest reconnected to the same match after reload');
+    }
+    // Close normally to clear this test room from the real public directory.
+    await host.page.getByRole('button', { name: `Комната ${code}`, exact: true }).click();
+    await host.page.getByRole('button', { name: 'Закрыть комнату', exact: true }).click();
+    await host.page.getByRole('dialog', { name: 'Выйти из комнаты', exact: true }).getByRole('button', { name: 'Выйти из комнаты', exact: true }).click();
+  } catch (error) {
+    console.error('Host:', (await host.page.locator('body').innerText()).slice(-3000));
+    console.error('Guest:', (await guest.page.locator('body').innerText()).slice(-3000));
+    throw error;
+  } finally { await Promise.all([host.context.close(), guest.context.close()]); }
+}
+try {
+  await flow(false);
+  await flow(true);
+  expect(errors).toEqual([]);
+  console.log('PASS: only live multiplayer connectivity checked (code, list, battle, reconnect).');
+} finally { await browser.close(); }

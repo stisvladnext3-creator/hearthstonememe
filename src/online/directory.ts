@@ -1,6 +1,6 @@
 import type { Peer, DataConnection } from 'peerjs';
 import { cleanName, ROOM_PREFIX, ROOM_PROTOCOL, validCode } from './protocol';
-import { peerRuntime, readMessage } from './transport';
+import { localRooms, peerRuntime, readMessage } from './transport';
 
 export const DIRECTORY_ID = `${ROOM_PREFIX}directory-${ROOM_PROTOCOL}`;
 export interface PublicRoom { code: string; hostName: string }
@@ -24,7 +24,7 @@ export function publicRoom(raw: unknown): PublicRoom | null {
 // to it; if it leaves, they elect a replacement and room owners re-advertise.
 // This keeps GitHub Pages usable without an additional hosted backend. Only room
 // codes and display names enter this connection, never decks, tokens or matches.
-export class RoomDirectory {
+class LocalRoomDirectory {
   private peer?: Peer;
   private connection?: DataConnection;
   private clients = new Map<DataConnection, { room?: PublicRoom; watching: boolean; seen: number }>();
@@ -139,7 +139,7 @@ export class RoomDirectory {
 }
 
 // Uses the room owner's existing peer, so the directory can verify ownership.
-export class RoomAdvertisement {
+class LocalRoomAdvertisement {
   private room: PublicRoom | null = null;
   private connection?: DataConnection;
   private disposed = false;
@@ -196,4 +196,28 @@ export class RoomAdvertisement {
     this.disposed = true; this.room = null; clearInterval(this.pulse);
     send(this.connection, { type: 'withdraw', protocol: ROOM_PROTOCOL }); this.drop(100);
   }
+}
+
+// The live directory is retained relay metadata, so displaying the list never
+// depends on establishing a WebRTC connection to another player's browser.
+export class RoomDirectory {
+  private source?: LocalRoomDirectory | import('./relay').RelayDirectory;
+  private disposed = false;
+  constructor(change: (state: DirectoryState) => void) {
+    if (localRooms()) this.source = new LocalRoomDirectory(change);
+    else void import('./relay').then(({ RelayDirectory }) => { if (!this.disposed) this.source = new RelayDirectory(change); })
+      .catch(() => change({ rooms: [], status: 'error' }));
+  }
+  refresh() { this.source?.refresh(); }
+  close() { this.disposed = true; this.source?.close(); }
+}
+export class RoomAdvertisement {
+  private source: { set: (room: PublicRoom | null) => void; retry: () => void; close: () => void };
+  constructor(peer: Peer) {
+    const live = peer as Peer & { advertisement?: () => RoomAdvertisement['source'] };
+    this.source = live.advertisement ? live.advertisement() : new LocalRoomAdvertisement(peer);
+  }
+  set(room: PublicRoom | null) { this.source.set(room); }
+  retry() { this.source.retry(); }
+  close() { this.source.close(); }
 }

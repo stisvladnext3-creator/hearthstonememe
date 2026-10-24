@@ -73,7 +73,8 @@ export class PeerRoom {
     this.update({ ...EMPTY_ROOM, phase: 'connecting', role, code: normalized, name: this.self.name, revision: resume?.revision ?? 0, listed: role === 'host' && (resume?.listed ?? listed) });
     try {
       const { Peer, options } = await peerRuntime(); if (this.disposed) return;
-      this.peer = role === 'host' ? new Peer(ROOM_PREFIX + normalized, options) : new Peer(options);
+      const peerOptions = { ...options, token: this.self.token };
+      this.peer = new Peer(role === 'host' ? ROOM_PREFIX + normalized : crypto.randomUUID(), peerOptions);
       this.connectTimer = setTimeout(() => { if (!this.state.connected && this.state.phase === 'connecting') this.update({ phase: 'error', error: 'Не удалось подключиться за 20 секунд. Проверь интернет и попробуй ещё раз.' }); }, 20000);
       this.peer.on('open', () => {
         if (this.disposed) return;

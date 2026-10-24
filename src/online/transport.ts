@@ -1,17 +1,18 @@
 import type { PeerOptions } from 'peerjs';
 
+export const localRooms = () => ['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).get('localRooms') === '1';
+
 export async function peerRuntime() {
-  const { Peer, util } = await import('peerjs');
-  let options: PeerOptions;
-  if (['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).get('localRooms') === '1') {
-    options = { host: '127.0.0.1', port: 9000, path: '/memestone', key: 'memestone', secure: false,
+  if (localRooms()) {
+    const { Peer } = await import('peerjs');
+    const options: PeerOptions = { host: '127.0.0.1', port: 9000, path: '/memestone', key: 'memestone', secure: false,
       config: { iceTransportPolicy: 'relay', iceServers: [{ urls: 'turn:127.0.0.1:3478?transport=tcp', username: 'memestone', credential: 'development-only' }] } };
-  } else {
-    options = { config: { ...util.defaultConfig, iceServers: util.defaultConfig.iceServers.map(server => ({ ...server,
-      urls: (Array.isArray(server.urls) ? server.urls : [server.urls]).flatMap(url => url.startsWith('turn:') ? [url, `${url}?transport=tcp`] : [url]),
-    })) } };
+    return { Peer, options };
   }
-  return { Peer, options };
+  const { RelayPeer } = await import('./relay');
+  // Implements the connection/event subset consumed by PeerRoom. Keep the
+  // game protocol and its private-state projection independent of transport.
+  return { Peer: RelayPeer as unknown as typeof import('peerjs').Peer, options: {} as PeerOptions };
 }
 
 export function readMessage(raw: unknown): unknown {

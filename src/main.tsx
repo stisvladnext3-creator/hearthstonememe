@@ -5,6 +5,7 @@ import { ArtworkProvider } from './artwork';
 import './styles.css';
 import './classic.css';
 import './readability.css';
+import './spell-cards.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ArtworkProvider><App /></ArtworkProvider></React.StrictMode>,

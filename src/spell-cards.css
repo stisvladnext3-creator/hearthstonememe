@@ -1,0 +1,86 @@
+/* Spell cards use a rectangular art window and a curved name ribbon. */
+.game-card.classic-card.kind-spell .card-frame {
+  filter: none;
+}
+
+.game-card.classic-card.kind-spell .card-art {
+  left: 18.5%;
+  right: 13.5%;
+  top: 10%;
+  height: 36%;
+  border-radius: 46% 46% 6% 6% / 17% 17% 4% 4%;
+}
+
+.game-card.classic-card.kind-spell .card-copy h3,
+.game-card.classic-card.kind-spell.long-name .card-copy h3 {
+  left: 11%;
+  right: 5%;
+  top: 44%;
+  height: 12%;
+  transform: none;
+  -webkit-text-stroke: 0;
+}
+
+.spell-title {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: #fff9ee;
+  stroke: #261a0d;
+  stroke-width: 4px;
+  paint-order: stroke fill;
+  stroke-linejoin: round;
+  font-family: 'Roboto Condensed', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-shadow: 0 2px 1px #1c110c;
+}
+
+.game-card.classic-card.kind-spell .card-copy p {
+  left: 21%;
+  right: 15%;
+  top: 67%;
+  height: 18.5%;
+  font-size: 5.3cqw;
+  line-height: 1.18;
+  color: #21180e;
+}
+
+.game-card.classic-card.kind-spell .card-kind {
+  display: none;
+}
+
+.game-card.classic-card.kind-spell .card-cost {
+  left: 2.5%;
+  top: 3.7%;
+  width: 25.5%;
+  height: 13%;
+  font-size: 21cqw;
+}
+
+.spell-rarity {
+  position: absolute;
+  z-index: 4;
+  left: 49.1%;
+  top: 55.8%;
+  width: 7.1%;
+  height: 5.4%;
+  border-radius: 50%;
+  border: 1px solid #29231c;
+  background: radial-gradient(ellipse at 33% 27%, #e9e8dc, #a6aaa8 40%, #56616a 72%, #232a33);
+  box-shadow: inset 1px 1px 1px #ffffff99, inset -1px -1px 1px #0009;
+  pointer-events: none;
+}
+
+.kind-spell.rare .spell-rarity {
+  background: radial-gradient(ellipse at 33% 27%, #bcecff, #3689dd 40%, #184b9f 72%, #0b1b4c);
+}
+
+.kind-spell.epic .spell-rarity {
+  background: radial-gradient(ellipse at 33% 27%, #f0b6ff, #ae41de 40%, #691b8e 72%, #290e41);
+}
+
+.kind-spell.legendary .spell-rarity {
+  background: radial-gradient(ellipse at 33% 27%, #fff0a1, #f7aa23 40%, #c05b09 72%, #642d04);
+}

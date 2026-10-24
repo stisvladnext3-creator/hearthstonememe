@@ -1,0 +1,54 @@
+.wood-buttons { gap: 10px; top: 27%; }
+.wood-main-button { height: 64px; }
+.wood-rooms-button > span { display: flex; gap: 12px; align-items: center; justify-content: center; }
+.rooms-page { max-width: 980px; margin: auto; padding: 22px 0 45px; color: #fff0d1; }
+.rooms-back { font-size: 15px; }
+.rooms-heading { margin: 28px 0; text-align: center; }
+.rooms-heading > .eyebrow { justify-content: center; }
+.rooms-heading h1 { font-family: var(--serif); font-size: clamp(28px, 4vw, 42px); line-height: 1.2; margin: 12px 0; color: #ffe2a2; text-shadow: 0 3px 4px #110a04; }
+.rooms-heading p { font-size: 18px; color: #ddd8c6; line-height: 1.5; }
+.room-entry-panel, .room-waiting-panel { background: linear-gradient(140deg, #253631f5, #17241ff5); border: 2px solid #b08b545c; border-radius: 12px; padding: 28px; box-shadow: 0 12px 35px #100b09a0, inset 0 0 0 3px #16251d; }
+.room-name-label { display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 18px; font-weight: 600; }
+.rooms-page input { background: #0f1f18; border: 1px solid #bca47370; border-radius: 5px; color: #fff4d4; padding: 11px 13px; font-size: 18px; min-width: 0; }
+.room-name-label input { width: 260px; max-width: 70%; }
+.room-deck-note { font-size: 14px; text-align: center; color: #c1cbbb; line-height: 1.5; margin: 13px 0 24px; }
+.room-entry-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.room-entry-grid > div, .room-entry-grid > form { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 24px 20px; border: 1px solid #b49a6352; border-radius: 8px; background: #15241ec7; }
+.room-entry-grid h2 { font: 21px/1.3 var(--serif); color: #ffe2ae; }
+.room-entry-grid p { font-size: 16px; line-height: 1.5; color: #cdd5c7; margin-bottom: auto; }
+.room-option-icon { color: #edc183; background: #a78b4f1c; border: 1px solid #a78b4f55; display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; }
+.room-entry-grid .button { margin-top: 8px; width: 100%; font-size: 16px; min-height: 46px; }
+.room-entry-grid label { font-size: 14px; color: #d3d9cb; width: 100%; display: flex; flex-direction: column; gap: 7px; }
+.room-entry-grid input { text-align: center; font-size: 23px; letter-spacing: 6px; width: 100%; }
+.room-connecting { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 22px 0 5px; font-size: 17px; text-align: center; line-height: 1.5; color: #f8d7a2; }
+.room-connecting > svg, .waiting-member .room-member-symbol > svg { animation: room-spin 2s linear infinite; }
+.resume-room { display: flex; margin: 20px auto 0; font-size: 16px; }
+.room-error { display: flex; align-items: center; gap: 10px; padding: 14px 18px; background: #632e27f5; border: 1px solid #c4896b; border-radius: 6px; color: #fff0d9; font-size: 16px; line-height: 1.45; margin-bottom: 18px; }
+.room-code-heading { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.room-code-heading > span { color: #c9c9ac; font-size: 11px; letter-spacing: 1.5px; }
+.room-code-heading > strong { font: 33px/1.3 var(--serif); letter-spacing: 5px; color: #ffe1a1; }
+.room-code-heading .icon-button { color: #e7ca98; width: 40px; height: 40px; }
+.room-sharing { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 17px 0 25px; flex-wrap: wrap; }
+.room-sharing > span { font-size: 14px; color: #c9e3b8; }
+.room-members { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.room-members > div { display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 24px 12px; border: 1px solid #a8bb7f70; background: #203a29; border-radius: 8px; text-align: center; min-width: 0; }
+.room-members > div.waiting-member { border-style: dashed; background: #15251e; color: #b8c3af; }
+.room-member-symbol { display: grid; place-items: center; width: 55px; height: 55px; border: 2px solid #d2b57a80; border-radius: 50%; color: #ebcc91; background: #a58e4a12; }
+.room-members strong { font-size: 21px; color: #ffedbf; max-width: 100%; overflow-wrap: anywhere; }
+.room-members small { font-size: 14px; color: #c0cbb7; }
+.room-members > div > span:last-child { display: flex; gap: 6px; align-items: center; font-size: 13px; color: #c5e4b0; margin-top: 5px; }
+.room-start { display: flex; width: min(100%, 340px); margin: 25px auto 0; font-size: 18px; min-height: 48px; }
+.room-leave { display: flex; margin: 19px auto 0; font-size: 14px; color: #e7ba9c; }
+.rooms-footnote { max-width: 720px; margin: 22px auto 0; padding: 13px 18px; background: #20190de8; border: 1px solid #bc95545e; border-radius: 6px; font-size: 15px; line-height: 1.5; color: #e3dac0; text-align: center; }
+.online-notice { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); max-width: 92%; padding: 8px 14px; background: #251b3cf5; border: 1px solid #c9a2db; color: #ffebce; border-radius: 6px; z-index: 45; font-size: 14px; line-height: 1.3; text-align: center; }
+.rematch-invite { padding: 10px; margin: 12px 0; color: #e9d2a8; font-size: 15px; }
+@keyframes room-spin { to { transform: rotate(360deg); } }
+@media(max-width:600px) {
+  .wood-buttons { gap: 7px; top: 26%; }.wood-main-button { height: 46px; }.wood-main-button > span { font-size: 21px; }.wood-rooms-button > span > svg { width: 19px; height: 19px; }
+  .rooms-page { padding: 15px 0 28px; }.rooms-heading { margin: 25px 0 20px; }.rooms-heading p { font-size: 16px; }
+  .room-entry-panel, .room-waiting-panel { padding: 18px 13px; }.room-name-label { flex-direction: column; gap: 9px; }.room-name-label input { max-width: 100%; width: 100%; }
+  .room-entry-grid { grid-template-columns: 1fr; gap: 16px; }.room-entry-grid > div, .room-entry-grid > form { padding: 20px 16px; }
+  .room-entry-grid h2 { font-size: 20px; }.room-deck-note { font-size: 14px; }.room-code-heading { gap: 8px; }.room-code-heading > span { width: 100%; text-align: center; }
+  .room-code-heading > strong { font-size: 29px; }.room-members { gap: 9px; }.room-members > div { padding: 18px 7px; }.room-members strong { font-size: 17px; }.room-members small { font-size: 12px; }
+  .room-sharing .button { font-size: 14px; }.rooms-footnote { font-size: 14px; padding: 12px; }.online-notice { font-size: 12px; padding: 6px 9px; }
+}

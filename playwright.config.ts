@@ -12,9 +12,9 @@ export default defineConfig({
     launchOptions: { executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', args: ['--no-sandbox'] },
     screenshot: 'only-on-failure',
   },
-  webServer: {
+  webServer: [{
     command: 'npm run preview -- --port 4173',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,
-  },
+  }, { command: 'node scripts/signaling.mjs', url: 'http://127.0.0.1:9000/memestone', reuseExistingServer: !process.env.CI }],
 });

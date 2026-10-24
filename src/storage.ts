@@ -32,6 +32,7 @@ function validPlayer(p: Player): boolean {
   return !!p && [p.health, p.armor, p.mana, p.maxMana, p.fatigue].every(finite)
     && p.mana >= 0 && p.maxMana >= 0 && p.maxMana <= 10 && p.mana <= p.maxMana && p.armor >= 0
     && ['spark', 'fool', 'oy', 'rds'].includes(p.power) && typeof p.powerUsed === 'boolean' && typeof p.hero === 'string'
+    && (p.name === undefined || typeof p.name === 'string' && p.name.length <= 20)
     && (p.powerSilenceTurns === undefined || Number.isSafeInteger(p.powerSilenceTurns) && p.powerSilenceTurns >= 0 && p.powerSilenceTurns <= 2)
     && (p.quest === undefined || p.quest?.id === 'rash-quest' && Number.isSafeInteger(p.quest.progress) && p.quest.progress >= 0 && p.quest.progress < 8)
     && Array.isArray(p.deck) && p.deck.every(cardId)

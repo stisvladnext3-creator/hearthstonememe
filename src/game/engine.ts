@@ -13,6 +13,7 @@ export interface Minion extends HandCard {
   attackBuff?: number;
 }
 export interface Player {
+  name?: string;
   health: number; armor: number; mana: number; maxMana: number;
   hand: HandCard[]; deck: string[]; board: Minion[];
   fatigue: number; hero: string; power: 'spark' | 'fool' | 'oy' | 'rds' | 'briefing'; powerUsed: boolean;
@@ -182,11 +183,11 @@ function emptyPlayer(hero: string): Player {
   return { health: 30, armor: 0, mana: 0, maxMana: 0, hand: [], deck: [], board: [],
     fatigue: 0, hero, power: 'spark', powerUsed: false, powerSilenceTurns: 0 };
 }
-export function createGame(deck = STARTER_DECK, seed = Date.now()): Game {
+export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck = BOT_DECK): Game {
   const g: Game = { id: String(seed), rashDeaths: 0, events: [], player: emptyPlayer('mage'), bot: emptyPlayer('boris'), active: 'player', turn: 1,
     winner: null, nextUid: 1, rng: seed, log: [], nextLog: 1 };
   g.player.deck = shuffled(g, deckError(deck) ? STARTER_DECK : deck);
-  g.bot.deck = shuffled(g, BOT_DECK);
+  g.bot.deck = shuffled(g, deckError(opponentDeck) ? BOT_DECK : opponentDeck);
   for (const side of ['player', 'bot'] as Side[]) {
     const i = g[side].deck.indexOf('casino');
     if (i >= 0) addToHand(g, side, g[side].deck.splice(i, 1)[0]);

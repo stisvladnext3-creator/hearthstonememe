@@ -25,12 +25,12 @@ function Entity({ entity, inspect, note, small = false }: { entity: HistoryEntit
     <span className="history-entity-name">{entity.name}</span>
   </button>;
 }
-export default function BattleHistory({ entries, inspect, close }: { entries: HistoryEntry[]; inspect: Inspect; close: () => void }) {
+export default function BattleHistory({ entries, inspect, close, opponent = 'Борис' }: { entries: HistoryEntry[]; inspect: Inspect; close: () => void; opponent?: string }) {
   return <aside className="battle-log illustrated-history" aria-label="История сражения"><div className="history-header"><div><span>ХРОНИКИ ТРАКТИРА</span><h3>История сражения</h3></div><button className="icon-button" aria-label="Закрыть журнал" onClick={close}><X size={20} /></button></div>
     <ol>{[...entries].reverse().map(entry => {
       const kind = KINDS[entry.kind ?? (entry.side === 'system' ? 'turn' : 'effect')];
       return <li key={entry.id} className={`history-entry ${entry.side} history-${entry.kind ?? 'legacy'}`}>
-        <div className="history-entry-heading"><span>ХОД {entry.turn ?? '—'} · {entry.side === 'player' ? 'ВЫ' : entry.side === 'bot' ? 'БОРИС' : 'ТРАКТИР'}</span><span>{kind.icon}{kind.text}</span></div>
+        <div className="history-entry-heading"><span>ХОД {entry.turn ?? '—'} · {entry.side === 'player' ? 'ВЫ' : entry.side === 'bot' ? opponent.toUpperCase() : 'ТРАКТИР'}</span><span>{kind.icon}{kind.text}</span></div>
         {entry.hero && <div className="history-caster"><Entity entity={entry.hero} inspect={inspect} note={entry.text} small /><span>использует силу героя</span></div>}
         {entry.actor && <div className="history-participants"><Entity entity={entry.actor} inspect={inspect} note={entry.text} />{entry.target && <><span className="history-action-arrow">{entry.kind === 'attack' ? <Swords size={18} /> : <ArrowRight size={18} />}</span><Entity entity={entry.target} inspect={inspect} note={entry.text} /></>}</div>}
         {entry.result && <div className="history-transform-result"><RefreshCw size={15} /><span>Превращено в</span><Entity entity={entry.result} inspect={inspect} note={`${entry.text} Боевой клич не срабатывал.`} small /></div>}

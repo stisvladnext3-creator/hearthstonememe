@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -11,12 +11,14 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "rooms:signaling": "node scripts/signaling.mjs"
   },
   "dependencies": {
     "@fontsource/roboto-condensed": "^5.3.0",
     "@fontsource/russo-one": "^5.3.0",
     "lucide-react": "^0.468.0",
+    "peerjs": "^1.5.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -26,6 +28,8 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "node-turn": "^0.0.6",
+    "peer": "^1.0.2",
     "typescript": "~5.7.2",
     "vite": "^6.0.5",
     "vitest": "^3.0.5"

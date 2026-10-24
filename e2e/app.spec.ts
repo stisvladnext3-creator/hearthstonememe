@@ -644,7 +644,7 @@ test('Maxim chooses an ally, creates a reusable echo, and temporary copies disap
   expect((await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!))).player.hand).toHaveLength(0);
 });
 
-test('both new Jainas have their supplied portraits, correct stats and complete rules', async ({ page }) => {
+test('both Jainas have their newly generated portraits, correct stats and complete rules', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
   for (const [id, attack, health] of [['jaina-rusher', '5', '1'], ['jaina-volunteer', '2', '1']]) {
@@ -652,7 +652,7 @@ test('both new Jainas have their supplied portraits, correct stats and complete 
     const detail = page.getByRole('dialog', { name: CARD[id].name, exact: true });
     await expect(detail.locator('.effect-description')).toContainText('РДШ'); await expect(detail.locator('.awaiting-original')).toHaveCount(0);
     await expect(detail.locator('.attack-stat')).toHaveText(attack); await expect(detail.locator('.health-stat')).toHaveText(health);
-    expect(await detail.locator('.original-portrait').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('jaina-portraits.png');
+    expect(await detail.locator('.original-portrait').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('jaina-maxim.png');
     await page.keyboard.press('Escape');
   }
 });

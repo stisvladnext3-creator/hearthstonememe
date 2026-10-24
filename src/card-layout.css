@@ -1,0 +1,37 @@
+/* Fixed text regions follow each frame. Font fitting keeps the full rules visible. */
+.game-card.classic-card:not(.kind-spell) .card-copy h3 {
+  top: 50.9%; height: 7.8%; left: 13%; right: 10%;
+  margin: 0; padding: 0; overflow: hidden; line-height: 1.03;
+  -webkit-text-stroke: .45cqw #171109;
+}
+.game-card.classic-card .card-copy p,
+.hand-card-wrap .game-card.classic-card .card-copy p {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; line-height: 1.18; text-align: center;
+  text-wrap: pretty; overflow: hidden;
+}
+.game-card.classic-card .card-fit {
+  display: block; width: 100%; max-width: 100%; flex: 0 0 100%;
+  line-height: inherit; white-space: normal; overflow-wrap: normal;
+  word-break: normal; text-align: center;
+}
+.game-card.classic-card .card-copy p b { display: inline; font-weight: 700; }
+.game-card.classic-card .card-kind { display: flex; align-items: center; justify-content: center; height: 4.5%; }
+.game-card.classic-card.kind-spell .card-kind,
+.game-card.classic-card.kind-hero .card-kind,
+.game-card.classic-card.kind-power .card-kind { display: none; }
+.card-rarity {
+  --gem-light: #fff; --gem-main: #e6edf0; --gem-dark: #84959f;
+  position: absolute; z-index: 5; pointer-events: none;
+  left: 46.8%; top: 57.2%; width: 7.5%; height: 6.4%;
+  border-radius: 50% 50% 48% 48%; border: .5cqw solid #332c28;
+  background: radial-gradient(ellipse at 29% 22%, var(--gem-light), transparent 39%),
+    conic-gradient(from 25deg, var(--gem-main), var(--gem-dark), var(--gem-main), var(--gem-light), var(--gem-dark), var(--gem-main));
+  box-shadow: inset .4cqw .35cqw .7cqw #fff9, inset -.45cqw -.4cqw .6cqw #0008, 0 .3cqw .5cqw #0009;
+}
+.card-rarity[data-rarity="rare"] { --gem-light: #d6f4ff; --gem-main: #2585ec; --gem-dark: #123b9e; }
+.card-rarity[data-rarity="epic"] { --gem-light: #f5cdff; --gem-main: #bd40ed; --gem-dark: #641b91; }
+.card-rarity[data-rarity="legendary"] { --gem-light: #fff2bc; --gem-main: #ffac21; --gem-dark: #bb4d08; }
+.kind-spell .card-rarity { left: 49.1%; top: 55.8%; width: 7.1%; height: 5.4%; }
+.kind-hero .card-rarity { left: 44.9%; top: 60%; width: 7.5%; height: 6.5%; }
+.kind-power .card-rarity { left: 52.2%; top: 88.9%; width: 6%; height: 6.9%; border-radius: 0; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }

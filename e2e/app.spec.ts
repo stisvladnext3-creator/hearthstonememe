@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createGame, type Game, type Minion } from '../src/game/engine';
-import { CARD, CARDS, STARTER_DECK } from '../src/game/cards';
+import { CARD, CARDS, STARTER_DECK, RARITY_NAMES, deckCopyLimit } from '../src/game/cards';
 
 function fixture(): Game {
   const g = createGame(undefined, 951);
@@ -225,7 +225,7 @@ test('the album pages through every card exactly once and resets its page after 
   const names: string[] = [];
   for (let n = 1; n <= Math.ceil(CARDS.length / 8); n++) {
     await expect(page.getByRole('status').filter({ hasText: /Страница/ })).toContainText(`Страница ${n}`);
-    names.push(...await page.locator('.card-grid .game-card').evaluateAll(cards => cards.map(c => c.getAttribute('aria-label')!)));
+    names.push(...await page.locator('.card-grid .game-card').evaluateAll(cards => cards.map(c => c.getAttribute('data-card-id')!)));
     if (n < Math.ceil(CARDS.length / 8)) await page.getByRole('button', { name: 'Следующая страница' }).click();
   }
   expect(names).toHaveLength(CARDS.length); expect(new Set(names).size).toBe(CARDS.length);
@@ -284,23 +284,23 @@ test('right-click reads a hand card without playing it', async ({ page }) => {
 });
 
 test('visual history distinguishes transformation from a played battlecry and shows hero/power images', async ({ page }) => {
-  const g = fixture(); unit(g, 'guardian', true); g.player.hand = [{ id: 'trachukcha', uid: g.nextUid++ }];
+  const g = fixture(); g.rng = 0; unit(g, 'guardian', true); g.player.hand = [{ id: 'trachukcha', uid: g.nextUid++ }];
   await seed(page, g);
   await page.getByRole('button', { name: 'Сила героя Искра, 2 маны', exact: true }).click();
   await page.getByRole('button', { name: /Страж трактира: 4 атаки/ }).click();
-  await page.getByRole('button', { name: 'Трачукча, 0 маны', exact: true }).click();
+  await page.getByRole('button', { name: 'Трачукча, 3 маны', exact: true }).click();
   await page.getByRole('button', { name: 'Сила героя Дибильнутый!, 3 маны', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Хорошая игра.: 99 атаки, 99 здоровья/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Завсегдатай: 1 атаки, 2 здоровья/ })).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Результат боя' })).toHaveCount(0);
   await page.getByRole('button', { name: 'История сражения', exact: true }).click();
   await expect(page.locator('.history-entry > p').first()).toBeInViewport();
   await expect(page.locator('.history-entry.history-transform .history-entity.power')).toBeVisible();
-  await expect(page.locator('.history-transform-result')).toContainText('Хорошая игра.');
+  await expect(page.locator('.history-transform-result')).toContainText('Завсегдатай');
   await expect(page.locator('.history-entry.history-transform')).toContainText('Боевой клич результата не срабатывает');
   await expect(page.locator('.history-caster').filter({ hasText: 'Лира' }).first()).toBeVisible();
   await expect(page.locator('.history-caster').filter({ hasText: 'Трачукча' }).first()).toBeVisible();
-  await page.locator('.history-transform-result').getByRole('button', { name: 'Посмотреть Хорошая игра.' }).click();
-  await expect(page.getByRole('dialog', { name: 'Хорошая игра.' })).toBeVisible();
+  await page.locator('.history-transform-result').getByRole('button', { name: 'Посмотреть Завсегдатай' }).click();
+  await expect(page.getByRole('dialog', { name: 'Завсегдатай' })).toBeVisible();
 });
 
 test('a bot lethal outcome reaches the victory screen and increments wins once', async ({ page }) => {
@@ -729,4 +729,46 @@ test('the forge field is selectable, persists and has a portrait background', as
   await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'forge');
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+for (const width of [1440, 390]) test(`every card fits its full name and effect inside the frame and has the right rarity crystal at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 1000 }); await page.goto('/');
+  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.evaluate(() => document.fonts.ready);
+  const colors = { common: '#e6edf0', rare: '#2585ec', epic: '#bd40ed', legendary: '#ffac21' };
+  const visited = new Set<string>();
+  for (;;) {
+    const cards = page.locator('.album-card-grid .game-card');
+    for (const card of await cards.all()) {
+      const label = await card.getAttribute('aria-label');
+      const def = CARD[(await card.getAttribute('data-card-id'))!];
+      expect(def, label!).toBeDefined(); visited.add(def.id);
+      for (const selector of ['.card-copy h3 .card-fit', '.card-copy p .card-fit']) {
+        const span = card.locator(selector);
+        if (!await span.count()) continue;
+        await expect.poll(() => span.evaluate(s => ({ fits: s.scrollWidth <= s.parentElement!.clientWidth + 1 && s.scrollHeight <= s.parentElement!.clientHeight + 1,
+          text: s.textContent }))).toEqual({ fits: true, text: selector.includes('h3') ? def.name : def.text });
+      }
+      const svg = card.locator('.spell-title text');
+      if (await svg.count()) expect(await svg.evaluate(e => (e as SVGTextElement).getComputedTextLength() <= 335)).toBe(true);
+      const gem = card.locator('.card-rarity'); await expect(gem).toHaveCount(1);
+      await expect(gem).toHaveAttribute('aria-label', `Редкость: ${RARITY_NAMES[def.rarity]}`);
+      expect(await gem.evaluate(e => getComputedStyle(e).getPropertyValue('--gem-main').trim())).toBe(colors[def.rarity]);
+      if (def.kind !== 'power' && def.kind !== 'token') await expect(card.locator('..').locator('.album-owned')).toHaveText(`×${deckCopyLimit(def)}`);
+    }
+    const next = page.getByRole('button', { name: 'Следующая страница', exact: true });
+    if (await next.isDisabled()) break; await next.click();
+  }
+  expect(visited.size).toBe(CARDS.length);
+});
+
+test('new instigator and both Slimes have generated art and inspectable rules', async ({ page }) => {
+  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  for (const name of ['Джайна-зачинщик', 'Слизь']) {
+    await page.getByLabel('Поиск карт').fill(name);
+    for (const card of await page.locator('.album-card-grid .game-card').all()) {
+      await expect(card.locator('.original-portrait')).toHaveCSS('background-image', /jaina-slimes\.png/);
+      await expect(card.locator('.card-copy p')).toContainText(name === 'Слизь' ? 'Провокация.' : 'Предсмертный хрип:');
+    }
+  }
 });

@@ -166,13 +166,13 @@ describe('custom meme cards and powers', () => {
     expect(hit).toBeGreaterThan(30); expect(miss).toBeGreaterThan(30);
     expect(playerHit).toBeGreaterThan(0); expect(botHit).toBeGreaterThan(0);
   });
-  it('Трачукча is free, grants 99 armor and replaces the power', () => {
+  it('Трачукча costs 3, grants 50 armor and replaces the power', () => {
     const g = fixture(); unit(g, 'dragon', 'bot');
     const next = play(g, 'trachukcha').state;
-    expect(next.player.armor).toBe(99); expect(next.player.mana).toBe(10);
+    expect(next.player.armor).toBe(50); expect(next.player.mana).toBe(7);
     expect(next.player.power).toBe('fool'); expect(next.player.hero).toBe('trachukcha');
     const powered = act(next, 'player', { type: 'power' }).state;
-    expect(powered.player.hand).toHaveLength(0); expect(powered.player.armor).toBe(99); expect(powered.player.mana).toBe(7);
+    expect(powered.player.hand).toHaveLength(0); expect(powered.player.armor).toBe(50); expect(powered.player.mana).toBe(4);
     expect(CARD[powered.bot.board[0].id].cost).toBe(2);
     expect(act(powered, 'player', { type: 'power' }).error).toBeTruthy();
   });
@@ -192,7 +192,7 @@ describe('custom meme cards and powers', () => {
   });
   it('Маратик grants armor and Ой creates a playable Смертокрыл 1/1', () => {
     const next = play(fixture(), 'maratik').state;
-    expect(next.player.power).toBe('oy'); expect(next.player.armor).toBe(5);
+    expect(next.player.power).toBe('oy'); expect(next.player.armor).toBe(20);
     next.player.mana = 10;
     const powered = act(next, 'player', { type: 'power' }).state;
     expect(powered.player.mana).toBe(4); expect(powered.player.hand.map(c => c.id)).toEqual(['deathwing']);
@@ -246,11 +246,11 @@ describe('new cards, death accounting and history', () => {
     expect(next.bot.board[0].id).toBe('zhanna'); expect(next.player.board.map(m => m.id)).toEqual(['zhanna', 'maxim']);
     expect(next.log.some(l => l.text.includes('Максимка') && l.text.includes('3'))).toBe(true);
   });
-  it('Дибильнутый transforms every enemy at exact reduced cost, without battlecries or death counts', () => {
+  it('Дибильнутый transforms every enemy at reduced cost with a safe cheapest fallback, without battlecries or death counts', () => {
     const g = fixture(); g.player.power = 'fool'; unit(g, 'me', 'bot'); unit(g, 'rash', 'bot');
     const beforeHand = [...g.bot.hand];
     const next = act(g, 'player', { type: 'power' }).state;
-    expect(next.bot.board.map(m => CARD[m.id].cost)).toEqual([5, 0]);
+    expect(next.bot.board.map(m => CARD[m.id].cost)).toEqual([5, 1]);
     expect(next.rashDeaths).toBe(0); expect(next.bot.health).toBe(30); expect(next.winner).toBeNull();
     expect(next.bot.hand).toEqual(beforeHand); expect(next.player.mana).toBe(7);
     expect(next.events.filter(e => e.kind === 'transform')).toHaveLength(2);

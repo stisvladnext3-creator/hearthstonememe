@@ -45,7 +45,7 @@ function Unit({ m, side, selected, canSelect, targetable, onClick, inspect }: {
     {m.origin === 'transformed' && <span className="origin-badge" title="Превращение: боевой клич не срабатывал"><RefreshCw size={11} /></span>}
     {m.charge && !m.silenced && <span className="charge-badge" title="Рывок: может атаковать сразу после выхода"><Zap size={12} /></span>}
     {m.rush && !m.silenced && <span className="rush-badge" title="Натиск: сразу атакует существ, героя — со следующего своего хода"><Swords size={12} /></span>}
-    {c.deathrattle && !m.silenced && <span className="deathrattle-badge" title="Предсмертный хрип: призывает РДШ 1/3 с провокацией">☠</span>}
+    {c.deathrattle && !m.silenced && <span className="deathrattle-badge" title={c.text.slice(c.text.indexOf('Предсмертный хрип:'))}>☠</span>}
     {m.taunt && <Shield className="taunt-icon" size={17} />}
     {!m.ready && !m.cannotAttack && <span className="sleep-mark">zZ</span>}
     {m.cannotAttack && <span className="sleep-mark"><X size={15} /></span>}

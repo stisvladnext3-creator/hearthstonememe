@@ -120,15 +120,33 @@ export function refreshAuras(g: Game) {
   return changes;
 }
 function resolve(g: Game) {
-  for (const side of [g.active, other(g.active)]) destroy(g, side, m => m.health <= 0);
-  const pending = deathrattles.get(g) ?? [];
-  deathrattles.delete(g);
-  for (const { side, minion } of pending) {
-    const id = CARD[minion.id].deathrattle!;
-    const token = summon(g, side, id, undefined, minion.id);
-    emit(g, { kind: 'spell', side, source: minion.uid, cardId: minion.id, target: { side, uid: token?.uid ?? 'hero' } });
-    log(g, `Предсмертный хрип «${CARD[minion.id].name}»: ${token ? `призывает ${CARD[id].name} 1/3 с провокацией` : 'призыв не сработал — на столе нет места'}.`, side,
-      { actor: cardEntity(minion.id, side, minion), target: token ? cardEntity(id, side, token) : undefined });
+  // A damage deathrattle can kill another deathrattle minion. Resolve each wave
+  // after removing every casualty, so targeting and free board slots are correct.
+  for (;;) {
+    for (const side of [g.active, other(g.active)]) destroy(g, side, m => m.health <= 0);
+    const pending = deathrattles.get(g) ?? [];
+    deathrattles.delete(g);
+    if (!pending.length) break;
+    for (const { side, minion } of pending) {
+      const deathrattle = CARD[minion.id].deathrattle!;
+      if (deathrattle === 'randomEnemyDamage') {
+        const foe = other(side), enemy = g[foe];
+        const targets: (number | 'hero')[] = ['hero', ...enemy.board.filter(m => m.health > 0).map(m => m.uid)];
+        const uid = targets[Math.floor(random(g) * targets.length)];
+        const body = enemy.board.find(m => m.uid === uid);
+        const victim = body ? cardEntity(body.id, foe, body) : heroEntity(enemy, foe);
+        if (body) body.health--; else damageHero(enemy, 1);
+        emit(g, { kind: 'spell', side, source: minion.uid, cardId: minion.id, target: { side: foe, uid } });
+        emit(g, { kind: 'damage', side: foe, cardId: minion.id, target: { side: foe, uid }, amount: 1 });
+        log(g, `Предсмертный хрип «${CARD[minion.id].name}» → ${victim.name}: 1 урон.`, side,
+          { actor: cardEntity(minion.id, side, minion), target: victim, amount: 1 });
+      } else {
+        const token = summon(g, side, deathrattle, undefined, minion.id);
+        emit(g, { kind: 'spell', side, source: minion.uid, cardId: minion.id, target: { side, uid: token?.uid ?? 'hero' } });
+        log(g, `Предсмертный хрип «${CARD[minion.id].name}»: ${token ? `призывает ${CARD[deathrattle].name} ${token.attack}/${token.health}${token.taunt ? ' с провокацией' : ''}` : 'призыв не сработал — на столе нет места'}.`, side,
+          { actor: cardEntity(minion.id, side, minion), target: token ? cardEntity(deathrattle, side, token) : undefined });
+      }
+    }
   }
   for (const { side, minion, before } of refreshAuras(g)) {
     log(g, `Аура Василия: ${CARD[minion.id].name}, атака ${before} → ${minion.attack} (бонус +${minion.auraBonus}).`, side,
@@ -308,8 +326,8 @@ export function act(input: Game, side: Side, action: Action): Result {
         } else record('Козиныч: ничего не произошло. Сегодня повезло!');
         break;
       }
-      case 'trachukcha': p.hero = 'trachukcha'; p.armor += 99; p.power = 'fool'; p.powerUsed = false; p.powerSilenceTurns = 0; record('Трачукча даёт 99 брони и заменяет силу героя на «Дибильнутый!».', { target: powerEntity(p, side) }); break;
-      case 'maratik': p.hero = 'maratik'; p.armor += 5; p.power = 'oy'; p.powerUsed = false; p.powerSilenceTurns = 0; record('Маратик даёт 5 брони и заменяет силу героя на «Ой».', { target: powerEntity(p, side) }); break;
+      case 'trachukcha': p.hero = 'trachukcha'; p.armor += c.armor!; p.power = 'fool'; p.powerUsed = false; p.powerSilenceTurns = 0; record(`Трачукча даёт ${c.armor} брони и заменяет силу героя на «Дибильнутый!».`, { target: powerEntity(p, side) }); break;
+      case 'maratik': p.hero = 'maratik'; p.armor += c.armor!; p.power = 'oy'; p.powerUsed = false; p.powerSilenceTurns = 0; record(`Маратик даёт ${c.armor} брони и заменяет силу героя на «Ой».`, { target: powerEntity(p, side) }); break;
       case 'jaina': p.hero = 'jaina'; p.armor += 10; p.power = 'rds'; p.powerUsed = false; p.powerSilenceTurns = 0; record(`Джайна даёт 10 брони и «Силу РДШ». Погибло РДШ за матч: ${g.rashDeaths}.`, { target: powerEntity(p, side) }); break;
       case 'purgeZhanna': {
         let removed = 0;
@@ -447,13 +465,14 @@ export function act(input: Game, side: Side, action: Action): Result {
     if (power === 'rds') { summon(g, side, 'rash', 'hero', 'rds-power'); record('Сила РДШ призывает РДШ 2/5.', { kind: 'power', target: cardEntity('rash', side) }); }
     if (power === 'briefing') { const id = p.deck[0]; draw(g, side); record('Сила героя «Взять карту»: добор одной карты.', { kind: 'power', target: id ? cardEntity(id, side) : undefined }); }
     if (power === 'fool') {
-      const pool = COLLECTIBLE.filter(c => c.kind === 'minion');
+      const pool = COLLECTIBLE.filter(c => c.kind === 'minion' && c.effect !== 'concede');
       enemy.board = enemy.board.map(m => {
         const cost = Math.max(0, CARD[m.id].cost - 5);
         let options = pool.filter(c => c.cost === cost);
         // A future sparse card pool uses the closest lower cost when an exact one is absent.
         if (!options.length) {
-          const lower = Math.max(...pool.filter(c => c.cost <= cost).map(c => c.cost));
+          const cheaper = pool.filter(c => c.cost <= cost);
+          const lower = cheaper.length ? Math.max(...cheaper.map(c => c.cost)) : Math.min(...pool.map(c => c.cost));
           options = pool.filter(c => c.cost === lower);
         }
         const c = options[Math.floor(random(g) * options.length)];

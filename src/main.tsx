@@ -9,6 +9,7 @@ import './spell-cards.css';
 import './discover.css';
 import './battle-layout.css';
 import './rooms.css';
+import './card-layout.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ArtworkProvider><App /></ArtworkProvider></React.StrictMode>,

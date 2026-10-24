@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Copy, DoorOpen, Link, LoaderCircle, Play, RefreshCw, Swords, Users, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Check, Copy, DoorOpen, Globe, Link, LoaderCircle, Play, RefreshCw, Swords, Users, Wifi, WifiOff } from 'lucide-react';
 import Battle from './Battle';
 import Modal from './Modal';
 import { PeerRoom, inviteLink, savedRoom } from '../online/room';
 import { cleanName, EMPTY_ROOM, normalizeCode, type RoomState } from '../online/protocol';
+import { EMPTY_DIRECTORY, RoomDirectory, type DirectoryState } from '../online/directory';
 import type { Inspect } from '../inspection';
 import type { BattlegroundId } from '../battlegrounds';
 import { read, write } from '../storage';
@@ -19,12 +20,18 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
   const [leaving, setLeaving] = useState(false);
   const [copied, setCopied] = useState('');
   const [resume, setResume] = useState(savedRoom);
+  const [listed, setListed] = useState(true);
+  const [directory, setDirectory] = useState<DirectoryState>({ ...EMPTY_DIRECTORY });
   const controller = useRef<PeerRoom | null>(null);
+  const directoryController = useRef<RoomDirectory | null>(null);
   const matchId = useRef('');
   const inBattle = active && room.phase === 'playing' && !!room.game && !showLobby;
   useEffect(() => { battleChanged(inBattle); }, [inBattle, battleChanged]);
-  useEffect(() => () => controller.current?.close(), []);
-  const open = (role: 'host' | 'guest', restore = false) => {
+  useEffect(() => { if (active && !directoryController.current) directoryController.current = new RoomDirectory(setDirectory); }, [active]);
+  useEffect(() => () => {
+    controller.current?.close(); directoryController.current?.close(); directoryController.current = null;
+  }, []);
+  const open = (role: 'host' | 'guest', restore = false, destination?: string) => {
     controller.current?.close();
     const next = new PeerRoom(state => {
       if (controller.current !== next) return;
@@ -33,7 +40,8 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
     });
     controller.current = next; write('online-name', cleanName(name));
     const saved = restore ? savedRoom() : undefined;
-    void next.open(saved?.role ?? role, name, deck, saved?.code ?? code, saved ?? undefined);
+    if (destination) setCode(destination);
+    void next.open(saved?.role ?? role, name, deck, saved?.code ?? destination ?? code, saved ?? undefined, listed);
   };
   const leave = () => {
     controller.current?.close(true); controller.current = null; setRoom({ ...EMPTY_ROOM });
@@ -54,12 +62,20 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
   const connecting = room.phase === 'connecting';
   return <section className="rooms-page page-enter">
     <button className="text-button rooms-back" onClick={home}><ArrowLeft size={17} /> Главное меню</button>
-    <div className="rooms-heading"><span className="eyebrow"><Users size={17} /> СВОЯ КОМПАНИЯ</span><h1>Игровые комнаты</h1><p>Создай комнату и позови друга. Или присоединяйся по коду.</p></div>
+    <div className="rooms-heading"><span className="eyebrow"><Users size={17} /> СВОЯ КОМПАНИЯ</span><h1>Игровые комнаты</h1><p>Выбери открытую комнату, создай свою или зайди по коду.</p></div>
     {room.error && <div className="room-error" role="alert"><WifiOff size={18} />{room.error}</div>}
     {!entered && <div className="room-entry-panel">
       <label className="room-name-label">Твоё имя<input aria-label="Имя игрока" maxLength={20} value={name} onChange={e => setName(e.target.value)} disabled={connecting} /></label>
       <p className="room-deck-note">В бой пойдёт твоя сохранённая колода: {deck.length} карт. Её можно изменить в коллекции.</p>
-      <div className="room-entry-grid"><div><span className="room-option-icon"><Users size={29} /></span><h2>Позвать друга</h2><p>Получишь код и ссылку на свою комнату.</p><button className="button primary" onClick={() => open('host')} disabled={connecting}><Swords size={17} />Создать комнату</button></div>
+      <section className="public-rooms" aria-label="Список открытых комнат">
+        <div className="public-rooms-heading"><h2><Globe size={21} />Открытые комнаты <span>{directory.rooms.length}</span></h2><button className="icon-button" aria-label="Обновить список комнат" onClick={() => directoryController.current?.refresh()}><RefreshCw size={18} className={directory.status === 'connecting' ? 'spinning' : ''} /></button></div>
+        {directory.status !== 'ready' ? <p className="public-rooms-empty" role="status">{directory.status === 'connecting' ? 'Ищем открытые комнаты…' : 'Восстанавливаем список комнат. По коду можно войти сразу.'}</p>
+          : directory.rooms.length ? <ul>{directory.rooms.map(entry => <li key={entry.code} data-room-code={entry.code}>
+            <span className="public-room-icon"><Users size={22} /></span><div><strong>Комната {entry.hostName}</strong><small>Код {entry.code} · ждёт соперника</small></div><span className="public-room-seats">1/2</span>
+            <button className="button primary" aria-label={`Войти в комнату ${entry.hostName}`} disabled={connecting} onClick={() => open('guest', false, entry.code)}><DoorOpen size={16} />Войти</button>
+          </li>)}</ul> : <p className="public-rooms-empty" role="status">Пока нет открытых комнат. Создай свою — и к тебе смогут присоединиться.</p>}
+      </section>
+      <div className="room-entry-grid"><div><span className="room-option-icon"><Users size={29} /></span><h2>Позвать друга</h2><p>Получишь код и ссылку на свою комнату.</p><label className="room-public-option"><input type="checkbox" checked={listed} onChange={e => setListed(e.target.checked)} disabled={connecting} />Показывать в списке комнат</label><button className="button primary" onClick={() => open('host')} disabled={connecting}><Swords size={17} />Создать комнату</button></div>
         <form onSubmit={e => { e.preventDefault(); open('guest'); }}><span className="room-option-icon"><DoorOpen size={29} /></span><h2>Войти в комнату</h2><label>Код друга<input aria-label="Код комнаты" placeholder="ABC234" maxLength={8} value={code} onChange={e => setCode(normalizeCode(e.target.value))} disabled={connecting} autoCapitalize="characters" autoComplete="off" spellCheck={false} /></label><button className="button secondary" type="submit" disabled={connecting || code.length !== 6}>Войти по коду <DoorOpen size={17} /></button></form></div>
       {connecting && <p className="room-connecting" role="status"><LoaderCircle size={20} />Подключаемся к комнате…</p>}
       {resume && !connecting && <button className="button secondary resume-room" onClick={() => open(resume.role, true)}><RefreshCw size={17} />Вернуться в комнату {resume.code}</button>}
@@ -67,6 +83,7 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
     {entered && <div className="room-waiting-panel">
       <div className="room-code-heading"><span>КОД КОМНАТЫ</span><strong>{room.code}</strong><button className="icon-button" aria-label="Скопировать код комнаты" onClick={() => void copy(room.code, 'Код скопирован')}><Copy size={20} /></button></div>
       <div className="room-sharing"><button className="button secondary" onClick={() => void copy(inviteLink(room.code), 'Ссылка скопирована')}><Link size={17} />Пригласить по ссылке</button><span role="status">{copied}</span></div>
+      {room.role === 'host' && !room.game && <label className="room-public-option room-public-toggle"><input type="checkbox" checked={room.listed} onChange={e => controller.current?.setListed(e.target.checked)} />Показывать в списке, пока есть свободное место</label>}
       <div className="room-members"><div><span className="room-member-symbol"><Users size={24} /></span><strong>{room.name}</strong><small>{room.role === 'host' ? 'Создатель комнаты' : 'Ты'}</small><span><Check size={14} />Готов</span></div>
         <div className={room.connected ? '' : 'waiting-member'}><span className="room-member-symbol">{room.connected ? <Users size={24} /> : <LoaderCircle size={24} />}</span><strong>{room.opponent || 'Ждём друга'}</strong><small>{room.connected ? 'В комнате' : room.opponent ? 'Переподключается' : 'Передай код или ссылку'}</small><span>{room.connected ? <><Wifi size={14} />На связи</> : 'Ожидание'}</span></div></div>
       {room.game ? <button className="button primary room-start" onClick={() => setShowLobby(false)}><Play size={18} />Вернуться в бой</button>

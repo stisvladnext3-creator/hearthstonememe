@@ -5,7 +5,7 @@ export interface CardDef {
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean;
-  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; deathrattle?: 'rds-guard';
+  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage';
 }
 
 export const CARDS: CardDef[] = [
@@ -13,15 +13,15 @@ export const CARDS: CardDef[] = [
   { id: 'goodgame', name: 'Хорошая игра.', cost: 0, kind: 'minion', attack: 99, health: 99, text: 'Боевой клич: уничтожает вашего персонажа.', flavor: 'Боевой клич срабатывает только при розыгрыше из руки. Если существо появилось через призыв или превращение, герой не уничтожается.', rarity: 'common', art: 1, custom: true, effect: 'concede', tribe: 'Я сдаюсь.' },
   { id: 'ruslan', name: 'Русланчик', cost: 4, kind: 'minion', attack: 10, health: 10, text: 'Не может атаковать. Он всегда прав.', flavor: '«Тихий час» снимает запрет на атаку. После призыва всё ещё нужно дождаться своего следующего хода.', rarity: 'common', art: 2, custom: true, cannotAttack: true, tribe: 'Сверхчеловек' },
   { id: 'casino', name: 'Козиныч', cost: 3, kind: 'spell', text: 'С шансом 50% уничтожает половину колоды случайного игрока. Начало матча: вы берёте эту карту.', flavor: 'Крутить или не крутить? Как будто есть выбор.', rarity: 'legendary', art: 3, custom: true, effect: 'casino' },
-  { id: 'trachukcha', name: 'Трачукча', cost: 0, printedCost: -1, kind: 'hero', armor: 99, text: 'Боевой клич: тупит до конца матча. Заменяет силу героя на «Дибильнутый!».', flavor: 'Цена на оригинале −1; разыгрывается бесплатно. «Дибильнутый!» теперь работает по присланной карте: за 3 маны превращает всех существ противника в случайных на 5 маны дешевле.', rarity: 'legendary', art: 4, custom: true, effect: 'trachukcha' },
+  { id: 'trachukcha', name: 'Трачукча', cost: 3, kind: 'hero', armor: 50, text: 'Даёт 50 брони. Боевой клич: заменяет силу героя на «Дибильнутый!».', flavor: 'Сила за 3 маны превращает врагов в существ на 5 маны дешевле. Никогда не создаёт «Хорошую игру.».', rarity: 'legendary', art: 4, custom: true, effect: 'trachukcha' },
   { id: 'me', name: 'Я', cost: 10, kind: 'minion', attack: 5, health: 7, text: 'Боевой клич: заполняет вашу руку легендарными существами.', flavor: 'Колода мечты. Все остальные просто завидуют.', rarity: 'legendary', art: 5, custom: true, effect: 'legendaryHand', tribe: 'Сверхчеловек' },
   { id: 'deathwing', name: 'Смертокрыл', cost: 5, kind: 'minion', attack: 1, health: 1, text: 'Боевой клич: уничтожает всех других существ. Вы сбрасываете все карты. В конце вашего хода это существо распыляется.', flavor: 'Пришёл. Увидел. Всё испортил. Ушёл.', rarity: 'legendary', art: 6, custom: true, effect: 'deathwing', tribe: 'Дракон' },
-  { id: 'maratik', name: 'Маратик', cost: 10, kind: 'hero', armor: 5, text: 'Боевой клич: заменяет вашу силу героя на «Ой».', flavor: '«Ой» за 6 маны добавляет в руку Смертокрыла 1/1. Кажется, сейчас что-то произойдёт.', rarity: 'legendary', art: 7, custom: true, effect: 'maratik' },
+  { id: 'maratik', name: 'Маратик', cost: 10, kind: 'hero', armor: 20, text: 'Даёт 20 брони. Боевой клич: заменяет вашу силу героя на «Ой».', flavor: '«Ой» за 6 маны добавляет в руку Смертокрыла 1/1. Кажется, сейчас что-то произойдёт.', rarity: 'legendary', art: 7, custom: true, effect: 'maratik' },
   { id: 'oy', name: 'Ой', cost: 6, kind: 'power', text: 'Вы кладёте в руку Смертокрыла 1/1.', flavor: 'Сила героя Маратика. Одно маленькое слово. Очень большие последствия.', rarity: 'rare', art: 6, custom: true, effect: 'oy' },
   { id: 'spark-power', name: 'Искра', cost: 2, kind: 'power', text: 'Наносит 1 урон выбранному врагу. Один раз за ход.', flavor: 'Стартовая сила героя. Заклинание «Искра хаоса» — отдельная карта и наносит 3 урона.', rarity: 'common', art: 10 },
   { id: 'jaina', name: 'Джайна-ассасин', cost: 12, kind: 'hero', armor: 10, text: 'Стоит на 1 ману меньше за каждое РДШ, погибшее в матче. Боевой клич: ваша сила героя меняется на «Сила РДШ».', flavor: 'Погибшие РДШ обоих игроков снижают стоимость, но не ниже нуля. Новая сила за 4 маны призывает РДШ 2/5.', rarity: 'legendary', art: 10, custom: true, effect: 'jaina' },
   { id: 'rds-power', name: 'Сила РДШ', cost: 4, kind: 'power', text: 'Призывает РДШ 2/5.', flavor: 'Сила героя Джайны-ассасина. Новому РДШ нужен ход, чтобы подготовиться к атаке.', rarity: 'rare', art: 10, custom: true, effect: 'rds' },
-  { id: 'fool-power', name: 'Дибильнутый!', cost: 3, kind: 'power', text: 'Превращает существ противника в случайных существ на 5 маны дешевле.', flavor: 'Стоимость результата не ниже нуля. Превращение не запускает боевые кличи и не считается гибелью.', rarity: 'epic', art: 4, custom: true, effect: 'devolve' },
+  { id: 'fool-power', name: 'Дибильнутый!', cost: 3, kind: 'power', text: 'Превращает врагов в существ на 5 маны дешевле. Исключена «Хорошая игра.».', flavor: 'Если нужной стоимости нет, выбирается ближайшая меньшая или самое дешёвое доступное существо. Превращение не запускает боевые кличи и предсмертные хрипы.', rarity: 'epic', art: 4, custom: true, effect: 'devolve' },
   { id: 'maxim', name: 'Максимка-разведчик', cost: 6, kind: 'minion', attack: 3, health: 5, text: 'Боевой клич: уничтожает всех существ «Жанна» в колодах обоих игроков.', flavor: 'Трогает только колоды. Существа на столе и карты в руке остаются на месте.', rarity: 'epic', art: 5, custom: true, effect: 'purgeZhanna', tribe: 'Максим' },
   { id: 'volunteer', name: 'Волонтер-босс', cost: 5, kind: 'minion', attack: 8, health: 8, text: 'Уничтожает ВСЕХ существ на столе. Призывает два РДШ 2/4.', flavor: 'В прототипе срабатывает при розыгрыше: уничтожает и себя, затем оставляет двух РДШ 2/4.', rarity: 'common', art: 11, custom: true, effect: 'volunteer', tribe: 'Лох' },
   { id: 'rash', name: 'РДШ', cost: 3, kind: 'token', attack: 2, health: 5, text: 'Призван силой РДШ. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Считает не только своих.', rarity: 'common', art: 10, tribe: 'РДШ' },
@@ -52,23 +52,27 @@ export const CARDS: CardDef[] = [
   { id: 'jaina-volunteer', name: 'Джайна-волонтер', cost: 1, kind: 'minion', attack: 2, health: 1, text: 'Боевой клич: призывает РДШ 0/2 с провокацией.', flavor: 'Самой Джайне нужен ход для подготовки атаки. Боевой клич призывает отдельного защитника, если на столе есть место.', rarity: 'common', art: 10, custom: true, effect: 'jainaVolunteer', tribe: 'Жанна', frame: 'simple' },
   { id: 'rds-guard', name: 'РДШ — защитник', cost: 1, kind: 'token', attack: 1, health: 3, text: 'Провокация. Призывается предсмертным хрипом Джайны-рашера.', flavor: 'Его призыв продвигает задачу, а гибель удешевляет Джайну-ассасина.', rarity: 'common', art: 10, taunt: true, tribe: 'РДШ', frame: 'simple' },
   { id: 'rds-helper', name: 'РДШ — помощник', cost: 1, kind: 'token', attack: 0, health: 2, text: 'Провокация. Призывается Джайной-волонтером.', flavor: 'Не наносит урон без усиления атаки, но защищает героя.', rarity: 'common', art: 10, taunt: true, tribe: 'РДШ', frame: 'simple' },
+  { id: 'jaina-instigator', name: 'Джайна-зачинщик', cost: 6, kind: 'minion', attack: 4, health: 3, text: 'Натиск. Предсмертный хрип: наносит 1 урон случайному врагу.', flavor: 'Сразу атакует существ. После гибели без немоты наносит 1 урон случайному вражескому существу или герою.', rarity: 'rare', art: 10, custom: true, rush: true, deathrattle: 'randomEnemyDamage', tribe: 'Жанна', frame: 'simple' },
+  { id: 'slime', name: 'Слизь', cost: 1, kind: 'minion', attack: 1, health: 4, text: 'Провокация. Предсмертный хрип: призывает Слизь 0/2 с провокацией.', flavor: 'Призванная Слизь не имеет предсмертного хрипа. Немота отменяет призыв.', rarity: 'common', art: 9, custom: true, taunt: true, deathrattle: 'slime-token', frame: 'simple' },
+  { id: 'slime-token', name: 'Слизь', cost: 1, kind: 'token', attack: 0, health: 2, text: 'Провокация.', flavor: 'Маленькая Слизь, призванная предсмертным хрипом. Сама больше никого не призывает.', rarity: 'common', art: 9, taunt: true, frame: 'simple' },
 ];
 export const CARD = Object.fromEntries(CARDS.map(c => [c.id, c])) as Record<string, CardDef>;
 export const COLLECTIBLE = CARDS.filter(c => c.kind !== 'power' && c.kind !== 'token');
 export const STARTER_DECK = [
-  'casino', 'galinka', 'goodgame', 'ruslan', 'ruslan', 'trachukcha', 'me', 'deathwing', 'maratik',
-  'regular', 'echo-maxim', 'bouncer', 'bouncer', 'jaina-volunteer', 'dragonslayer', 'jaina-rusher', 'paper-army', 'guardian', 'vasiliy',
+  'casino', 'galinka', 'goodgame', 'ruslan', 'slime', 'trachukcha', 'me', 'deathwing', 'maratik',
+  'regular', 'echo-maxim', 'bouncer', 'jaina-instigator', 'jaina-volunteer', 'dragonslayer', 'jaina-rusher', 'paper-army', 'guardian', 'vasiliy',
   'masik', 'jaina', 'bolt', 'briefing', 'heal', 'dog-spell', 'draw', 'maxim', 'silence', 'volunteer', 'rash-quest',
 ];
 export const BOT_DECK = [
-  'regular', 'echo-maxim', 'regular', 'volunteer', 'bouncer', 'bouncer', 'bouncer', 'jaina-volunteer', 'rash-quest', 'dragonslayer',
+  'regular', 'echo-maxim', 'slime', 'volunteer', 'bouncer', 'bouncer', 'jaina-instigator', 'jaina-volunteer', 'rash-quest', 'dragonslayer',
   'jaina-rusher', 'paper-army', 'mage', 'guardian', 'guardian', 'vasiliy', 'dragon', 'masik', 'bolt', 'bolt',
   'heal', 'dog-spell', 'draw', 'briefing', 'silence', 'silence', 'ruslan', 'casino', 'galinka', 'deathwing',
 ];
+export const deckCopyLimit = (card: CardDef) => card.rarity === 'legendary' ? 1 : card.rarity === 'epic' ? 2 : 3;
+export const RARITY_NAMES = { common: 'Обычная', rare: 'Редкая', epic: 'Эпическая', legendary: 'Легендарная' } as const;
 export function deckError(ids: string[]): string | undefined {
   if (ids.length !== 30) return 'В колоде должно быть ровно 30 карт.';
   if (ids.some(id => !COLLECTIBLE.some(c => c.id === id))) return 'В колоде есть недоступная карта.';
-  // Three common copies allow a small prototype pool to support a 30-card deck.
-  if (ids.some(id => ids.filter(x => x === id).length > (CARD[id].rarity === 'legendary' ? 1 : 3)))
-    return 'Максимум 1 копия легендарной и 3 копии обычной или редкой карты.';
+  if (ids.some(id => ids.filter(x => x === id).length > deckCopyLimit(CARD[id])))
+    return 'Максимум: 3 обычных, 3 редких, 2 эпических и 1 легендарная копия карты.';
 }

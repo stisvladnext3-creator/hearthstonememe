@@ -3,7 +3,7 @@ import { createGame, other, type Action, type Game, type Side } from '../game/en
 import type { HistoryEntity } from '../game/history';
 import { HEROES } from '../game/presentation';
 
-export const ROOM_PROTOCOL = 1;
+export const ROOM_PROTOCOL = 2;
 export const ROOM_PREFIX = 'memestone-v08-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
@@ -117,8 +117,9 @@ export interface RoomState {
   role: 'host' | 'guest' | null; code: string; name: string; opponent: string;
   connected: boolean; game: Game | null; revision: number; pending: boolean;
   rematchSelf: boolean; rematchOpponent: boolean; error: string;
+  listed: boolean;
 }
-export const EMPTY_ROOM: RoomState = { phase: 'idle', role: null, code: '', name: '', opponent: '', connected: false, game: null, revision: 0, pending: false, rematchSelf: false, rematchOpponent: false, error: '' };
+export const EMPTY_ROOM: RoomState = { phase: 'idle', role: null, code: '', name: '', opponent: '', connected: false, game: null, revision: 0, pending: false, rematchSelf: false, rematchOpponent: false, error: '', listed: false };
 export type ClientMessage =
   | { type: 'hello'; protocol: number; name: string; deck: string[]; token: string }
   | { type: 'action'; action: Action; revision: number; requestId: string }

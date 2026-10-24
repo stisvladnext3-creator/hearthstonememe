@@ -51,8 +51,8 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
       galinka: () => { expect(p.board.find(m => m.id === 'pushkin')).toMatchObject({ attack: 15, health: 15, taunt: true, origin: 'summoned' }); },
       goodgame: () => { expect(p.health).toBe(0); expect(p.armor).toBe(7); expect(n.winner).toBe(foe); expect(n.log.find(l => l.kind === 'finish')?.target?.side).toBe(side); },
       casino: () => { expect(p.deck.length + e.deck.length).toBe(15); expect([p.deck.length, e.deck.length].sort((a, b) => a - b)).toEqual([5, 10]); },
-      trachukcha: () => { expect(p).toMatchObject({ hero: 'trachukcha', armor: 106, health: 17, power: 'fool', powerUsed: false }); },
-      maratik: () => { expect(p).toMatchObject({ hero: 'maratik', armor: 12, health: 17, power: 'oy', powerUsed: false }); },
+      trachukcha: () => { expect(p).toMatchObject({ hero: 'trachukcha', armor: 57, health: 17, power: 'fool', powerUsed: false }); },
+      maratik: () => { expect(p).toMatchObject({ hero: 'maratik', armor: 27, health: 17, power: 'oy', powerUsed: false }); },
       jaina: () => { expect(p).toMatchObject({ hero: 'jaina', armor: 17, health: 17, power: 'rds', powerUsed: false }); },
       me: () => { expect(p.hand).toHaveLength(10); expect(p.hand[0].id).toBe('heal'); expect(p.hand.slice(1).every(h => CARD[h.id].kind === 'minion' && CARD[h.id].rarity === 'legendary')).toBe(true); },
       deathwing: () => { expect(p.board.map(m => m.id)).toEqual(['deathwing']); expect(e.board).toHaveLength(0); expect(p.hand).toHaveLength(0); expect(n.rashDeaths).toBe(2); expect(act(n, side, { type: 'end' }).state[side].board).toHaveLength(0); },
@@ -92,16 +92,16 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     if (power === 'oy') { expect(p.hand.map(h => h.id)).toEqual(['deathwing']); expect(e.board[0].id).toBe('guardian'); }
     if (power === 'rds') expect(p.board[0]).toMatchObject({ id: 'rash', attack: 2, health: 5, origin: 'summoned', createdBy: 'rds-power' });
     if (power === 'fool') {
-      expect(e.board[0]).toMatchObject({ id: 'goodgame', attack: 99, health: 99, origin: 'transformed' });
+      expect(e.board[0]).toMatchObject({ id: 'regular', attack: 1, health: 2, origin: 'transformed' });
       expect(e.health).toBe(28); expect(n.state.winner).toBeNull();
-      expect(n.state.log.find(l => l.kind === 'transform')).toMatchObject({ actor: { id: 'fool-power', type: 'power' }, target: { id: 'guardian' }, result: { id: 'goodgame' } });
+      expect(n.state.log.find(l => l.kind === 'transform')).toMatchObject({ actor: { id: 'fool-power', type: 'power' }, target: { id: 'guardian' }, result: { id: 'regular' } });
     }
   });
 
   it('does not apply battlecries to transformed or generated cards', () => {
-    const g = setup(side), foe = other(side); g[side].power = 'fool'; creature(g, foe, 'guardian');
+    const g = setup(side), foe = other(side); g[side].power = 'fool'; g.rng = 1; creature(g, foe, 'guardian');
     const transformed = act(g, side, { type: 'power' }).state;
-    expect(transformed[foe].board[0].id).toBe('goodgame'); expect(transformed.winner).toBeNull();
+    expect(transformed[foe].board.map(m => m.id)).toEqual(['jaina-volunteer']); expect(transformed.winner).toBeNull();
     transformed.active = foe; transformed[foe].hand.push({ id: 'goodgame', uid: transformed.nextUid++ });
     const actualPlay = act(transformed, foe, { type: 'play', uid: transformed[foe].hand[0].uid }).state;
     expect(actualPlay[foe].health).toBe(0); expect(actualPlay.winner).toBe(side);

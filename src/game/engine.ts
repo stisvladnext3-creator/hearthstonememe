@@ -29,14 +29,16 @@ export interface Game {
   log: HistoryEntry[]; nextLog: number;
   discovery?: { side: Side; sourceId: string; options: string[]; target: Target };
   briefing?: { remainingTurns: Record<Side, number> };
+  mulligan?: { deadline: number; ready: Record<Side, boolean>; selected: Record<Side, number[]> };
 }
 export interface Anchor { side: Side; uid: number | 'hero' }
 export interface GameEvent {
-  id: number; kind: 'attack' | 'summon' | 'spell' | 'power' | 'damage' | 'death' | 'transform';
+  id: number; kind: 'attack' | 'summon' | 'spell' | 'power' | 'damage' | 'death' | 'transform' | 'draw';
   side: Side; source?: number | 'hero'; target?: Anchor; cardId?: string; amount?: number;
 }
 export type Target = number | 'hero' | 'own-hero';
 export type Action =
+  | { type: 'mulligan'; replace: number[]; confirm?: boolean }
   | { type: 'play'; uid: number; target?: Target }
   | { type: 'attack'; uid: number; target: Target }
   | { type: 'power'; target?: Target }
@@ -53,6 +55,7 @@ export function powerProblem(g: Game, side: Side): string | undefined {
   const p = g[side];
   const power = activePower(g, side);
   if (g.winner) return 'Матч уже завершён.';
+  if (g.mulligan) return 'Сначала выберите стартовую руку.';
   if (g.active !== side) return 'Сейчас ход соперника.';
   if (g.discovery) return 'Сначала выберите карту раскопки.';
   if (p.powerSilenceTurns) return `Сила героя отключена немотой. Осталось своих ходов: ${p.powerSilenceTurns}.`;
@@ -165,7 +168,11 @@ function draw(g: Game, side: Side, n = 1) {
   for (let i = 0; i < n; i++) {
     const p = g[side];
     const id = p.deck.shift();
-    if (id) addToHand(g, side, id);
+    if (id) {
+      const count = p.hand.length;
+      addToHand(g, side, id);
+      if (p.hand.length > count) emit(g, { kind: 'draw', side, cardId: id, target: { side, uid: p.hand.at(-1)!.uid } });
+    }
     else {
       p.fatigue++;
       damageHero(p, p.fatigue);
@@ -201,13 +208,13 @@ function emptyPlayer(hero: string): Player {
   return { health: 30, armor: 0, mana: 0, maxMana: 0, hand: [], deck: [], board: [],
     fatigue: 0, hero, power: 'spark', powerUsed: false, powerSilenceTurns: 0 };
 }
-export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck = BOT_DECK): Game {
+export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck = BOT_DECK, mulliganDeadline?: number): Game {
   const g: Game = { id: String(seed), rashDeaths: 0, events: [], player: emptyPlayer('mage'), bot: emptyPlayer('boris'), active: 'player', turn: 1,
     winner: null, nextUid: 1, rng: seed, log: [], nextLog: 1 };
   g.player.deck = shuffled(g, deckError(deck) ? STARTER_DECK : deck);
   g.bot.deck = shuffled(g, deckError(opponentDeck) ? BOT_DECK : opponentDeck);
   for (const side of ['player', 'bot'] as Side[]) {
-    const p = g[side], openingSize = side === 'player' ? 3 : 4;
+    const p = g[side], openingSize = mulliganDeadline !== undefined ? 3 : side === 'player' ? 3 : 4;
     // Reserve quests before other guaranteed cards, then deal the random
     // remainder. Move the actual copy out of the deck; never create an extra.
     const guaranteed = [...new Set(p.deck.filter(id => CARD[id].quest)), 'casino'];
@@ -217,11 +224,40 @@ export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck 
     }
     draw(g, side, openingSize - p.hand.length);
   }
-  g.player.maxMana = 1;
-  g.player.mana = 1;
-  draw(g, 'player');
-  log(g, 'Добро пожаловать в трактир! Вы ходите первым.', 'system');
+  if (mulliganDeadline !== undefined) {
+    g.mulligan = { deadline: mulliganDeadline, ready: { player: false, bot: false }, selected: { player: [], bot: [] } };
+    log(g, 'Выберите стартовую руку. Можно заменить любые из трёх карт.', 'system');
+  } else {
+    g.player.maxMana = 1; g.player.mana = 1; draw(g, 'player');
+    log(g, 'Добро пожаловать в трактир! Вы ходите первым.', 'system');
+  }
   return g;
+}
+
+function finishMulligan(g: Game) {
+  for (const side of ['player', 'bot'] as const) {
+    const p = g[side], selected = g.mulligan!.selected[side];
+    const outgoing: HandCard[] = [];
+    // Deal first, then shuffle the returned copies into the remaining deck.
+    p.hand = p.hand.map(c => {
+      if (!selected.includes(c.uid)) return c;
+      const id = p.deck.shift();
+      if (!id) return c;
+      outgoing.push(c);
+      const replacement = { id, uid: g.nextUid++ };
+      emit(g, { kind: 'draw', side, cardId: id, target: { side, uid: replacement.uid } });
+      return replacement;
+    });
+    if (outgoing.length) p.deck = shuffled(g, [...p.deck, ...outgoing.map(c => c.id)]);
+  }
+  delete g.mulligan;
+  g[g.active].maxMana = g[g.active].mana = 1;
+  draw(g, g.active);
+  log(g, `Стартовая рука выбрана. ${g[g.active].name ?? (g.active === 'player' ? 'Вы' : 'Борис')} ходит первым.`, 'system');
+}
+export function expireMulligan(input: Game, now = Date.now()): Game {
+  if (!input.mulligan || input.mulligan.deadline > now) return input;
+  const g = structuredClone(input); finishMulligan(g); return g;
 }
 export function targetNeeded(g: Game, uid?: number): boolean {
   if (uid === undefined) return activePower(g, g.active) === 'spark';
@@ -242,6 +278,18 @@ export function legalTargets(g: Game, action: 'attack' | 'bolt' | 'silence' | 's
 export function act(input: Game, side: Side, action: Action): Result {
   const fail = (error: string): Result => ({ state: input, error });
   if (input.winner) return fail('Матч уже завершён.');
+  if (action.type === 'mulligan') {
+    if (!input.mulligan) return fail('Стартовая рука уже выбрана.');
+    if (input.mulligan.ready[side]) return fail('Вы уже подтвердили стартовую руку.');
+    if (action.confirm !== undefined && typeof action.confirm !== 'boolean' || !Array.isArray(action.replace) || action.replace.length > 3 || new Set(action.replace).size !== action.replace.length
+      || !action.replace.every(uid => Number.isSafeInteger(uid) && input[side].hand.some(c => c.uid === uid))) return fail('Выберите карты из своей стартовой руки.');
+    const g = structuredClone(input);
+    g.mulligan!.selected[side] = [...action.replace];
+    if (action.confirm !== false) g.mulligan!.ready[side] = true;
+    if (g.mulligan!.ready.player && g.mulligan!.ready.bot) finishMulligan(g);
+    return { state: g };
+  }
+  if (input.mulligan && action.type !== 'concede') return fail('Сначала выберите стартовую руку.');
   if (input.active !== side && action.type !== 'concede') return fail('Сейчас ход соперника.');
   if (input.discovery && action.type !== 'discover' && action.type !== 'concede') return fail('Сначала выберите карту раскопки.');
   const g = structuredClone(input);
@@ -268,6 +316,7 @@ export function act(input: Game, side: Side, action: Action): Result {
   if (action.type === 'concede') {
     g.winner = enemySide;
     delete g.discovery;
+    delete g.mulligan;
     record(side === 'player' ? 'Вы сдались.' : 'Борис сдался.', { kind: 'finish' });
     return { state: g };
   }
@@ -522,6 +571,8 @@ export function act(input: Game, side: Side, action: Action): Result {
   return { state: g };
 }
 export function chooseBotAction(g: Game): Action {
+  if (g.mulligan) return { type: 'mulligan', replace: g.bot.hand.filter(c => CARD[c.id].cost > 3 || CARD[c.id].effect === 'concede').map(c => c.uid) };
+
   if (g.winner || g.active !== 'bot') return { type: 'end' };
   const p = g.bot;
   const silenceTarget = g.player.board.find(m => m.taunt || !m.silenced && !!CARD[m.id].auraAttack)

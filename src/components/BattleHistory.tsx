@@ -1,4 +1,6 @@
-import { ArrowRight, BookOpen, Flame, Layers3, RefreshCw, Skull, Sparkles, Swords, WandSparkles, X } from 'lucide-react';
+import { useState } from 'react';
+import { phoneScreen, useViewport } from '../useViewport';
+import { ArrowRight, BookOpen, Flame, Layers3, RefreshCw, Skull, Sparkles, Swords, WandSparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CARD } from '../game/cards';
 import { heroCard } from '../game/presentation';
 import type { HistoryEntry, HistoryEntity, HistoryKind } from '../game/history';
@@ -26,8 +28,11 @@ function Entity({ entity, inspect, note, small = false }: { entity: HistoryEntit
   </button>;
 }
 export default function BattleHistory({ entries, inspect, close, opponent = 'Борис' }: { entries: HistoryEntry[]; inspect: Inspect; close: () => void; opponent?: string }) {
+  const size = useViewport(), pageSize = phoneScreen(size) ? (size.height < 700 ? 1 : 2) : 5;
+  const [page, setPage] = useState(1);
+  const pages = Math.max(1, Math.ceil(entries.length / pageSize)), current = Math.min(page, pages);
   return <aside className="battle-log illustrated-history" aria-label="История сражения"><div className="history-header"><div><span>ХРОНИКИ ТРАКТИРА</span><h3>История сражения</h3></div><button className="icon-button" aria-label="Закрыть журнал" onClick={close}><X size={20} /></button></div>
-    <ol>{[...entries].reverse().map(entry => {
+    <ol>{[...entries].reverse().slice((current - 1) * pageSize, current * pageSize).map(entry => {
       const kind = KINDS[entry.kind ?? (entry.side === 'system' ? 'turn' : 'effect')];
       return <li key={entry.id} className={`history-entry ${entry.side} history-${entry.kind ?? 'legacy'}`}>
         <div className="history-entry-heading"><span>ХОД {entry.turn ?? '—'} · {entry.side === 'player' ? 'ВЫ' : entry.side === 'bot' ? opponent.toUpperCase() : 'ТРАКТИР'}</span><span>{kind.icon}{kind.text}</span></div>
@@ -38,6 +43,7 @@ export default function BattleHistory({ entries, inspect, close, opponent = 'Б�
         <p>{entry.text}</p>
       </li>;
     })}</ol>
+    <div className="history-pagination"><button aria-label="Предыдущая страница истории" disabled={current <= 1} onClick={() => setPage(current - 1)}><ChevronLeft size={20} /></button><span>{current} / {pages}</span><button aria-label="Следующая страница истории" disabled={current >= pages} onClick={() => setPage(current + 1)}><ChevronRight size={20} /></button></div>
     <p className="history-tip">Нажми на изображение, чтобы прочитать описание.</p>
   </aside>;
 }

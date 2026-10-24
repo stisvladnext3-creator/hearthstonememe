@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Copy, DoorOpen, Globe, Link, LoaderCircle, Play, RefreshCw, Swords, Users, Wifi, WifiOff } from 'lucide-react';
+import { phoneScreen, useViewport } from '../useViewport';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowLeft, Check, Copy, DoorOpen, Globe, Link, LoaderCircle, Play, RefreshCw, Swords, Users, Wifi, WifiOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import Battle from './Battle';
 import Modal from './Modal';
 import { PeerRoom, inviteLink, savedRoom } from '../online/room';
@@ -13,6 +14,11 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
   active: boolean; deck: string[]; board: BattlegroundId; animations: boolean; overlayOpen: boolean; inspect: Inspect;
   settings: () => void; help: () => void; chooseBoard: () => void; home: () => void; battleChanged: (value: boolean) => void;
 }) {
+  const viewport = useViewport();
+  const [roomCapacity, setRoomCapacity] = useState(3);
+  const roomPageSize = phoneScreen(viewport) ? Math.min(roomCapacity, viewport.width > viewport.height ? 2 : 3) : 6;
+  const roomList = useRef<HTMLUListElement>(null);
+  const [roomPage, setRoomPage] = useState(1);
   const [room, setRoom] = useState<RoomState>({ ...EMPTY_ROOM });
   const [name, setName] = useState(() => { const n = read<unknown>('online-name', 'Игрок'); return typeof n === 'string' ? cleanName(n) : 'Игрок'; });
   const [code, setCode] = useState(() => normalizeCode(new URLSearchParams(location.search).get('room') ?? ''));
@@ -23,9 +29,16 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
   const [listed, setListed] = useState(true);
   const [directory, setDirectory] = useState<DirectoryState>({ ...EMPTY_DIRECTORY });
   const controller = useRef<PeerRoom | null>(null);
+  const roomPages = Math.max(1, Math.ceil(directory.rooms.length / roomPageSize)), shownRoomPage = Math.min(roomPage, roomPages);
   const directoryController = useRef<RoomDirectory | null>(null);
   const matchId = useRef('');
   const inBattle = active && room.phase === 'playing' && !!room.game && !showLobby;
+  useLayoutEffect(() => {
+    const list = roomList.current; if (!list) return;
+    const fit = () => { if (list.clientHeight) setRoomCapacity(Math.max(1, Math.floor(list.clientHeight / 62))); };
+    fit(); const observer = new ResizeObserver(fit); observer.observe(list);
+    return () => observer.disconnect();
+  }, [active, room.phase, directory.status, directory.rooms.length]);
   useEffect(() => { battleChanged(inBattle); }, [inBattle, battleChanged]);
   useEffect(() => { if (active && !directoryController.current) directoryController.current = new RoomDirectory(setDirectory); }, [active]);
   useEffect(() => () => {
@@ -70,10 +83,11 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
       <section className="public-rooms" aria-label="Список открытых комнат">
         <div className="public-rooms-heading"><h2><Globe size={21} />Открытые комнаты <span>{directory.rooms.length}</span></h2><button className="icon-button" aria-label="Обновить список комнат" onClick={() => directoryController.current?.refresh()}><RefreshCw size={18} className={directory.status === 'connecting' ? 'spinning' : ''} /></button></div>
         {directory.status !== 'ready' ? <p className="public-rooms-empty" role="status">{directory.status === 'connecting' ? 'Ищем открытые комнаты…' : 'Восстанавливаем список комнат. По коду можно войти сразу.'}</p>
-          : directory.rooms.length ? <ul>{directory.rooms.map(entry => <li key={entry.code} data-room-code={entry.code}>
+          : directory.rooms.length ? <ul ref={roomList}>{directory.rooms.slice((shownRoomPage - 1) * roomPageSize, shownRoomPage * roomPageSize).map(entry => <li key={entry.code} data-room-code={entry.code}>
             <span className="public-room-icon"><Users size={22} /></span><div><strong>Комната {entry.hostName}</strong><small>Код {entry.code} · ждёт соперника</small></div><span className="public-room-seats">1/2</span>
             <button className="button primary" aria-label={`Войти в комнату ${entry.hostName}`} disabled={connecting} onClick={() => open('guest', false, entry.code)}><DoorOpen size={16} />Войти</button>
           </li>)}</ul> : <p className="public-rooms-empty" role="status">Пока нет открытых комнат. Создай свою — и к тебе смогут присоединиться.</p>}
+      {roomPages > 1 && <div className="rooms-pagination"><button aria-label="Предыдущая страница комнат" disabled={shownRoomPage <= 1} onClick={() => setRoomPage(shownRoomPage - 1)}><ChevronLeft size={18} /></button><span>{shownRoomPage} / {roomPages}</span><button aria-label="Следующая страница комнат" disabled={shownRoomPage >= roomPages} onClick={() => setRoomPage(shownRoomPage + 1)}><ChevronRight size={18} /></button></div>}
       </section>
       <div className="room-entry-grid"><div><span className="room-option-icon"><Users size={29} /></span><h2>Позвать друга</h2><p>Получишь код и ссылку на свою комнату.</p><label className="room-public-option"><input type="checkbox" checked={listed} onChange={e => setListed(e.target.checked)} disabled={connecting} />Показывать в списке комнат</label><button className="button primary" onClick={() => open('host')} disabled={connecting}><Swords size={17} />Создать комнату</button></div>
         <form onSubmit={e => { e.preventDefault(); open('guest'); }}><span className="room-option-icon"><DoorOpen size={29} /></span><h2>Войти в комнату</h2><label>Код друга<input aria-label="Код комнаты" placeholder="ABC234" maxLength={8} value={code} onChange={e => setCode(normalizeCode(e.target.value))} disabled={connecting} autoCapitalize="characters" autoComplete="off" spellCheck={false} /></label><button className="button secondary" type="submit" disabled={connecting || code.length !== 6}>Войти по коду <DoorOpen size={17} /></button></form></div>

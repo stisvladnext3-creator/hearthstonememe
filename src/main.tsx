@@ -11,6 +11,7 @@ import './discover.css';
 import './battle-layout.css';
 import './rooms.css';
 import './card-layout.css';
+import './phone.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ArtworkProvider><CardAppearanceProvider><App /></CardAppearanceProvider></ArtworkProvider></React.StrictMode>,

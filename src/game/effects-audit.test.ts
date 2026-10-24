@@ -146,7 +146,7 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     expect(n[side].board[0]).toMatchObject({ silenced: true, ephemeral: false, ready: false, attack: 1, health: 1 });
     expect(n[other(side)].board[0]).toMatchObject({ silenced: false, taunt: true, health: 6 });
     expect(n[side].mana).toBe(9);
-    expect(n.events.find(e => e.cardId === 'silence')).toMatchObject({ kind: 'spell', side, target: { side, uid: target.uid } });
+    expect(n.events.find(e => e.cardId === 'silence' && e.kind !== 'draw')).toMatchObject({ kind: 'spell', side, target: { side, uid: target.uid } });
     expect(n.log.at(-1)).toMatchObject({ actor: { id: 'silence', side }, target: { id: 'deathwing', side } });
     expect(act(n, side, { type: 'end' }).state[side].board.some(m => m.uid === target.uid)).toBe(true);
   });

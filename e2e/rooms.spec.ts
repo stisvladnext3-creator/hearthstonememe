@@ -38,9 +38,41 @@ async function start(host: Page, guest: Page) {
   await expect(host.getByRole('button', { name: 'Начать бой', exact: true })).toBeEnabled({ timeout: 25000 });
   await host.getByRole('button', { name: 'Начать бой', exact: true }).click();
   await expect(host.locator('.battle-arena')).toBeVisible(); await expect(guest.locator('.battle-arena')).toBeVisible({ timeout: 15000 });
-  for (const player of [host, guest]) await expect(player.locator('.player-hand .game-card').first()).toHaveAttribute('data-card-id', 'rash-quest');
+  for (const player of [host, guest]) {
+    await expect(player.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible();
+    await expect(player.locator('.mulligan-choice')).toHaveCount(3);
+    await player.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
+  }
+  for (const player of [host, guest]) {
+    await expect(player.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
+    await expect(player.locator('.player-hand .game-card').first()).toHaveAttribute('data-card-id', 'rash-quest');
+  }
 }
 async function close(...contexts: BrowserContext[]) { await Promise.all(contexts.map(c => c.close())); }
+
+test('opening choices and the shared deadline survive a host reload before both players confirm', async ({ browser }) => {
+  const { host, guest, hostContext, guestContext } = await participants(browser);
+  try {
+    const code = await create(host); await join(guest, code);
+    await expect(host.getByRole('button', { name: 'Начать бой', exact: true })).toBeEnabled({ timeout: 25000 });
+    await host.getByRole('button', { name: 'Начать бой', exact: true }).click();
+    for (const p of [host, guest]) { await expect(p.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible(); await expect(p.locator('.mulligan-choice')).toHaveCount(3); }
+    await host.locator('.mulligan-choice .game-card').first().click();
+    await expect.poll(async () => (await savedMatch(host)).game.mulligan?.selected.player.length).toBe(1);
+    const before = (await savedMatch(host)).game;
+    await host.reload(); await host.getByRole('button', { name: 'Комнаты', exact: true }).click();
+    await host.getByRole('button', { name: `Вернуться в комнату ${code}`, exact: true }).click();
+    await expect(host.locator('.mulligan-choice.replace')).toHaveCount(1, { timeout: 15000 });
+    expect((await savedMatch(host)).game.mulligan?.deadline).toBe(before.mulligan!.deadline);
+    await expect(host.getByRole('button', { name: 'Подтвердить стартовую руку' })).toBeEnabled({ timeout: 15000 });
+    await host.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
+    await expect(guest.getByRole('button', { name: 'Подтвердить стартовую руку' })).toBeEnabled({ timeout: 15000 });
+    await guest.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
+    for (const p of [host, guest]) await expect(p.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
+    const after = (await savedMatch(host)).game;
+    expect(after.player.hand[0].uid).not.toBe(before.player.hand[0].uid); expect(after.bot.hand[0].id).toBe('rash-quest');
+  } finally { await close(hostContext, guestContext); }
+});
 
 async function savedMatch(host: Page): Promise<{ game: Game; revision: number }> {
   return host.evaluate(() => JSON.parse(sessionStorage.getItem('memestone.room.v1')!));
@@ -49,22 +81,68 @@ function nextAction(g: Game): Action {
   return chooseBotAction(g.active === 'bot' ? g : { ...g, active: 'bot', player: g.bot, bot: g.player,
     discovery: g.discovery ? { ...g.discovery, side: g.discovery.side === 'player' ? 'bot' : 'player' } : undefined });
 }
+async function historyContains(page: Page, text: string) {
+  const next = page.getByRole('button', { name: 'Следующая страница истории' });
+  while (!(await page.locator('.battle-log').innerText()).includes(text) && await next.isEnabled()) await next.click();
+  await expect(page.locator('.battle-log')).toContainText(text);
+}
+async function roomIsOnAnyPage(page: Page, code: string) {
+  const previous = page.getByRole('button', { name: 'Предыдущая страница комнат' });
+  while (await previous.count() && await previous.isEnabled()) await previous.click();
+  const row = page.locator(`.public-rooms [data-room-code="${code}"]`);
+  for (;;) {
+    if (await row.count()) return true;
+    const next = page.getByRole('button', { name: 'Следующая страница комнат' });
+    if (!await next.count() || !await next.isEnabled()) return false;
+    await next.click();
+  }
+}
+async function showRoom(page: Page, code: string, timeout = 25_000) {
+  await expect.poll(() => roomIsOnAnyPage(page, code), { timeout }).toBe(true);
+  return page.locator(`.public-rooms [data-room-code="${code}"]`);
+}
+function longBattleSeed() {
+  for (let seed = 1; seed <= 100; seed++) {
+    let g = createRoomGame(STARTER_DECK, STARTER_DECK, 'Хозяин', 'Гость', seed, 'simulation', 30_000);
+    g = act(act(g, 'player', { type: 'mulligan', replace: [] }).state, 'bot', { type: 'mulligan', replace: [] }).state;
+    let bytes = 0;
+    for (let n = 0; n < 200 && !g.winner; n++) { g = act(g, g.active, nextAction(g)).state; bytes = Math.max(bytes, Buffer.byteLength(JSON.stringify(roomGameView(g, 'bot')))); }
+    if (g.winner && g.turn > 12 && bytes > 32_000) return seed;
+  }
+  throw new Error('No complete large-history game found for the regression');
+}
 async function playAction(host: Page, guest: Page, action: Action) {
   const { game, revision } = await savedMatch(host);
   const page = game.active === 'player' ? host : guest;
   const view = roomGameView(game, game.active);
   if (action.type === 'play') {
-    await page.locator(`.hand-card-wrap[data-combat-anchor="player:${action.uid}"] .hand-card-button`).click();
+    const card = page.locator(`.hand-card-wrap[data-combat-anchor="player:${action.uid}"] .hand-card-button`);
+    await expect(card.locator('.game-card')).toHaveClass(/playable/);
+    await card.click();
     if (!targetNeeded(view, action.uid)) action = { ...action, target: undefined };
-  } else if (action.type === 'attack') await page.locator(`.player-board [data-combat-anchor="player:${action.uid}"]`).click();
+  } else if (action.type === 'attack') {
+    const attacker = page.locator(`.player-board [data-combat-anchor="player:${action.uid}"]`);
+    await expect(attacker).toHaveClass(/ready/); await attacker.click();
+  }
   else if (action.type === 'power') {
+    await expect(page.locator('.own-hero-row .hero-power')).toBeEnabled();
     await page.locator('.own-hero-row .hero-power').click();
     if (activePower(view, 'player') !== 'spark') action = { ...action, target: undefined };
   }
   else if (action.type === 'discover') await page.locator('.discover-choices').getByRole('button', { name: `${CARD[action.cardId].name}, ${CARD[action.cardId].printedCost ?? CARD[action.cardId].cost} маны`, exact: true }).click();
   else if (action.type === 'end') await page.getByRole('button', { name: 'Завершить', exact: true }).click();
   if ('target' in action && action.target !== undefined) {
-    if (action.target === 'hero') await page.locator('.enemy-hero-row .hero-portrait').click();
+    if (action.target === 'hero') {
+      try { await expect(page.locator('.enemy-hero-row .hero-portrait'), JSON.stringify(action)).toBeEnabled(); }
+      catch (error) {
+        console.log('Target selection diagnostics', JSON.stringify({ action, turn: game.turn, active: game.active,
+          ownBoard: view.player.board.map(m => ({ id: m.id, uid: m.uid, ready: m.ready, rush: m.rush, charge: m.charge, entered: m.enteredTurn })),
+          enemyBoard: view.bot.board.map(m => ({ id: m.id, uid: m.uid, taunt: m.taunt })),
+          hint: await page.locator('.battle-hint').innerText(), selected: await page.locator('.board-unit.selected').allTextContents(), notice: await page.locator('.online-notice').allTextContents() }));
+        throw error;
+      }
+      await page.locator('.enemy-hero-row .hero-portrait').click();
+    }
     else if (action.target === 'own-hero') await page.locator('.own-hero-row .hero-portrait').click();
     else await page.locator(`.board-unit[data-combat-anchor$=":${action.target}"]`).click();
   }
@@ -90,7 +168,7 @@ async function playAction(host: Page, guest: Page, action: Action) {
 
 test('a complete battle stays synchronized after history grows beyond the JSON channel limit', async ({ browser }) => {
   test.setTimeout(120000);
-  const { host, guest, hostContext, guestContext } = await participants(browser, 1);
+  const { host, guest, hostContext, guestContext } = await participants(browser, longBattleSeed());
   const errors: string[] = []; for (const p of [host, guest]) p.on('pageerror', e => errors.push(e.message));
   try {
     const code = await create(host); await join(guest, code); await start(host, guest);
@@ -186,7 +264,7 @@ for (const owner of ['player', 'bot'] as Side[]) test(`repeated Maxim echo from 
     const afterEnd = (await savedMatch(host)).game;
     expect(afterEnd[owner].hand.some(c => c.id === 'echo-maxim' && c.expiresTurn !== undefined)).toBe(false);
     await guest.getByRole('button', { name: 'История сражения', exact: true }).click();
-    await expect(guest.locator('.battle-log')).toContainText('Эхо: копия');
+    await historyContains(guest, 'Эхо: копия');
     await expect(guest.locator('.battle-log')).toContainText('Забивной Максимка');
   } finally { await close(hostContext, guestContext); }
 });
@@ -203,7 +281,7 @@ test('two browsers join a room, play from opposite sides, synchronize a summon a
     await expect(guest.getByRole('button', { name: 'РДШ — помощник: 0 атаки, 2 здоровья', exact: true })).toBeVisible();
     await host.getByRole('button', { name: 'Завершить', exact: true }).click(); await expect(guest.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled();
     await guest.getByRole('button', { name: 'Завершить', exact: true }).click(); await expect(host.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled();
-    await guest.getByRole('button', { name: 'История сражения', exact: true }).click(); await expect(guest.locator('.battle-log')).toContainText('ХОЗЯИН');
+    await guest.getByRole('button', { name: 'История сражения', exact: true }).click(); await historyContains(guest, 'ХОЗЯИН');
     expect(await guest.evaluate(() => JSON.parse(sessionStorage.getItem('memestone.room.v1')!).game)).toBeUndefined();
     expect(await guest.evaluate(() => localStorage.getItem('memestone.v1.game'))).toBeNull();
     expect(await guest.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
@@ -268,6 +346,7 @@ test('an unknown room gives a recoverable error and the mobile room menu fits it
 });
 
 test('the public room list lets a mobile player join without typing a code and hides occupied rooms', async ({ browser }) => {
+  test.setTimeout(60000);
   const { host, guest, hostContext, guestContext } = await participants(browser);
   const watcherContext = await browser.newContext(); const watcher = await watcherContext.newPage();
   try {
@@ -275,7 +354,7 @@ test('the public room list lets a mobile player join without typing a code and h
     await guest.goto('/?localRooms=1'); await guest.getByRole('button', { name: 'Комнаты', exact: true }).click();
     await guest.getByLabel('Имя игрока').fill('Гость');
     const row = guest.locator(`.public-rooms [data-room-code="${code}"]`);
-    await expect(row).toBeVisible({ timeout: 25000 }); await expect(row).toContainText('1/2');
+    await showRoom(guest, code); await expect(row).toContainText('1/2');
     expect(await guest.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await row.getByRole('button', { name: 'Войти в комнату Хозяин', exact: true }).click();
     await expect(host.getByRole('button', { name: 'Начать бой', exact: true })).toBeEnabled({ timeout: 15000 });
@@ -287,6 +366,7 @@ test('the public room list lets a mobile player join without typing a code and h
 });
 
 test('private rooms stay out of the list, can be made public, and disappear when closed', async ({ browser }) => {
+  test.setTimeout(60000);
   const { host, guest, hostContext, guestContext } = await participants(browser);
   try {
     await host.goto('/?localRooms=1'); await host.getByRole('button', { name: 'Комнаты', exact: true }).click();
@@ -296,9 +376,9 @@ test('private rooms stay out of the list, can be made public, and disappear when
     const code = (await host.locator('.room-code-heading strong').innerText()).trim();
     await guest.goto('/?localRooms=1'); await guest.getByRole('button', { name: 'Комнаты', exact: true }).click();
     await expect(guest.locator('.public-rooms-empty')).not.toContainText('Ищем', { timeout: 20000 });
-    const row = guest.locator(`.public-rooms [data-room-code="${code}"]`); await expect(row).toHaveCount(0);
+    const row = guest.locator(`.public-rooms [data-room-code="${code}"]`); expect(await roomIsOnAnyPage(guest, code)).toBe(false);
     await host.getByLabel('Показывать в списке, пока есть свободное место', { exact: true }).check();
-    await expect(row).toBeVisible({ timeout: 15000 });
+    await showRoom(guest, code);
     await host.getByRole('button', { name: 'Закрыть комнату', exact: true }).click();
     await host.getByRole('dialog', { name: 'Выйти из комнаты', exact: true }).getByRole('button', { name: 'Выйти из комнаты', exact: true }).click();
     await expect(row).toHaveCount(0, { timeout: 10000 });
@@ -313,11 +393,11 @@ test('open rooms are rediscovered when the first lobby browser closes', async ({
     await directory.goto('/?localRooms=1'); await directory.getByRole('button', { name: 'Комнаты', exact: true }).click();
     await expect(directory.locator('.public-rooms-empty')).not.toContainText('Ищем', { timeout: 20000 });
     const code = await create(host);
-    await expect(directory.locator(`.public-rooms [data-room-code="${code}"]`)).toBeVisible({ timeout: 20000 });
+    await showRoom(directory, code);
     await directoryContext.close();
     await guest.goto('/?localRooms=1'); await guest.getByRole('button', { name: 'Комнаты', exact: true }).click();
     const row = guest.locator(`.public-rooms [data-room-code="${code}"]`);
-    await expect(row).toBeVisible({ timeout: 30000 });
+    await showRoom(guest, code, 30_000);
     await expect(host.locator('.room-error')).toHaveCount(0);
     await row.getByRole('button', { name: 'Войти в комнату Хозяин', exact: true }).click(); await start(host, guest);
   } finally { await close(directoryContext, hostContext, guestContext); }

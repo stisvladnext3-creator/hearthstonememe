@@ -1,4 +1,4 @@
-import { CARD, STARTER_DECK, deckError } from './game/cards';
+import { CARD, STARTER_DECK, deckError, migrateRewardDeck } from './game/cards';
 import { refreshAuras, type Game, type Minion, type Player } from './game/engine';
 import { HEROES } from './game/presentation';
 import type { HistoryEntity, HistoryEntry } from './game/history';
@@ -14,7 +14,9 @@ export function write(key: string, value: unknown) {
 }
 export function loadDeck(): string[] {
   const data = read<unknown>('deck', null);
-  return Array.isArray(data) && data.every(x => typeof x === 'string') && !deckError(data) ? data : [...STARTER_DECK];
+  if (!Array.isArray(data) || !data.every(x => typeof x === 'string')) return [...STARTER_DECK];
+  const migrated = migrateRewardDeck(data);
+  return !deckError(migrated) ? migrated : [...STARTER_DECK];
 }
 const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 const cardId = (id: unknown): id is string => typeof id === 'string' && Object.hasOwn(CARD, id);
@@ -53,9 +55,15 @@ export function loadGame(): Game | null {
   if (g && g.events === undefined) g.events = [];
   if (!g || typeof g.id !== 'string' || !validPlayer(g.player) || !validPlayer(g.bot) || !['player', 'bot'].includes(g.active)
     || g.winner !== null || ![g.turn, g.nextUid, g.rng, g.nextLog, g.rashDeaths].every(finite) || !Number.isSafeInteger(g.rashDeaths) || g.rashDeaths < 0
-    || !Array.isArray(g.events) || !g.events.every(e => e && finite(e.id) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform'].includes(e.kind) && ['player', 'bot'].includes(e.side)
+    || !Array.isArray(g.events) || !g.events.every(e => e && finite(e.id) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw'].includes(e.kind) && ['player', 'bot'].includes(e.side)
       && (!e.cardId || Object.hasOwn(CARD, e.cardId)) && (!e.source || e.source === 'hero' || finite(e.source)) && (!e.target || ['player', 'bot'].includes(e.target.side) && (e.target.uid === 'hero' || finite(e.target.uid))))
     || !Array.isArray(g.log) || !g.log.every(validEntry)) return null;
+  if (g.mulligan && (!finite(g.mulligan.deadline) || !g.mulligan.ready || !g.mulligan.selected || !['player', 'bot'].every(s => {
+    const side = s as 'player' | 'bot', selected = g.mulligan!.selected[side];
+    return g[side].hand.length === 3 && !g[side].board.length && g[side].mana === 0 && g[side].maxMana === 0
+      && typeof g.mulligan!.ready[side] === 'boolean' && Array.isArray(selected) && selected.length <= 3
+      && new Set(selected).size === selected.length && selected.every(n => g[side].hand.some(c => c.uid === n));
+  }))) return null;
   if (g.discovery && (g.discovery.side !== g.active || !cardId(g.discovery.sourceId) || CARD[g.discovery.sourceId].effect !== 'discoverBlast'
     || !Array.isArray(g.discovery.options) || g.discovery.options.length < 1 || g.discovery.options.length > 3
     || new Set(g.discovery.options).size !== g.discovery.options.length || !g.discovery.options.every(id => cardId(id) && g[g.active].deck.includes(id))

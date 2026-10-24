@@ -3,7 +3,7 @@ import { createGame, other, type Action, type Game, type Side } from '../game/en
 import type { HistoryEntity } from '../game/history';
 import { HEROES } from '../game/presentation';
 
-export const ROOM_PROTOCOL = 2;
+export const ROOM_PROTOCOL = 3;
 export const ROOM_PREFIX = 'memestone-v08-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
@@ -23,6 +23,8 @@ export function validAction(value: unknown): value is Action {
   const uid = Number.isSafeInteger(a.uid) && Number(a.uid) > 0;
   const target = a.target === 'hero' || a.target === 'own-hero' || Number.isSafeInteger(a.target) && Number(a.target) > 0;
   switch (a.type) {
+    case 'mulligan': return Array.isArray(a.replace) && a.replace.length <= 3 && new Set(a.replace).size === a.replace.length
+      && a.replace.every(n => Number.isSafeInteger(n) && n > 0) && (a.confirm === undefined || typeof a.confirm === 'boolean');
     case 'play': return uid && (a.target === undefined || target);
     case 'attack': return uid && target;
     case 'power': return a.target === undefined || target;
@@ -31,10 +33,15 @@ export function validAction(value: unknown): value is Action {
     default: return false;
   }
 }
-export function createRoomGame(hostDeck: string[], guestDeck: string[], hostName: string, guestName: string, seed: number, id: string) {
+export function createRoomGame(hostDeck: string[], guestDeck: string[], hostName: string, guestName: string, seed: number, id: string, mulliganDeadline?: number) {
   const guestFirst = (seed & 1) === 1;
-  const g = createGame(guestFirst ? guestDeck : hostDeck, seed, guestFirst ? hostDeck : guestDeck);
-  if (guestFirst) { [g.player, g.bot] = [g.bot, g.player]; g.active = 'bot'; }
+  const g = createGame(guestFirst ? guestDeck : hostDeck, seed, guestFirst ? hostDeck : guestDeck, mulliganDeadline);
+  if (guestFirst) {
+    [g.player, g.bot] = [g.bot, g.player]; g.active = 'bot';
+    // Initial draws belong to the swapped seats too. Keep both animation
+    // ownership and the subsequent hidden-card projection consistent.
+    for (const event of g.events) { event.side = other(event.side); if (event.target) event.target.side = other(event.target.side); }
+  }
   g.id = id; g.player.name = cleanName(hostName); g.bot.name = cleanName(guestName);
   g.player.hero = 'mage'; g.bot.hero = 'mage';
   g.log = [{ id: 1, kind: 'turn', side: 'system', turn: 1, text: `${g[g.active].name} ходит первым.` }]; g.nextLog = 2;
@@ -46,6 +53,8 @@ export function createRoomGame(hostDeck: string[], guestDeck: string[], hostName
 export function roomGameView(input: Game, viewer: Side): Game {
   const g = structuredClone(input);
   const opponent = other(viewer);
+  if (g.mulligan) g.mulligan.selected[opponent] = [];
+  for (const event of g.events) if (event.kind === 'draw' && event.side === opponent) delete event.cardId;
   g[opponent].hand = g[opponent].hand.map(c => ({ uid: c.uid, id: 'hidden' }));
   g.player.deck = g.player.deck.map(() => 'hidden'); g.bot.deck = g.bot.deck.map(() => 'hidden');
   g.rng = 0; g.nextUid = 0;
@@ -70,6 +79,10 @@ export function roomGameView(input: Game, viewer: Side): Game {
   }
   if (viewer === 'player') return g;
   [g.player, g.bot] = [g.bot, g.player]; g.active = other(g.active);
+  if (g.mulligan) {
+    [g.mulligan.ready.player, g.mulligan.ready.bot] = [g.mulligan.ready.bot, g.mulligan.ready.player];
+    [g.mulligan.selected.player, g.mulligan.selected.bot] = [g.mulligan.selected.bot, g.mulligan.selected.player];
+  }
   if (g.winner && g.winner !== 'draw') g.winner = other(g.winner);
   if (g.discovery) g.discovery.side = other(g.discovery.side);
   if (g.briefing) [g.briefing.remainingTurns.player, g.briefing.remainingTurns.bot] = [g.briefing.remainingTurns.bot, g.briefing.remainingTurns.player];
@@ -102,10 +115,15 @@ export function validRoomView(value: unknown): value is Game {
   if (g.briefing && (!g.briefing.remainingTurns || !['player', 'bot'].every(s => {
     const n = g.briefing!.remainingTurns[s as Side]; return Number.isInteger(n) && n >= 0 && n <= 5;
   }))) return false;
+  if (g.mulligan && (!Number.isFinite(g.mulligan.deadline) || !g.mulligan.ready || !g.mulligan.selected
+    || !['player', 'bot'].every(s => g[s as Side].hand.length === 3 && g[s as Side].board.length === 0 && g[s as Side].mana === 0 && g[s as Side].maxMana === 0
+      && typeof g.mulligan!.ready[s as Side] === 'boolean' && Array.isArray(g.mulligan!.selected[s as Side])
+      && new Set(g.mulligan!.selected[s as Side]).size === g.mulligan!.selected[s as Side].length
+      && g.mulligan!.selected[s as Side].length <= 3 && g.mulligan!.selected[s as Side].every(n => uid(n) && g[s as Side].hand.some(c => c.uid === n))))) return false;
   if (g.discovery && (!sideOf(g.discovery.side) || !knownCard(g.discovery.sourceId) || !Array.isArray(g.discovery.options) || g.discovery.options.length > 3 || !g.discovery.options.every(knownCard)
     || g.discovery.target !== 'hero' && !g[other(g.discovery.side)].board.some(m => m.uid === g.discovery!.target))) return false;
   return Array.isArray(g.events) && g.events.length <= 40 && Array.isArray(g.log) && g.log.length <= 1000
-    && g.events.every(e => e && uid(e.id) && sideOf(e.side) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform'].includes(e.kind) && (!e.cardId || knownCard(e.cardId))
+    && g.events.every(e => e && uid(e.id) && sideOf(e.side) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw'].includes(e.kind) && (!e.cardId || knownCard(e.cardId))
       && (!e.target || sideOf(e.target.side) && (e.target.uid === 'hero' || uid(e.target.uid))) && (e.source === undefined || e.source === 'hero' || uid(e.source)))
     && g.log.every(e => e && typeof e.text === 'string' && (e.side === 'system' || sideOf(e.side)) && (e.kind === undefined || ['play', 'attack', 'effect', 'power', 'transform', 'death', 'draw', 'discard', 'turn', 'finish', 'discover'].includes(e.kind))
       && [e.actor, e.target, e.hero, e.result].every(entity));

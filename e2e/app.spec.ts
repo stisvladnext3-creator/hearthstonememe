@@ -57,12 +57,15 @@ test('collection searches, categories and mana filters work together', async ({ 
 test('a new solo match puts its quest first and activates it only after playing', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click();
   const hand = page.locator('.player-hand .game-card');
-  await expect(hand).toHaveCount(4);
+  await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible();
+  await expect(hand).toHaveCount(3);
   await expect(hand.first()).toHaveAttribute('data-card-id', 'rash-quest');
   await expect(hand.nth(1)).toHaveAttribute('data-card-id', 'casino');
   await expect(page.locator('.quest-progress.player')).toHaveCount(0);
   await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   await expect(hand.first()).toHaveAttribute('data-card-id', 'rash-quest');
+  await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
+  await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
   await hand.first().click(); await expect(page.locator('.quest-progress.player')).toContainText('0/8');
   await expect(hand).toHaveCount(3);
 });
@@ -98,6 +101,8 @@ test('targeted spell bypasses taunt, minion attack obeys taunt and damage is ren
 test('bot takes its turn, game persists and resumes after reload', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
+  await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Завершить', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Ход Бориса', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled({ timeout: 12000 });
@@ -117,6 +122,8 @@ test('suicide card ends match, counts one loss and offers rematch', async ({ pag
   const stats = await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.stats')!));
   expect(stats.games).toBe(1); expect(stats.wins).toBe(0);
   await page.getByRole('button', { name: 'Ещё одна партия' }).click();
+  await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible();
+  await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
   await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.stats')!).games)).toBe(1);
 });
@@ -129,6 +136,7 @@ test('settings persist and corrupted local data falls back safely', async ({ pag
   await expect(page.getByRole('checkbox', { name: /Анимации/ })).not.toBeChecked();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
   await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled();
 });
 test('mobile navigation, collection and full battlefield do not overflow viewport', async ({ page }) => {
@@ -159,6 +167,7 @@ test('original image replaces the full card, persists after reload, and can be r
   await page.getByLabel('Поиск карт').fill('Галинка');
   await page.getByRole('button', { name: 'Галинка, 10 маны', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Галинка' });
+  await dialog.getByRole('tab', { name: 'Картинка', exact: true }).click();
   await dialog.getByLabel('Загрузить оригинал Галинка').setInputFiles('public/art/card-frame.png');
   await expect(dialog.getByAltText('Оригинальная карта Галинка')).toBeVisible();
   await page.reload();
@@ -166,6 +175,7 @@ test('original image replaces the full card, persists after reload, and can be r
   await page.getByLabel('Поиск карт').fill('Галинка');
   await page.getByRole('button', { name: 'Галинка, 10 маны', exact: true }).click();
   await expect(dialog.getByAltText('Оригинальная карта Галинка')).toBeVisible();
+  await dialog.getByRole('tab', { name: 'Картинка', exact: true }).click();
   await dialog.getByRole('button', { name: 'Убрать свою картинку' }).click();
   await expect(dialog.getByAltText('Оригинальная карта Галинка')).toHaveCount(0);
   await expect(dialog.locator('.awaiting-original')).toHaveCount(0);
@@ -256,7 +266,7 @@ test('holding a hand card opens its rules without spending mana or playing it', 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
   await page.waitForTimeout(550); await page.mouse.up();
   const dialog = page.getByRole('dialog', { name: 'Завсегдатай' });
-  await expect(dialog).toBeVisible(); await expect(dialog.locator('.inspection-context')).toContainText('Карта в руке');
+  await expect(dialog).toBeVisible(); await page.getByRole('tab', { name: 'Детали', exact: true }).click(); await expect(dialog.locator('.inspection-context')).toContainText('Карта в руке');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!).player.mana)).toBe(10);
   await page.keyboard.press('Escape');
   await expect(card).toBeVisible(); await expect(page.locator('.player-board .board-unit')).toHaveCount(0);
@@ -333,7 +343,7 @@ test('an unavailable power explains the hand cap when held and consumes nothing'
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
   await page.waitForTimeout(550); await page.mouse.up();
   const dialog = page.getByRole('dialog', { name: 'Ой' });
-  await expect(dialog).toBeVisible(); await expect(dialog.locator('.inspection-context')).toContainText('уже 10 карт');
+  await expect(dialog).toBeVisible(); await page.getByRole('tab', { name: 'Детали', exact: true }).click(); await expect(dialog.locator('.inspection-context')).toContainText('уже 10 карт');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!).player.mana)).toBe(10);
 });
 
@@ -346,9 +356,10 @@ test('all three new cards show bundled internet art and source attribution', asy
     const dialog = page.getByRole('dialog', { name: c.name, exact: true });
     await expect(dialog.locator('.original-portrait')).toBeVisible();
     await expect(dialog.locator('.awaiting-original')).toHaveCount(0);
-    await expect(dialog.locator('.art-credit a').first()).toHaveAttribute('href', /commons.wikimedia.org/);
     const url = await dialog.locator('.original-portrait').evaluate(e => getComputedStyle(e).backgroundImage.slice(5, -2));
     expect((await page.request.get(url)).ok()).toBe(true);
+    await page.getByRole('tab', { name: 'Детали', exact: true }).click();
+    await expect(dialog.locator('.art-credit a').first()).toHaveAttribute('href', /commons.wikimedia.org/);
     await page.keyboard.press('Escape');
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -372,6 +383,7 @@ test('mobile discovery preserves its three choices across reload and inspects wi
   const option = choices.locator('.game-card').first(); const box = (await option.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
   await page.waitForTimeout(550); await page.mouse.up();
+  await page.getByRole('tab', { name: 'Детали', exact: true }).click();
   await expect(page.locator('.card-detail-modal .inspection-context')).toContainText('Вариант раскопки');
   await page.keyboard.press('Escape'); await expect(choices).toBeVisible();
   await choices.locator('.game-card').first().click(); await expect(choices).not.toBeVisible();
@@ -404,6 +416,7 @@ test('Василий buffs the board, shows the British cat and records the aura
   await expect(cat.locator('.original-portrait')).toBeVisible();
   await cat.click({ button: 'right' });
   const detail = page.getByRole('dialog', { name: CARD.vasiliy.name, exact: true });
+  await page.getByRole('tab', { name: 'Детали', exact: true }).click();
   await expect(detail.locator('.inspection-context')).toContainText('Аура Василия: +2 к атаке.');
   await expect(detail.locator('.art-credit')).toContainText('BritishEmpire');
   await page.keyboard.press('Escape');
@@ -515,6 +528,7 @@ test('hero silence persists after reload, lasts two own turns, and restores the 
   await power.click(); await page.getByRole('button', { name: /Герой противника: 30 здоровья, атаковать/ }).click();
   await expect(page.getByRole('button', { name: 'Герой противника: 29 здоровья', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  while (!(await page.locator('.battle-log').innerText()).includes('Немота героя закончилась.') && await page.getByRole('button', { name: 'Следующая страница истории' }).isEnabled()) await page.getByRole('button', { name: 'Следующая страница истории' }).click();
   await expect(page.locator('.battle-log')).toContainText('Немота героя закончилась. Сила героя снова доступна.');
 });
 
@@ -596,6 +610,7 @@ test('opponent power exposes the current ability, cost, used status and silence'
   await expect(power).toContainText('Немота: 2'); await power.click();
   const dialog = page.getByRole('dialog', { name: 'Ой', exact: true });
   await expect(dialog.locator('.effect-description')).toContainText('Смертокрыла');
+  await page.getByRole('tab', { name: 'Детали', exact: true }).click();
   await expect(dialog.locator('.inspection-context')).toContainText('Осталось своих ходов: 2');
 });
 
@@ -734,6 +749,8 @@ test('hand cards show complete descriptions, enlarge on hover, and shrink while 
 
 test('the forge field is selectable, persists and has a portrait background', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
+  await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Выбор игрового поля', exact: true }).click();
   await page.getByRole('radio', { name: /Огненная кузница/ }).check(); await page.getByRole('button', { name: 'Вернуться в бой', exact: true }).click();
   await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'forge');
@@ -802,7 +819,7 @@ for (const width of [1440, 390]) test(`every card fits its full name and effect 
         return ['href', 'width', 'height', 'x', 'y', 'transform'].every(a => base.getAttribute(a) === tinted.getAttribute(a))
           && e.hasAttribute('clip-path') && e.querySelectorAll('circle, ellipse, rect').length === 0;
       })).toBe(true);
-      if (def.kind !== 'power' && def.kind !== 'token') await expect(card.locator('..').locator('.album-owned')).toHaveText(`×${deckCopyLimit(def)}`);
+      if (def.kind !== 'power' && def.kind !== 'token' && !def.reward) await expect(card.locator('..').locator('.album-owned')).toHaveText(`×${deckCopyLimit(def)}`);
     }
     const next = page.getByRole('button', { name: 'Следующая страница', exact: true });
     if (await next.isDisabled()) break; await next.click();
@@ -851,6 +868,7 @@ for (const width of [1440, 390]) for (const appearance of ['signature', 'diamond
 test('legendary appearance is selected per card, persists, can be reset and follows the card into a hand', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
   await page.getByLabel('Поиск карт').fill('Масик'); await page.locator('.album-card-grid .game-card').click();
+  await page.getByRole('tab', { name: 'Оформление', exact: true }).click();
   await page.getByRole('button', { name: 'Алмазное', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Алмазное', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.detail-card-area .game-card')).toHaveClass(/model-diamond/);
@@ -858,6 +876,7 @@ test('legendary appearance is selected per card, persists, can be reset and foll
   await page.reload(); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
   await page.getByLabel('Поиск карт').fill('Масик'); await expect(page.locator('.album-card-grid .game-card')).toHaveClass(/model-diamond/);
   await page.getByLabel('Поиск карт').fill('Василий'); await page.locator('.album-card-grid .game-card').click();
+  await page.getByRole('tab', { name: 'Оформление', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Классическое', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Тёмное', exact: true }).click(); await page.keyboard.press('Escape');
   const g = fixture(); g.player.hand = [{ id: 'masik', uid: g.nextUid++ }, { id: 'vasiliy', uid: g.nextUid++ }];
@@ -870,6 +889,7 @@ test('legendary appearance is selected per card, persists, can be reset and foll
   expect(await card.locator('.card-type text').evaluate(e => ({ x: e.getAttribute('x'), y: e.getAttribute('y'), size: e.getAttribute('font-size') }))).toEqual(before);
   await card.dispatchEvent('pointerdown', { pointerType: 'touch', button: 0, clientX: 50, clientY: 50 });
   await expect(page.getByRole('dialog', { name: CARD.masik.name })).toBeVisible();
+  await page.getByRole('tab', { name: 'Оформление', exact: true }).click();
   await page.getByRole('button', { name: 'Классическое', exact: true }).click();
   await expect(page.locator('.detail-card-area .game-card')).toHaveClass(/model-dragon/);
   await page.keyboard.press('Escape'); await expect(card).toHaveClass(/model-dragon/);

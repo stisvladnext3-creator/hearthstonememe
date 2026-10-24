@@ -4,7 +4,7 @@ export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
-  art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean;
+  art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean; reward?: boolean;
   effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage';
 }
 
@@ -23,7 +23,7 @@ export const CARDS: CardDef[] = [
   { id: 'rds-power', name: 'Сила РДШ', cost: 4, kind: 'power', text: 'Призывает РДШ 2/5.', flavor: 'Сила героя Джайны-ассасина. Новому РДШ нужен ход, чтобы подготовиться к атаке.', rarity: 'rare', art: 10, custom: true, effect: 'rds' },
   { id: 'fool-power', name: 'Дибильнутый!', cost: 3, kind: 'power', text: 'Превращает врагов в существ на 5 маны дешевле. Исключена «Хорошая игра.».', flavor: 'Если нужной стоимости нет, выбирается ближайшая меньшая или самое дешёвое доступное существо. Превращение не запускает боевые кличи и предсмертные хрипы.', rarity: 'epic', art: 4, custom: true, effect: 'devolve' },
   { id: 'maxim', name: 'Максимка-разведчик', cost: 6, kind: 'minion', attack: 3, health: 5, text: 'Боевой клич: уничтожает всех существ «Жанна» в колодах обоих игроков.', flavor: 'Трогает только колоды. Существа на столе и карты в руке остаются на месте.', rarity: 'epic', art: 5, custom: true, effect: 'purgeZhanna', tribe: 'Максим' },
-  { id: 'volunteer', name: 'Волонтер-босс', cost: 5, kind: 'minion', attack: 8, health: 8, text: 'Уничтожает ВСЕХ существ на столе. Призывает два РДШ 2/4.', flavor: 'В прототипе срабатывает при розыгрыше: уничтожает и себя, затем оставляет двух РДШ 2/4.', rarity: 'common', art: 11, custom: true, effect: 'volunteer', tribe: 'Лох' },
+  { id: 'volunteer', name: 'Волонтер-босс', cost: 5, kind: 'minion', attack: 8, health: 8, text: 'Уничтожает ВСЕХ существ на столе. Призывает два РДШ 2/4.', flavor: 'В прототипе срабатывает при розыгрыше: уничтожает и себя, затем оставляет двух РДШ 2/4.', rarity: 'common', art: 11, custom: true, reward: true, effect: 'volunteer', tribe: 'Лох' },
   { id: 'rash', name: 'РДШ', cost: 3, kind: 'token', attack: 2, health: 5, text: 'Призван силой РДШ. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Считает не только своих.', rarity: 'common', art: 10, tribe: 'РДШ' },
   { id: 'rash-volunteer', name: 'РДШ', cost: 2, kind: 'token', attack: 2, health: 4, text: 'Призван Волонтером-боссом. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Работают парами.', rarity: 'common', art: 11, tribe: 'РДШ' },
   { id: 'zhanna', name: 'Жанна', cost: 4, kind: 'minion', attack: 3, health: 5, text: 'Базовое тестовое существо типа «Жанна».', flavor: 'Добавлена как тестовая цель для Максимки-разведчика. Оригинальная карта Жанны пока не прислана.', rarity: 'common', art: 10, tribe: 'Жанна' },
@@ -57,19 +57,29 @@ export const CARDS: CardDef[] = [
   { id: 'slime-token', name: 'Слизь', cost: 1, kind: 'token', attack: 0, health: 2, text: 'Провокация.', flavor: 'Маленькая Слизь, призванная предсмертным хрипом. Сама больше никого не призывает.', rarity: 'common', art: 9, taunt: true, frame: 'simple' },
 ];
 export const CARD = Object.fromEntries(CARDS.map(c => [c.id, c])) as Record<string, CardDef>;
-export const COLLECTIBLE = CARDS.filter(c => c.kind !== 'power' && c.kind !== 'token');
+export const COLLECTIBLE = CARDS.filter(c => c.kind !== 'power' && c.kind !== 'token' && !c.reward);
 export const STARTER_DECK = [
   'casino', 'galinka', 'goodgame', 'ruslan', 'slime', 'trachukcha', 'me', 'deathwing', 'maratik',
   'regular', 'echo-maxim', 'bouncer', 'jaina-instigator', 'jaina-volunteer', 'dragonslayer', 'jaina-rusher', 'paper-army', 'guardian', 'vasiliy',
-  'masik', 'jaina', 'bolt', 'briefing', 'heal', 'dog-spell', 'draw', 'maxim', 'silence', 'volunteer', 'rash-quest',
+  'masik', 'jaina', 'bolt', 'briefing', 'heal', 'dog-spell', 'draw', 'maxim', 'silence', 'slime', 'rash-quest',
 ];
 export const BOT_DECK = [
-  'regular', 'echo-maxim', 'slime', 'volunteer', 'bouncer', 'bouncer', 'jaina-instigator', 'jaina-volunteer', 'rash-quest', 'dragonslayer',
+  'regular', 'echo-maxim', 'slime', 'slime', 'bouncer', 'bouncer', 'jaina-instigator', 'jaina-volunteer', 'rash-quest', 'dragonslayer',
   'jaina-rusher', 'paper-army', 'mage', 'guardian', 'guardian', 'vasiliy', 'dragon', 'masik', 'bolt', 'bolt',
   'heal', 'dog-spell', 'draw', 'briefing', 'silence', 'silence', 'ruslan', 'casino', 'galinka', 'deathwing',
 ];
 export const deckCopyLimit = (card: CardDef) => card.rarity === 'legendary' ? 1 : card.rarity === 'epic' ? 2 : 3;
 export const RARITY_NAMES = { common: 'Обычная', rare: 'Редкая', epic: 'Эпическая', legendary: 'Легендарная' } as const;
+export function migrateRewardDeck(ids: string[]): string[] {
+  const result = ids.filter(id => !CARD[id]?.reward);
+  const preferred = ['guardian', 'slime', 'regular', 'bouncer'];
+  const replacements = [...preferred.map(id => CARD[id]), ...COLLECTIBLE.filter(c => !preferred.includes(c.id) && c.effect !== 'concede')];
+  for (let n = result.length; n < ids.length; n++) {
+    const replacement = replacements.find(c => result.filter(id => id === c.id).length < deckCopyLimit(c));
+    if (replacement) result.push(replacement.id);
+  }
+  return result;
+}
 export function deckError(ids: string[]): string | undefined {
   if (ids.length !== 30) return 'В колоде должно быть ровно 30 карт.';
   if (ids.some(id => !COLLECTIBLE.some(c => c.id === id))) return 'В колоде есть недоступная карта.';

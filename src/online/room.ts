@@ -1,5 +1,6 @@
+import { migrateRewardDeck } from '../game/cards';
 import type { Peer, DataConnection } from 'peerjs';
-import { act, type Action, type Game } from '../game/engine';
+import { act, expireMulligan, type Action, type Game } from '../game/engine';
 import { cleanName, createRoomGame, EMPTY_ROOM, normalizeCode, ROOM_PREFIX, ROOM_PROTOCOL, roomCode, roomGameView, validAction, validCode, validDeck, validRoomView, type ClientMessage, type HostMessage, type Member, type RoomState } from './protocol';
 import { peerRuntime, readMessage } from './transport';
 import { DIRECTORY_ID, RoomAdvertisement } from './directory';
@@ -9,6 +10,8 @@ const SAVE_KEY = 'memestone.room.v1';
 export function savedRoom(): SavedRoom | null {
   try {
     const s = JSON.parse(sessionStorage.getItem(SAVE_KEY) ?? 'null') as SavedRoom | null;
+    if (s?.self && Array.isArray(s.self.deck)) s.self.deck = migrateRewardDeck(s.self.deck);
+    if (s?.guest && Array.isArray(s.guest.deck)) s.guest.deck = migrateRewardDeck(s.guest.deck);
     if (!s || !['host', 'guest'].includes(s.role) || !validCode(s.code) || !validDeck(s.self?.deck) || typeof s.self.name !== 'string' || typeof s.self.token !== 'string') return null;
     if (s.guest && (!validDeck(s.guest.deck) || typeof s.guest.name !== 'string' || typeof s.guest.token !== 'string')) return null;
     if (s.game && (!validRoomView(roomGameView(s.game, 'player')) || ![s.game.rng, s.game.nextUid, s.game.nextLog].every(Number.isSafeInteger))) return null;
@@ -44,6 +47,12 @@ export class PeerRoom {
   private hostRematch = false;
   private guestRematch = false;
   private everConnected = false;
+  private phaseTimer = setInterval(() => this.advanceOpening(), 250);
+  private advanceOpening() {
+    if (!this.canonical?.mulligan || this.disposed) return;
+    const next = expireMulligan(this.canonical);
+    if (next !== this.canonical) { this.canonical = next; this.state.revision++; this.publish(); }
+  }
   private outbound?: { type: 'action'; action: Action; revision: number; requestId: string; retried?: boolean };
   constructor(private change: (state: RoomState) => void) {}
   private update(patch: Partial<RoomState>) {
@@ -134,6 +143,7 @@ export class PeerRoom {
       if (connection !== this.connection) return;
       if (data.type === 'action') {
         if (typeof data.requestId !== 'string' || data.requestId.length > 100) return;
+        this.advanceOpening();
         if (this.recentRequests.has(data.requestId)) { this.publish(); return; }
         this.recentRequests.add(data.requestId); if (this.recentRequests.size > 200) this.recentRequests.delete(this.recentRequests.values().next().value!);
         if (!validAction(data.action) || !this.canonical || data.revision !== this.state.revision) {
@@ -206,10 +216,11 @@ export class PeerRoom {
   start() {
     if (this.state.role !== 'host' || !this.guest || !this.state.connected || this.canonical && !this.canonical.winner) return;
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-    this.canonical = createRoomGame(this.self!.deck, this.guest.deck, this.self!.name, this.guest.name, seed, crypto.randomUUID());
+    this.canonical = createRoomGame(this.self!.deck, this.guest.deck, this.self!.name, this.guest.name, seed, crypto.randomUUID(), Date.now() + 30_000);
     this.hostRematch = this.guestRematch = false; this.state.revision++; this.recentRequests.clear(); this.publish();
   }
   action(action: Action) {
+    this.advanceOpening();
     if (!validAction(action) || !this.state.connected || !this.state.game || this.state.pending) return;
     if (this.state.role === 'host') {
       const result = act(this.canonical!, 'player', action);
@@ -240,7 +251,7 @@ export class PeerRoom {
     if (clearSave && this.state.role === 'host' && this.canonical && !this.canonical.winner) {
       this.canonical = act(this.canonical, 'player', { type: 'concede' }).state; this.state.revision++; this.publish();
     }
-    this.disposed = true; clearTimeout(this.reconnectTimer); clearTimeout(this.signalingTimer); clearTimeout(this.connectTimer); clearTimeout(this.actionTimer);
+    this.disposed = true; clearInterval(this.phaseTimer); clearTimeout(this.reconnectTimer); clearTimeout(this.signalingTimer); clearTimeout(this.connectTimer); clearTimeout(this.actionTimer);
     this.advertisement?.close();
     const peer = this.peer; setTimeout(() => peer?.destroy(), clearSave ? 150 : 0);
     if (clearSave) { try { sessionStorage.removeItem(SAVE_KEY); } catch { /* Optional storage. */ } }

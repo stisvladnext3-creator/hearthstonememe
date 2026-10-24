@@ -4,6 +4,7 @@ export type ImageFormat = 'card' | 'editor' | 'portrait';
 export interface ArtCredit { title: string; author: string; source: string; license: string; licenseUrl: string }
 export interface SharedArtwork { path: string; format: ImageFormat; position?: string; size?: string; credit?: ArtCredit }
 export const ORIGINAL_ART: Record<string, SharedArtwork> = {
+  masik: { path: 'art/user/masik-portrait.png', format: 'portrait', position: 'center 30%' },
   vasiliy: { path: 'art/web/vasiliy.jpg', format: 'portrait', position: '68% 25%', size: '180% auto', credit: {
     title: 'Mystica from British Empire Cattery', author: 'BritishEmpire',
     source: 'https://commons.wikimedia.org/wiki/File:Mystica_from_British_Empire_Cattery.jpg',

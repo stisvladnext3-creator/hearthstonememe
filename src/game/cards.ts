@@ -1,11 +1,11 @@
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
-export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast';
+export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik';
 export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean;
-  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple';
+  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean;
 }
 
 export const CARDS: CardDef[] = [
@@ -41,17 +41,18 @@ export const CARDS: CardDef[] = [
   { id: 'dragonslayer', name: 'Драконоборец', cost: 2, kind: 'minion', attack: 1, health: 2, text: 'Боевой клич: наносит 4 урона герою противника.', flavor: 'Для четырёх единиц урона дракон поблизости не обязателен.', rarity: 'epic', art: 9, custom: true, effect: 'dragonslayer', tribe: 'Чел', frame: 'simple' },
   { id: 'dog-spell', name: 'Такая вот хуйня, собачка', cost: 2, kind: 'spell', text: 'Раскопайте копию карты из своей колоды. Наносит 4 урона выбранному врагу.', flavor: 'Выберите одну из трёх разных карт своей колоды. Копия попадёт в руку, оригинал останется в колоде. Затем выбранный враг получит 4 урона. При пустой колоде остаётся урон.', rarity: 'epic', art: 11, custom: true, effect: 'discoverBlast', tribe: 'Чел' },
   { id: 'vasiliy', name: 'Василий — хранитель мультивселенных', cost: 3, kind: 'minion', attack: 4, health: 5, text: 'Провокация. Все ваши существа получают +2 к атаке.', flavor: 'Аура действует на всех союзных существ, включая Василия, пока он на столе без немоты. Бонусы нескольких Василиев складываются. После его гибели, превращения или немоты бонус исчезает.', rarity: 'legendary', art: 9, custom: true, taunt: true, auraAttack: 2, tribe: 'Мяу' },
+  { id: 'masik', name: 'Масик, уничтожитель миров', cost: 7, kind: 'minion', attack: 6, health: 4, text: 'Рывок. Боевой клич: немота выбранного персонажа. На героя действует 2 хода.', flavor: 'Рывок позволяет атаковать сразу, включая героя, но не обходит провокацию. Немота существа снимает его способности; немота героя отключает его силу на 2 его хода.', rarity: 'legendary', art: 9, custom: true, charge: true, effect: 'masik', tribe: 'Мяу' },
 ];
 export const CARD = Object.fromEntries(CARDS.map(c => [c.id, c])) as Record<string, CardDef>;
 export const COLLECTIBLE = CARDS.filter(c => c.kind !== 'power' && c.kind !== 'token');
 export const STARTER_DECK = [
   'casino', 'galinka', 'goodgame', 'ruslan', 'ruslan', 'trachukcha', 'me', 'deathwing', 'maratik',
   'regular', 'regular', 'bouncer', 'bouncer', 'goblin', 'dragonslayer', 'mage', 'mage', 'guardian', 'vasiliy',
-  'dragon', 'jaina', 'bolt', 'bolt', 'heal', 'dog-spell', 'draw', 'maxim', 'silence', 'volunteer', 'zhanna',
+  'masik', 'jaina', 'bolt', 'bolt', 'heal', 'dog-spell', 'draw', 'maxim', 'silence', 'volunteer', 'zhanna',
 ];
 export const BOT_DECK = [
   'regular', 'regular', 'regular', 'volunteer', 'bouncer', 'bouncer', 'bouncer', 'goblin', 'goblin', 'dragonslayer',
-  'mage', 'mage', 'mage', 'guardian', 'guardian', 'vasiliy', 'dragon', 'dragon', 'bolt', 'bolt',
+  'mage', 'mage', 'mage', 'guardian', 'guardian', 'vasiliy', 'dragon', 'masik', 'bolt', 'bolt',
   'heal', 'dog-spell', 'draw', 'draw', 'silence', 'silence', 'ruslan', 'casino', 'galinka', 'deathwing',
 ];
 export function deckError(ids: string[]): string | undefined {

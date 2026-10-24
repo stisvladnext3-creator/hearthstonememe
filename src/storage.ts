@@ -32,11 +32,14 @@ function validPlayer(p: Player): boolean {
   return !!p && [p.health, p.armor, p.mana, p.maxMana, p.fatigue].every(finite)
     && p.mana >= 0 && p.maxMana >= 0 && p.maxMana <= 10 && p.mana <= p.maxMana && p.armor >= 0
     && ['spark', 'fool', 'oy', 'rds'].includes(p.power) && typeof p.powerUsed === 'boolean' && typeof p.hero === 'string'
+    && (p.powerSilenceTurns === undefined || Number.isSafeInteger(p.powerSilenceTurns) && p.powerSilenceTurns >= 0 && p.powerSilenceTurns <= 2)
     && Array.isArray(p.deck) && p.deck.every(cardId)
     && Array.isArray(p.hand) && p.hand.length <= 10 && p.hand.every(c => c && cardId(c.id) && finite(c.uid))
     && Array.isArray(p.board) && p.board.length <= 7 && p.board.every((m: Minion) => m && cardId(m.id)
       && [m.uid, m.attack, m.health, m.maxHealth].every(finite)
       && (m.auraBonus === undefined || finite(m.auraBonus) && m.auraBonus >= 0)
+      && (m.charge === undefined || typeof m.charge === 'boolean') && (m.attackedThisTurn === undefined || typeof m.attackedThisTurn === 'boolean')
+      && (m.enteredTurn === undefined || Number.isSafeInteger(m.enteredTurn) && m.enteredTurn >= 0)
       && (m.origin === undefined || ['played', 'summoned', 'transformed'].includes(m.origin))
       && [m.ready, m.taunt, m.cannotAttack, m.silenced, m.ephemeral].every(x => typeof x === 'boolean'));
 }
@@ -53,6 +56,14 @@ export function loadGame(): Game | null {
     || !Array.isArray(g.discovery.options) || g.discovery.options.length < 1 || g.discovery.options.length > 3
     || new Set(g.discovery.options).size !== g.discovery.options.length || !g.discovery.options.every(id => cardId(id) && g[g.active].deck.includes(id))
     || (g.discovery.target !== 'hero' && (!finite(g.discovery.target) || !g[g.active === 'player' ? 'bot' : 'player'].board.some(m => m.uid === g.discovery!.target))))) return null;
+  for (const p of [g.player, g.bot]) {
+    p.powerSilenceTurns ??= 0;
+    for (const m of p.board) {
+      m.charge ??= !!CARD[m.id].charge && !m.silenced;
+      m.enteredTurn ??= 0;
+      m.attackedThisTurn ??= false;
+    }
+  }
   refreshAuras(g);
   return g;
 }

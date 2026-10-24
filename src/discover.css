@@ -24,3 +24,5 @@
   .discover-choices { gap: 4px; margin: 18px -4px; }
   .discover-modal > small { font-size: 13px; }
 }
+
+.charge-badge{position:absolute;left:-6px;top:17px;z-index:5;width:20px;height:20px;display:grid;place-items:center;border:1px solid #ffe6a2;border-radius:50%;color:#fff2b0;background:#315f78;box-shadow:0 2px 4px #0b1e27}

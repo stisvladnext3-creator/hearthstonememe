@@ -448,3 +448,81 @@ for (const ready of [true, false]) {
     }
   });
 }
+
+test('Masik is in the collection with a portrait prepared from the supplied kitten photo', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.getByLabel('Поиск карт').fill('Масик');
+  await page.getByRole('button', { name: 'Масик, уничтожитель миров, 7 маны', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: CARD.masik.name, exact: true });
+  await expect(dialog.locator('.original-portrait')).toBeVisible();
+  await expect(dialog.locator('.awaiting-original')).toHaveCount(0);
+  await expect(dialog.locator('.effect-description')).toContainText('Рывок. Боевой клич:');
+  await expect(dialog.locator('.attack-stat')).toHaveText('6');
+  await expect(dialog.locator('.health-stat')).toHaveText('4');
+  const background = await dialog.locator('.original-portrait').evaluate(e => getComputedStyle(e).backgroundImage);
+  expect(background).toContain('masik-portrait.png');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('Masik silences a taunt and charges the opposing hero on the same turn', async ({ page }) => {
+  const g = fixture(); g.player.hand = [{ id: 'masik', uid: g.nextUid++ }]; unit(g, 'guardian', true);
+  await seed(page, g);
+  await page.getByRole('button', { name: 'Масик, уничтожитель миров, 7 маны', exact: true }).click();
+  await expect(page.locator('.battle-hint')).toContainText('существо или героя');
+  await page.getByRole('button', { name: 'Страж трактира: 4 атаки, 6 здоровья', exact: true }).click();
+  await expect(page.locator('.enemy-board .silence-mark')).toBeVisible();
+  const masik = page.getByRole('button', { name: /Масик, уничтожитель миров: 6 атаки, 4 здоровья, готов атаковать/ });
+  await expect(masik.locator('.charge-badge')).toBeVisible();
+  await masik.click();
+  await page.getByRole('button', { name: /Герой противника: 30 здоровья, атаковать/ }).click();
+  await expect(page.getByRole('button', { name: 'Герой противника: 24 здоровья', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Масик, уничтожитель миров: 6 атаки/ })).not.toHaveAttribute('aria-label', /готов атаковать/);
+});
+
+test('hero silence persists after reload, lasts two own turns, and restores the power', async ({ page }) => {
+  const g = fixture(); g.player.hand = [{ id: 'masik', uid: g.nextUid++ }];
+  g.bot.hand = []; g.bot.deck = ['regular', 'regular', 'regular'];
+  await seed(page, g);
+  await page.getByRole('button', { name: 'Масик, уничтожитель миров, 7 маны', exact: true }).click();
+  await page.getByRole('button', { name: /Ваш герой: 30 здоровья, атаковать/ }).click();
+  const power = page.getByRole('button', { name: 'Сила героя Искра, 2 маны', exact: true });
+  await expect(power).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('.own-hero-row .hero-label')).toContainText('ещё 2 хода');
+  await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  await expect(power).toHaveAttribute('aria-disabled', 'true');
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled({ timeout: 12000 });
+  await expect(page.locator('.own-hero-row .hero-label')).toContainText('ещё 1 ход');
+  await expect(power).toHaveAttribute('aria-disabled', 'true');
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled({ timeout: 12000 });
+  await expect(power).toHaveAttribute('aria-disabled', 'false');
+  await power.click(); await page.getByRole('button', { name: /Герой противника: 30 здоровья, атаковать/ }).click();
+  await expect(page.getByRole('button', { name: 'Герой противника: 29 здоровья', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  await expect(page.locator('.battle-log')).toContainText('Немота героя закончилась. Сила героя снова доступна.');
+});
+
+test('silencing a freshly played Masik removes charge without granting an attack', async ({ page }) => {
+  const g = fixture(); g.player.hand = [{ id: 'masik', uid: g.nextUid++ }, { id: 'silence', uid: g.nextUid++ }];
+  await seed(page, g);
+  await page.getByRole('button', { name: 'Масик, уничтожитель миров, 7 маны', exact: true }).click();
+  await page.getByRole('button', { name: /Герой противника: 30 здоровья, атаковать/ }).click();
+  await page.getByRole('button', { name: 'Тихий час, 1 маны', exact: true }).click();
+  const masik = page.getByRole('button', { name: /Масик, уничтожитель миров: 6 атаки/ });
+  await masik.click(); await expect(masik.locator('.silence-mark')).toBeVisible();
+  await expect(masik.locator('.charge-badge')).toHaveCount(0);
+  await expect(masik).not.toHaveAttribute('aria-label', /готов атаковать/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!).player.board[0].ready)).toBe(false);
+});
+
+test('bot plays Masik, silences taunt, and wins using charge', async ({ page }) => {
+  const errors: string[] = []; page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  const g = fixture(); g.active = 'bot'; g.player.health = 6; unit(g, 'guardian');
+  g.bot.mana = g.bot.maxMana = 7; g.bot.hand = [{ id: 'masik', uid: g.nextUid++ }];
+  await seed(page, g);
+  await expect(page.getByRole('dialog', { name: 'Результат боя' })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('heading', { name: 'Ещё по одной?' })).toBeVisible();
+  expect(errors).toEqual([]);
+});

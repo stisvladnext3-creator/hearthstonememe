@@ -1,6 +1,7 @@
-import { useId, useLayoutEffect, useRef, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import { ImagePlus } from 'lucide-react';
-import { CARD, RARITY_NAMES, type CardDef } from '../game/cards';
+import { CARD, type CardDef } from '../game/cards';
+import { CardFrame, CardName, frameModel } from './CardFrame';
 import { useArtwork } from '../artwork';
 import { useLongPress } from '../useLongPress';
 
@@ -40,7 +41,6 @@ export function Card({ card, onClick, onInspect, className = '', playable = fals
   card: CardDef; onClick?: () => void; onInspect?: () => void; className?: string; playable?: boolean; compact?: boolean; cost?: number;
 }) {
   const gesture = useLongPress(onInspect ?? onClick);
-  const namePath = useId();
   const { images } = useArtwork();
   const image = images[card.id];
   const scanned = image && image.format !== 'portrait';
@@ -48,14 +48,13 @@ export function Card({ card, onClick, onInspect, className = '', playable = fals
   const shownCost = cost ?? card.printedCost ?? card.cost;
   const content = <>
     {scanned ? <><span className={`scanned-card ${image.format}`}><img src={image.url} alt={`Оригинальная карта ${card.name}`} draggable="false" /></span><span className="visually-hidden">{card.text}</span></>
-      : <><div className="card-art"><Art index={card.art} cardId={card.id} /></div>{card.kind === 'hero' || card.kind === 'power' ? <span className={`card-frame special-frame ${card.kind}`}><img src={`${import.meta.env.BASE_URL}art/special-frames.png`} alt="" draggable="false" /></span> : <img className={`card-frame ${spell ? 'spell-frame' : ''}`} src={`${import.meta.env.BASE_URL}art/${spell ? 'spell-frame' : card.frame === 'simple' ? 'simple-minion-frame' : 'card-frame'}.png`} alt="" draggable="false" />}
-        <div className="card-copy"><h3>{spell ? <svg className="spell-title" viewBox="0 0 360 64"><defs><path id={namePath} d="M 12,49 Q 180,7 348,49" /></defs><text fontSize={Math.min(34, 500 / card.name.length)}><textPath href={`#${namePath}`} startOffset="50%" textAnchor="middle">{card.name}</textPath></text></svg> : <FittedText text={card.name} maximum={8.5} minimum={3.2} />}</h3><p><FittedText text={card.text} maximum={spell ? 5.3 : 4.8} rich /></p><span className="card-kind"><FittedText text={card.tribe || kindLabel(card.kind)} maximum={4.8} /></span></div>
+      : <><div className="card-art"><Art index={card.art} cardId={card.id} /></div><CardFrame card={card} />
+        <div className="card-copy"><CardName card={card} /><p><FittedText text={card.text} maximum={spell ? 5.3 : 4.8} rich /></p><span className="card-kind"><FittedText text={card.tribe || kindLabel(card.kind)} maximum={4.8} /></span></div>
         <div className="card-bottom">{card.attack !== undefined ? <><span className="attack-stat">{card.attack}</span><span className="health-stat">{card.health}</span></> : card.armor ? <span className="armor-stat">{card.armor}</span> : null}</div>
       </>}
     {(!scanned || (cost !== undefined && cost !== card.cost)) && <span className={`card-cost ${scanned ? 'override-cost' : ''} ${cost !== undefined && cost < card.cost ? 'discounted' : ''}`}>{shownCost}</span>}
-    <span className="card-rarity" data-rarity={card.rarity} role="img" aria-label={`Редкость: ${RARITY_NAMES[card.rarity]}`} />
   </>;
-  const classes = `game-card classic-card ${card.rarity} kind-${card.kind} ${card.frame === 'simple' ? 'model-simple' : ''} ${card.tribe ? 'has-tribe' : ''} ${card.name.length > 18 ? 'long-name' : ''} ${scanned ? 'has-original' : ''} ${compact ? 'compact' : ''} ${playable ? 'playable' : ''} ${className}`;
+  const classes = `game-card classic-card ${card.rarity} kind-${card.kind} model-${frameModel(card)} ${card.tribe ? 'has-tribe' : ''} ${card.name.length > 18 ? 'long-name' : ''} ${scanned ? 'has-original' : ''} ${compact ? 'compact' : ''} ${playable ? 'playable' : ''} ${className}`;
   return onClick ? <button className={classes} data-card-id={card.id} onClick={onClick} {...gesture} aria-label={`${card.name}, ${shownCost} маны`} title={card.text}>{content}</button>
     : <div className={classes} data-card-id={card.id}>{content}</div>;
 }

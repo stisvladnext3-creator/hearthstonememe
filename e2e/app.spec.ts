@@ -743,17 +743,38 @@ for (const width of [1440, 390]) test(`every card fits its full name and effect 
       const label = await card.getAttribute('aria-label');
       const def = CARD[(await card.getAttribute('data-card-id'))!];
       expect(def, label!).toBeDefined(); visited.add(def.id);
-      for (const selector of ['.card-copy h3 .card-fit', '.card-copy p .card-fit']) {
+      for (const selector of ['.card-copy p .card-fit']) {
         const span = card.locator(selector);
         if (!await span.count()) continue;
         await expect.poll(() => span.evaluate(s => ({ fits: s.scrollWidth <= s.parentElement!.clientWidth + 1 && s.scrollHeight <= s.parentElement!.clientHeight + 1,
           text: s.textContent }))).toEqual({ fits: true, text: selector.includes('h3') ? def.name : def.text });
       }
-      const svg = card.locator('.spell-title text');
-      if (await svg.count()) expect(await svg.evaluate(e => (e as SVGTextElement).getComputedTextLength() <= 335)).toBe(true);
+      const title = card.locator('.card-name');
+      await expect(title).toHaveAttribute('aria-label', def.name);
+      await expect(title.locator('textPath')).toHaveText(def.name);
+      expect(await title.evaluate(svg => {
+        const text = svg.querySelector('text')!, path = svg.querySelector('path')!;
+        const box = text.getBBox();
+        const model = svg.closest('.game-card')!.querySelector('.card-frame')!.getAttribute('data-frame-model')!;
+        // Native ribbon coordinates, rather than an HTML box that could itself
+        // be positioned outside the painted banner.
+        const bands: Record<string, [number, number]> = { simple: [720, 853], dragon: [720, 853], spell: [650, 805], hero: [470, 555], power: [470, 555] };
+        return text.getComputedTextLength() <= path.getTotalLength() * .94 + 1 && box.height > 0
+          && box.y >= bands[model][0] && box.y + box.height <= bands[model][1];
+      })).toBe(true);
+      await expect(card.locator('.card-copy h3')).toHaveCount(0);
       const gem = card.locator('.card-rarity'); await expect(gem).toHaveCount(1);
       await expect(gem).toHaveAttribute('aria-label', `Редкость: ${RARITY_NAMES[def.rarity]}`);
       expect(await gem.evaluate(e => getComputedStyle(e).getPropertyValue('--gem-main').trim())).toBe(colors[def.rarity]);
+      // The raster already includes a gem: its recolored copy must use exactly
+      // the same image coordinates, clipped to the original socket, with no
+      // second positioned CSS stone or independent replacement geometry.
+      expect(await gem.evaluate(e => {
+        if (e.tagName.toLowerCase() !== 'g') return false;
+        const svg = e.ownerSVGElement!, base = svg.querySelector(':scope > image')!, tinted = e.querySelector('image')!;
+        return ['href', 'width', 'height', 'x', 'y', 'transform'].every(a => base.getAttribute(a) === tinted.getAttribute(a))
+          && e.hasAttribute('clip-path') && e.querySelectorAll('circle, ellipse, rect').length === 0;
+      })).toBe(true);
       if (def.kind !== 'power' && def.kind !== 'token') await expect(card.locator('..').locator('.album-owned')).toHaveText(`×${deckCopyLimit(def)}`);
     }
     const next = page.getByRole('button', { name: 'Следующая страница', exact: true });

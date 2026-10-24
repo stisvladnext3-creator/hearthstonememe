@@ -130,7 +130,7 @@ body:has(.in-battle) { min-width: 280px; overflow: hidden; }
 .battle-arena:has(.quest-progress.player) .deck-counter { display: none; }
 .rush-badge { position: absolute; left: -6px; top: 14%; z-index: 5; width: 19px; height: 19px; display: grid; place-items: center; border-radius: 50%; border: 1px solid #fee7ae; background: #8c431e; color: #fff0c1; box-shadow: 0 2px 5px #26170c; }
 .deathrattle-badge { position: absolute; left: 50%; top: -10px; transform: translateX(-50%); z-index: 5; font: 18px/1 Arial,sans-serif; color: #fff6dd; text-shadow: 0 1px 3px #000, 0 1px 5px #000; }
-.game-card.classic-card .simple-rarity { position: absolute; left: 47%; top: 58%; width: 8%; height: 7%; z-index: 5; border-radius: 50%; border: 1px solid #535c62; background: radial-gradient(ellipse at 30% 22%, #fff, #cedee2 46%, #697b84 80%); box-shadow: 0 1px 2px #22180d; pointer-events: none; }
+
 /* Full rules remain on every hand card. Hover lifts its complete face above the fan. */
 .player-hand { z-index: 20; }
 .hand-card-wrap .game-card.classic-card .card-copy p { display: block; font-size: 4.85cqw; line-height: 1.15; }

@@ -6,6 +6,7 @@ import './styles.css';
 import './classic.css';
 import './readability.css';
 import './spell-cards.css';
+import './discover.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ArtworkProvider><App /></ArtworkProvider></React.StrictMode>,

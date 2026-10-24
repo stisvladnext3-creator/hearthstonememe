@@ -31,7 +31,7 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     if (id === 'deathwing' || id === 'me') g[side].hand.push({ id: 'heal', uid: g.nextUid++ });
     if (id === 'maxim') g[side].hand.push({ id: 'zhanna', uid: g.nextUid++ });
     const before = structuredClone(g);
-    const result = act(g, side, { type: 'play', uid, target: ['bolt', 'silence'].includes(id) ? target.uid : undefined });
+    const result = act(g, side, { type: 'play', uid, target: ['bolt', 'silence', 'dog-spell'].includes(id) ? target.uid : undefined });
     expect(result.error).toBeUndefined();
     expect(g).toEqual(before);
     const n = result.state, p = n[side], e = n[foe];
@@ -39,7 +39,7 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     expect(n.log.some(l => l.kind === 'play' && l.actor?.id === id && l.side === side)).toBe(true);
     const body = p.board.find(m => m.id === id);
     if (c.kind === 'minion' && id !== 'volunteer') {
-      expect(body).toMatchObject({ attack: c.attack, health: c.health, ready: false, origin: 'played' });
+      expect(body).toMatchObject({ attack: c.attack! + (c.auraAttack ?? 0), health: c.health, ready: false, origin: 'played' });
     }
     if (!c.effect) {
       expect(p.health).toBe(17); expect(e.health).toBe(28); expect(n.winner).toBeNull();
@@ -61,6 +61,15 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
       heal: () => { expect(p.health).toBe(22); expect(p.armor).toBe(7); expect(e.health).toBe(28); },
       draw: () => { expect(p.hand).toHaveLength(2); expect(p.deck).toHaveLength(8); },
       silence: () => { expect(e.board[0]).toMatchObject({ taunt: false, silenced: true, attack: 4, health: 6 }); },
+      dragonslayer: () => { expect(e.health).toBe(24); expect(p.health).toBe(17); expect(n.log.find(l => l.actor?.id === id && l.amount === 4)?.target?.side).toBe(foe); },
+      'dog-spell': () => {
+        expect(n.discovery).toMatchObject({ side, sourceId: id, target: target.uid });
+        expect(p.deck).toEqual(before[side].deck); expect(e.board[0].health).toBe(6);
+        const chosen = n.discovery!.options[0];
+        const completed = act(n, side, { type: 'discover', cardId: chosen });
+        expect(completed.error).toBeUndefined(); expect(completed.state[side].hand[0].id).toBe(chosen);
+        expect(completed.state[side].deck).toEqual(before[side].deck); expect(completed.state[foe].board[0].health).toBe(2);
+      },
     };
     if (c.effect) { expect(checks[id], `No audited contract for ${id}`).toBeDefined(); checks[id](); }
   });

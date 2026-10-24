@@ -322,3 +322,77 @@ test('an unavailable power explains the hand cap when held and consumes nothing'
   await expect(dialog).toBeVisible(); await expect(dialog.locator('.inspection-context')).toContainText('уже 10 карт');
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!).player.mana)).toBe(10);
 });
+
+test('all three new cards show bundled internet art and source attribution', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  for (const id of ['dragonslayer', 'dog-spell', 'vasiliy']) {
+    const c = CARD[id]; await page.getByLabel('Поиск карт').fill(c.name);
+    await page.getByRole('button', { name: `${c.name}, ${c.cost} маны`, exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: c.name, exact: true });
+    await expect(dialog.locator('.original-portrait')).toBeVisible();
+    await expect(dialog.locator('.awaiting-original')).toHaveCount(0);
+    await expect(dialog.locator('.art-credit a').first()).toHaveAttribute('href', /commons.wikimedia.org/);
+    const url = await dialog.locator('.original-portrait').evaluate(e => getComputedStyle(e).backgroundImage.slice(5, -2));
+    expect((await page.request.get(url)).ok()).toBe(true);
+    await page.keyboard.press('Escape');
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('mobile discovery preserves its three choices across reload and inspects without selecting', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const g = fixture(); g.player.deck = ['regular', 'dragon', 'bolt'];
+  g.player.hand = [{ id: 'dog-spell', uid: g.nextUid++ }];
+  await seed(page, g);
+  await page.getByRole('button', { name: `${CARD['dog-spell'].name}, 2 маны`, exact: true }).click();
+  await page.getByRole('button', { name: /Герой противника: 30 здоровья, атаковать/ }).click();
+  let choices = page.getByRole('dialog', { name: 'Раскопка', exact: true });
+  await expect(choices.locator('.game-card')).toHaveCount(3);
+  const offered = await choices.locator('.game-card').evaluateAll(cards => cards.map(c => c.getAttribute('aria-label')));
+  await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  choices = page.getByRole('dialog', { name: 'Раскопка', exact: true });
+  await expect(choices).toBeVisible();
+  expect(await choices.locator('.game-card').evaluateAll(cards => cards.map(c => c.getAttribute('aria-label')))).toEqual(offered);
+  await page.keyboard.press('Escape'); await expect(choices).toBeVisible();
+  const option = choices.locator('.game-card').first(); const box = (await option.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down();
+  await page.waitForTimeout(550); await page.mouse.up();
+  await expect(page.locator('.card-detail-modal .inspection-context')).toContainText('Вариант раскопки');
+  await page.keyboard.press('Escape'); await expect(choices).toBeVisible();
+  await choices.locator('.game-card').first().click(); await expect(choices).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Герой противника: 26 здоровья', exact: true })).toBeVisible();
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!));
+  expect(saved.player.deck).toEqual(g.player.deck); expect(saved.player.hand).toHaveLength(1); expect(saved.player.mana).toBe(8);
+  expect(saved.discovery).toBeUndefined();
+  await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  await expect(page.locator('.history-discover .history-entity').last()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('bot completes its discovery and deals lethal damage without losing the effect', async ({ page }) => {
+  const errors: string[] = []; page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
+  const g = fixture(); g.active = 'bot'; g.player.health = 4;
+  g.bot.hand = [{ id: 'dog-spell', uid: g.nextUid++ }]; g.bot.mana = g.bot.maxMana = 2;
+  g.bot.deck = ['regular', 'dragon', 'bolt']; unit(g, 'guardian');
+  await seed(page, g);
+  await expect(page.getByRole('dialog', { name: 'Результат боя' })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('heading', { name: 'Ещё по одной?' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('Василий buffs the board, shows the British cat and records the aura', async ({ page }) => {
+  const g = fixture(); unit(g, 'regular'); g.player.hand = [{ id: 'vasiliy', uid: g.nextUid++ }];
+  await seed(page, g);
+  await page.getByRole('button', { name: `${CARD.vasiliy.name}, 3 маны`, exact: true }).click();
+  await expect(page.getByRole('button', { name: /Завсегдатай: 3 атаки, 2 здоровья/ })).toBeVisible();
+  const cat = page.getByRole('button', { name: /Василий.*: 6 атаки, 5 здоровья/ });
+  await expect(cat.locator('.original-portrait')).toBeVisible();
+  await cat.click({ button: 'right' });
+  const detail = page.getByRole('dialog', { name: CARD.vasiliy.name, exact: true });
+  await expect(detail.locator('.inspection-context')).toContainText('Аура Василия: +2 к атаке.');
+  await expect(detail.locator('.art-credit')).toContainText('BritishEmpire');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  await expect(page.locator('.battle-log')).toContainText('Аура Василия: Завсегдатай, атака 1 → 3');
+});

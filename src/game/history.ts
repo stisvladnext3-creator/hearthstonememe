@@ -6,7 +6,7 @@ export interface HistoryEntity {
   type: 'card' | 'hero' | 'power'; id: string; name: string; art: number; side: Side;
   attack?: number; health?: number; armor?: number;
 }
-export type HistoryKind = 'play' | 'attack' | 'effect' | 'power' | 'transform' | 'death' | 'draw' | 'discard' | 'turn' | 'finish';
+export type HistoryKind = 'play' | 'attack' | 'effect' | 'power' | 'transform' | 'death' | 'draw' | 'discard' | 'turn' | 'finish' | 'discover';
 export interface HistoryEntry {
   id: number; text: string; side: Side | 'system'; turn?: number;
   kind?: HistoryKind; actor?: HistoryEntity; target?: HistoryEntity; result?: HistoryEntity;

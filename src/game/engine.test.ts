@@ -285,7 +285,8 @@ describe('bot and complete games', () => {
       let steps = 0;
       while (!g.winner && steps < 1200) {
         const side = g.active;
-        const view = side === 'bot' ? g : { ...g, active: 'bot' as const, player: g.bot, bot: g.player };
+        const view = side === 'bot' ? g : { ...g, active: 'bot' as const, player: g.bot, bot: g.player,
+          discovery: g.discovery ? { ...g.discovery, side: 'bot' as const } : undefined };
         const action = chooseBotAction(view);
         const result = act(g, side, action);
         expect(result.error, `seed ${seed}, action ${JSON.stringify(action)}`).toBeUndefined();

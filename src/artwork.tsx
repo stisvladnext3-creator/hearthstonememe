@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ORIGINAL_ART, type ImageFormat } from './original-art';
+import { ORIGINAL_ART, type SharedArtwork, type ImageFormat } from './original-art';
 
-export interface Artwork { url: string; format: ImageFormat }
+export interface Artwork extends Omit<SharedArtwork, 'path'> { url: string }
 interface SavedArtwork { id: string; blob: Blob; format: ImageFormat }
 interface ArtContext {
   images: Record<string, Artwork>;
@@ -10,6 +10,10 @@ interface ArtContext {
 }
 const Context = createContext<ArtContext>({ images: {}, save: async () => {}, remove: async () => {} });
 export const useArtwork = () => useContext(Context);
+function sharedImage(image: SharedArtwork): Artwork {
+  const { path, ...metadata } = image;
+  return { ...metadata, url: import.meta.env.BASE_URL + path };
+}
 function database(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('memestone-original-art', 1);
@@ -32,7 +36,7 @@ async function storeImage(image: SavedArtwork | string) {
 }
 export function ArtworkProvider({ children }: { children: ReactNode }) {
   const [images, setImages] = useState<Record<string, Artwork>>(() => Object.fromEntries(
-    Object.entries(ORIGINAL_ART).map(([id, a]) => [id, { url: import.meta.env.BASE_URL + a.path, format: a.format }]),
+    Object.entries(ORIGINAL_ART).map(([id, a]) => [id, sharedImage(a)]),
   ));
   const urls = useRef(new Set<string>());
   useEffect(() => {
@@ -75,7 +79,7 @@ export function ArtworkProvider({ children }: { children: ReactNode }) {
     setImages(previous => {
       const next = { ...previous }; delete next[id];
       const original = ORIGINAL_ART[id];
-      if (original) next[id] = { url: import.meta.env.BASE_URL + original.path, format: original.format };
+      if (original) next[id] = sharedImage(original);
       return next;
     });
   };

@@ -12,6 +12,7 @@ const KINDS: Record<HistoryKind, { text: string; icon: React.ReactNode }> = {
   transform: { text: 'Превращение', icon: <RefreshCw /> }, death: { text: 'Гибель', icon: <Skull /> },
   draw: { text: 'Добор', icon: <BookOpen /> }, discard: { text: 'Карта сгорела', icon: <Flame /> },
   turn: { text: 'Новый ход', icon: <Sparkles /> }, finish: { text: 'Конец боя', icon: <Flame /> },
+  discover: { text: 'Раскопка', icon: <BookOpen /> },
 };
 function Entity({ entity, inspect, note, small = false }: { entity: HistoryEntity; inspect: Inspect; note: string; small?: boolean }) {
   const open = () => {

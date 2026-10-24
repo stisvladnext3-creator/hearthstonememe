@@ -1,0 +1,26 @@
+.discover-modal { width: 900px; text-align: center; padding: 30px 35px; }
+.discover-modal h2 { font-size: 30px; margin: 15px 0 10px; }
+.discover-modal > .eyebrow { display: flex; justify-content: center; align-items: center; gap: 8px; color: #e7c68c; font-size: 12px; }
+.discover-modal > p { color: #e3d8ba; font-size: 18px; line-height: 1.45; }
+.discover-choices { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); justify-items: center; gap: 20px; margin: 22px 0; }
+.discover-choices > .game-card { width: 100%; max-width: 240px; touch-action: pan-y; }
+.discover-choices > .game-card:hover { filter: drop-shadow(0 0 9px #f4d88988) brightness(1.1); }
+.discover-modal .discover-effect { padding: 12px; border: 1px solid #a88e594d; border-radius: 5px; background: #0e2118e6; }
+.discover-modal > small { display: block; color: #c1cdb8; font-size: 14px; line-height: 1.5; margin-top: 14px; }
+.discover-modal > .text-button { margin: 18px auto 0; color: #e4c78e; font-size: 14px; }
+.art-credit { font-size: 12px; line-height: 1.5; color: #b4c6b8; margin-top: 14px; }
+.art-credit a { color: #e7cb93; text-decoration: underline; text-underline-offset: 2px; }
+.portrait-art.original-portrait { background-position: var(--portrait-position, center) !important; }
+.portrait-art.original-portrait.portrait { background-size: var(--portrait-size, cover) !important; }
+.game-card.classic-card.model-simple .card-frame { filter: none; }
+.game-card.classic-card.model-simple .card-art { left: 26%; right: 20%; top: 6%; height: 45%; border-radius: 50%; }
+.game-card.classic-card.model-simple .card-cost { left: 4%; top: 5.5%; }
+.game-card.classic-card.kind-spell.has-tribe .card-kind { display: block; top: 86%; left: 35%; right: 29%; max-height: 5%; font-size: 5.2cqw; line-height: 1.1; color: #382511; background: #d3ba88; border: 1px solid #8c7146; border-radius: 40%; }
+@media(max-width:600px) {
+  .discover-modal { padding: 25px 13px; }
+  .discover-modal h2 { font-size: 25px; }
+  .discover-modal > .eyebrow { font-size: 11px; letter-spacing: .2px; }
+  .discover-modal > p { font-size: 16px; }
+  .discover-choices { gap: 4px; margin: 18px -4px; }
+  .discover-modal > small { font-size: 13px; }
+}

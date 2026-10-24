@@ -1,5 +1,5 @@
 import { CARD, STARTER_DECK, deckError } from './game/cards';
-import type { Game, Minion, Player } from './game/engine';
+import { refreshAuras, type Game, type Minion, type Player } from './game/engine';
 import { HEROES } from './game/presentation';
 import type { HistoryEntity, HistoryEntry } from './game/history';
 
@@ -25,7 +25,7 @@ function validEntity(e: HistoryEntity): boolean {
 }
 function validEntry(entry: HistoryEntry): boolean {
   return !!entry && finite(entry.id) && typeof entry.text === 'string' && ['player', 'bot', 'system'].includes(entry.side)
-    && (entry.kind === undefined || ['play', 'attack', 'effect', 'power', 'transform', 'death', 'draw', 'discard', 'turn', 'finish'].includes(entry.kind))
+    && (entry.kind === undefined || ['play', 'attack', 'effect', 'power', 'transform', 'death', 'draw', 'discard', 'turn', 'finish', 'discover'].includes(entry.kind))
     && [entry.actor, entry.target, entry.hero, entry.result].every(e => e === undefined || validEntity(e));
 }
 function validPlayer(p: Player): boolean {
@@ -36,6 +36,7 @@ function validPlayer(p: Player): boolean {
     && Array.isArray(p.hand) && p.hand.length <= 10 && p.hand.every(c => c && cardId(c.id) && finite(c.uid))
     && Array.isArray(p.board) && p.board.length <= 7 && p.board.every((m: Minion) => m && cardId(m.id)
       && [m.uid, m.attack, m.health, m.maxHealth].every(finite)
+      && (m.auraBonus === undefined || finite(m.auraBonus) && m.auraBonus >= 0)
       && (m.origin === undefined || ['played', 'summoned', 'transformed'].includes(m.origin))
       && [m.ready, m.taunt, m.cannotAttack, m.silenced, m.ephemeral].every(x => typeof x === 'boolean'));
 }
@@ -48,6 +49,11 @@ export function loadGame(): Game | null {
     || !Array.isArray(g.events) || !g.events.every(e => e && finite(e.id) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform'].includes(e.kind) && ['player', 'bot'].includes(e.side)
       && (!e.cardId || Object.hasOwn(CARD, e.cardId)) && (!e.source || e.source === 'hero' || finite(e.source)) && (!e.target || ['player', 'bot'].includes(e.target.side) && (e.target.uid === 'hero' || finite(e.target.uid))))
     || !Array.isArray(g.log) || !g.log.every(validEntry)) return null;
+  if (g.discovery && (g.discovery.side !== g.active || !cardId(g.discovery.sourceId) || CARD[g.discovery.sourceId].effect !== 'discoverBlast'
+    || !Array.isArray(g.discovery.options) || g.discovery.options.length < 1 || g.discovery.options.length > 3
+    || new Set(g.discovery.options).size !== g.discovery.options.length || !g.discovery.options.every(id => cardId(id) && g[g.active].deck.includes(id))
+    || (g.discovery.target !== 'hero' && (!finite(g.discovery.target) || !g[g.active === 'player' ? 'bot' : 'player'].board.some(m => m.uid === g.discovery!.target))))) return null;
+  refreshAuras(g);
   return g;
 }
 export interface Stats { wins: number; games: number; lastResult: string | null }

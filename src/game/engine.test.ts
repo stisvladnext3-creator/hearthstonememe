@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CARD, STARTER_DECK, deckError } from './cards';
-import { act, chooseBotAction, createGame, legalTargets, type Game, type Minion, type Side } from './engine';
+import { act, cardCost, chooseBotAction, createGame, legalTargets, type Game, type Minion, type Side } from './engine';
 
 function fixture() {
   const g = createGame(STARTER_DECK, 42);
@@ -166,11 +166,13 @@ describe('custom meme cards and powers', () => {
     expect(playerHit).toBeGreaterThan(0); expect(botHit).toBeGreaterThan(0);
   });
   it('Трачукча is free, grants 99 armor and replaces the power', () => {
-    const next = play(fixture(), 'trachukcha').state;
+    const g = fixture(); unit(g, 'dragon', 'bot');
+    const next = play(g, 'trachukcha').state;
     expect(next.player.armor).toBe(99); expect(next.player.mana).toBe(10);
     expect(next.player.power).toBe('fool'); expect(next.player.hero).toBe('trachukcha');
     const powered = act(next, 'player', { type: 'power' }).state;
-    expect(powered.player.hand).toHaveLength(1); expect(powered.player.armor).toBe(97); expect(powered.player.mana).toBe(8);
+    expect(powered.player.hand).toHaveLength(0); expect(powered.player.armor).toBe(99); expect(powered.player.mana).toBe(7);
+    expect(CARD[powered.bot.board[0].id].cost).toBe(2);
     expect(act(powered, 'player', { type: 'power' }).error).toBeTruthy();
   });
   it('Я fills the hand with legendary minions only', () => {
@@ -200,6 +202,75 @@ describe('custom meme cards and powers', () => {
   it('Ой cannot consume mana with a full hand', () => {
     const g = fixture(); g.player.power = 'oy'; for (let i = 0; i < 10; i++) hand(g, 'regular');
     expect(act(g, 'player', { type: 'power' }).error).toBeTruthy(); expect(g.player.mana).toBe(10);
+  });
+});
+describe('new cards, death accounting and history', () => {
+  it('counts РАШ deaths on both sides and discounts Джайна without going negative', () => {
+    const g = fixture();
+    const a = unit(g, 'rash'), b = unit(g, 'rash-volunteer', 'bot'); a.attack = 5; b.attack = 5;
+    const next = act(g, 'player', { type: 'attack', uid: a.uid, target: b.uid }).state;
+    expect(next.rashDeaths).toBe(2); expect(cardCost(next, 'jaina')).toBe(10);
+    expect(next.events.filter(e => e.kind === 'death')).toHaveLength(2);
+    const played = play(next, 'jaina'); expect(played.error).toBeUndefined();
+    expect(played.state.player.mana).toBe(0); expect(played.state.player.armor).toBe(10);
+    expect(played.state.player.power).toBe('rds');
+    next.rashDeaths = 20; expect(cardCost(next, 'jaina')).toBe(0);
+  });
+  it('keeps Джайна unplayable at 12 mana until enough РАШ have died', () => {
+    const g = fixture(); expect(play(g, 'jaina').error).toBe('Недостаточно маны.');
+  });
+  it('Сила РДШ pays 4 mana, summons a sleeping 2/5 and respects board and turn limits', () => {
+    const g = fixture(); g.player.power = 'rds';
+    const result = act(g, 'player', { type: 'power' }); expect(result.error).toBeUndefined();
+    expect(result.state.player.mana).toBe(6);
+    expect(result.state.player.board[0]).toMatchObject({ id: 'rash', attack: 2, health: 5, ready: false });
+    expect(act(result.state, 'player', { type: 'power' }).error).toBeTruthy();
+    for (let i = 0; i < 7; i++) unit(g, 'regular');
+    expect(act(g, 'player', { type: 'power' }).error).toBeTruthy();
+    expect(g.player.mana).toBe(10);
+  });
+  it('Волонтер destroys itself and both boards, counts deaths, then leaves exactly two 2/4s', () => {
+    const g = fixture(); unit(g, 'rash'); unit(g, 'rash', 'bot'); unit(g, 'dragon', 'bot');
+    const next = play(g, 'volunteer').state;
+    expect(next.bot.board).toHaveLength(0); expect(next.rashDeaths).toBe(2);
+    expect(next.player.board).toHaveLength(2);
+    expect(next.player.board.every(m => m.id === 'rash-volunteer' && m.attack === 2 && m.health === 4 && !m.ready)).toBe(true);
+  });
+  it('Максимка removes Жанна only from decks, preserving hands and boards', () => {
+    const g = fixture(); g.player.deck = ['zhanna', 'dragon', 'zhanna']; g.bot.deck = ['zhanna', 'heal'];
+    hand(g, 'zhanna'); hand(g, 'zhanna', 'bot'); unit(g, 'zhanna'); unit(g, 'zhanna', 'bot');
+    const next = play(g, 'maxim').state;
+    expect(next.player.deck).toEqual(['dragon']); expect(next.bot.deck).toEqual(['heal']);
+    expect(next.player.hand[0].id).toBe('zhanna'); expect(next.bot.hand[0].id).toBe('zhanna');
+    expect(next.bot.board[0].id).toBe('zhanna'); expect(next.player.board.map(m => m.id)).toEqual(['zhanna', 'maxim']);
+    expect(next.log.some(l => l.text.includes('Максимка') && l.text.includes('3'))).toBe(true);
+  });
+  it('Дибильнутый transforms every enemy at exact reduced cost, without battlecries or death counts', () => {
+    const g = fixture(); g.player.power = 'fool'; unit(g, 'me', 'bot'); unit(g, 'rash', 'bot');
+    const beforeHand = [...g.bot.hand];
+    const next = act(g, 'player', { type: 'power' }).state;
+    expect(next.bot.board.map(m => CARD[m.id].cost)).toEqual([5, 0]);
+    expect(next.rashDeaths).toBe(0); expect(next.bot.health).toBe(30); expect(next.winner).toBeNull();
+    expect(next.bot.hand).toEqual(beforeHand); expect(next.player.mana).toBe(7);
+    expect(next.events.filter(e => e.kind === 'transform')).toHaveLength(2);
+    expect(next.log.some(l => l.text.includes('Дибильнутый!:') && l.text.includes('→'))).toBe(true);
+  });
+  it('refuses empty-board transformation without spending mana or the power', () => {
+    const g = fixture(); g.player.power = 'fool';
+    const result = act(g, 'player', { type: 'power' }); expect(result.error).toBeTruthy();
+    expect(result.state.player.mana).toBe(10); expect(result.state.player.powerUsed).toBe(false);
+  });
+  it('Смертокрыл counts destroyed РАШ and silence does not remove the РАШ type', () => {
+    const g = fixture(); unit(g, 'rash'); const m = unit(g, 'rash', 'bot');
+    const silence = play(g, 'silence', m.uid).state; silence.player.mana = 10;
+    expect(play(silence, 'deathwing').state.rashDeaths).toBe(2);
+  });
+  it('records exact attack source, target, reciprocal damage, turn and animation anchors', () => {
+    const g = fixture(), a = unit(g, 'mage'), b = unit(g, 'bouncer', 'bot');
+    const next = act(g, 'player', { type: 'attack', uid: a.uid, target: b.uid }).state;
+    expect(next.log.some(l => l.text.includes('Хранительница искр → Вышибала: 3 урона. Ответный удар Вышибала: 2 урона.') && l.turn === 1)).toBe(true);
+    expect(next.events.find(e => e.kind === 'attack')).toMatchObject({ side: 'player', source: a.uid, target: { side: 'bot', uid: b.uid } });
+    expect(next.events.filter(e => e.kind === 'damage').map(e => e.amount)).toEqual([3, 2]);
   });
 });
 describe('bot and complete games', () => {

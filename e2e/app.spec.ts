@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createGame, type Game, type Minion } from '../src/game/engine';
-import { CARD } from '../src/game/cards';
+import { CARD, CARDS } from '../src/game/cards';
 
 function fixture(): Game {
   const g = createGame(undefined, 951);
@@ -15,22 +15,25 @@ function unit(g: Game, id: string, enemy = false) {
   g[enemy ? 'bot' : 'player'].board.push(m);
   return m;
 }
-async function seed(page: Page, game: Game) {
-  await page.addInitScript(data => {
+async function seed(page: Page, game: Game, motion = false) {
+  await page.addInitScript(({ game: data, motion }) => {
+    if (sessionStorage.getItem('memestone.fixture.' + data.id)) return;
+    sessionStorage.setItem('memestone.fixture.' + data.id, '1');
     localStorage.setItem('memestone.v1.game', JSON.stringify(data));
-    localStorage.setItem('memestone.v1.settings', JSON.stringify({ sound: false, motion: false }));
-  }, game);
+    localStorage.setItem('memestone.v1.settings', JSON.stringify({ sound: false, motion }));
+  }, { game, motion });
   await page.goto('/');
   await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
 }
 test('home, illustrated card details, rules and keyboard dialog dismissal', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Твои карты. Твои правила.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Memestone', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
   await page.getByRole('button', { name: 'Галинка, 10 маны', exact: true }).click();
   const detail = page.getByRole('dialog', { name: 'Галинка' });
   await expect(detail).toBeVisible();
-  await expect(detail.getByText('Провокация. Боевой клич: призывает Пушкина 15/15 с провокацией.', { exact: true })).toHaveCount(2);
+  await expect(detail.locator('.effect-description')).toContainText('призывает Пушкина 15/15');
   await page.keyboard.press('Escape'); await expect(detail).not.toBeVisible();
   await page.getByRole('navigation').getByRole('button', { name: 'Как играть' }).click();
   await expect(page.getByRole('dialog', { name: 'Как играть' })).toBeVisible();
@@ -39,16 +42,16 @@ test('home, illustrated card details, rules and keyboard dialog dismissal', asyn
 });
 test('collection searches, categories and mana filters work together', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
-  await expect(page.locator('.card-grid .game-card')).toHaveCount(20);
+  await expect(page.locator('.card-grid .game-card')).toHaveCount(CARDS.length);
   await page.getByRole('tab', { name: 'Твои мемы' }).click();
-  await expect(page.locator('.card-grid .game-card')).toHaveCount(9);
+  await expect(page.locator('.card-grid .game-card')).toHaveCount(CARDS.filter(c => c.custom).length);
   await page.getByLabel('Поиск карт').fill('рус');
   await expect(page.locator('.card-grid .game-card')).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Русланчик, 4 маны' })).toBeVisible();
   await page.getByLabel('Стоимость 7 и больше').click();
   await expect(page.getByRole('heading', { name: 'Карты спрятались' })).toBeVisible();
   await page.getByRole('button', { name: 'Сбросить фильтры' }).click();
-  await expect(page.locator('.card-grid .game-card')).toHaveCount(20);
+  await expect(page.locator('.card-grid .game-card')).toHaveCount(CARDS.length);
 });
 test('deck editor saves an actual changed 30-card deck and survives reload', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
@@ -104,10 +107,10 @@ test('suicide card ends match, counts one loss and offers rematch', async ({ pag
 });
 test('settings persist and corrupted local data falls back safely', async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('memestone.v1.game', '{"broken":true}'); localStorage.setItem('memestone.v1.deck', '"bad"'); });
-  await page.goto('/'); await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-topbar').getByRole('button', { name: 'Настройки', exact: true }).click();
   await page.getByRole('checkbox', { name: /Анимации/ }).uncheck();
   await page.getByRole('button', { name: 'Сохранено' }).click();
-  await page.reload(); await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.reload(); await page.locator('.wood-topbar').getByRole('button', { name: 'Настройки', exact: true }).click();
   await expect(page.getByRole('checkbox', { name: /Анимации/ })).not.toBeChecked();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'В бой', exact: true }).click();
@@ -117,9 +120,8 @@ test('mobile navigation, collection and full battlefield do not overflow viewpor
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Открыть навигацию' }).click();
-  await page.getByRole('navigation').getByRole('button', { name: /Коллекция/ }).click();
-  await expect(page.locator('.card-grid .game-card')).toHaveCount(20);
+  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await expect(page.locator('.card-grid .game-card')).toHaveCount(CARDS.length);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'Галинка, 10 маны' }).click();
   await expect(page.getByRole('dialog', { name: 'Галинка' })).toBeVisible();
@@ -133,4 +135,79 @@ test('mobile navigation, collection and full battlefield do not overflow viewpor
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   const boxes = await page.locator('.player-board .board-unit').evaluateAll(els => els.map(e => e.getBoundingClientRect().toJSON()));
   expect(boxes.every(b => b.x >= 0 && b.x + b.width <= 390)).toBe(true);
+});
+
+test('original image replaces the full card, persists after reload, and can be removed', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.getByRole('button', { name: 'Галинка, 10 маны', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Галинка' });
+  await dialog.getByLabel('Загрузить оригинал Галинка').setInputFiles('public/art/card-frame.png');
+  await expect(dialog.getByAltText('Оригинальная карта Галинка')).toBeVisible();
+  await page.reload();
+  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.getByRole('button', { name: 'Галинка, 10 маны', exact: true }).click();
+  await expect(dialog.getByAltText('Оригинальная карта Галинка')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Убрать свою картинку' }).click();
+  await expect(dialog.getByAltText('Оригинальная карта Галинка')).toHaveCount(0);
+  await expect(dialog.locator('.awaiting-original')).toBeVisible();
+});
+
+test('history shows source, target, reciprocal damage and turn, then survives reload', async ({ page }) => {
+  const g = fixture(); unit(g, 'mage'); unit(g, 'bouncer', true);
+  await seed(page, g);
+  await page.getByRole('button', { name: /Хранительница искр: 3 атаки/ }).click();
+  await page.getByRole('button', { name: /Вышибала: 2 атаки/ }).click();
+  await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  const history = page.locator('.battle-log');
+  await expect(history).toContainText('Хранительница искр → Вышибала: 3 урона. Ответный удар Вышибала: 2 урона.');
+  await expect(history).toContainText('ХОД 1 · ВЫ');
+  await page.reload();
+  await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  await expect(page.locator('.battle-log')).toContainText('Ответный удар Вышибала: 2 урона.');
+});
+
+test('card strike and hero strike animate at their real targets', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const g = fixture(); unit(g, 'mage'); unit(g, 'bouncer', true); unit(g, 'dragon');
+  await seed(page, g, true);
+  await page.getByRole('button', { name: /Хранительница искр: 3 атаки/ }).click();
+  await page.getByRole('button', { name: /Вышибала: 2 атаки/ }).click();
+  await expect(page.locator('[data-fx="attack"]')).toBeVisible();
+  await expect(page.locator('[data-fx="damage"]').first()).toBeAttached();
+  await expect(page.locator('[data-fx="attack"]')).toHaveCount(0, { timeout: 3000 });
+  await page.getByRole('button', { name: /Пепельный дракон: 7 атаки/ }).click();
+  await page.getByRole('button', { name: /Герой противника: 30 здоровья, атаковать/ }).click();
+  await expect(page.locator('[data-fx="attack"]')).toBeVisible();
+  await expect(page.locator('[data-combat-anchor="bot:hero"]')).toHaveClass(/combat-hit/);
+  await expect(page.getByRole('button', { name: 'Герой противника: 23 здоровья' })).toBeVisible();
+});
+
+test('summoning and hero power have distinct animations; disabling motion stops them', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const g = fixture(); g.player.hand.push({ id: 'regular', uid: g.nextUid++ });
+  await seed(page, g, true);
+  await page.getByRole('button', { name: 'Завсегдатай, 1 маны' }).click();
+  await expect(page.locator('[data-fx="summon"]')).toBeVisible();
+  await expect(page.locator('[data-fx="summon"]')).toHaveCount(0, { timeout: 3000 });
+  await page.getByRole('button', { name: 'Сила героя Искра, 2 маны' }).click();
+  await page.getByRole('button', { name: /Герой противника: 30 здоровья, атаковать/ }).click();
+  await expect(page.locator('[data-fx="power"]')).toBeAttached();
+  await expect(page.locator('.fx-power-name')).toHaveText('Искра');
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.getByRole('checkbox', { name: /Анимации/ }).uncheck();
+  await page.getByRole('button', { name: 'Сохранено' }).click();
+  await expect(page.locator('.combat-effects')).toBeHidden();
+});
+
+test('discounted Джайна displays its real cost and replaces the hero power', async ({ page }) => {
+  const g = fixture(); g.rashDeaths = 2; g.player.hand.push({ id: 'jaina', uid: g.nextUid++ });
+  await seed(page, g);
+  await expect(page.getByRole('button', { name: 'Джайна-ассасин, 10 маны' })).toBeVisible();
+  await page.getByRole('button', { name: 'Джайна-ассасин, 10 маны' }).click();
+  await expect(page.getByRole('button', { name: 'Сила героя Сила РДШ, 4 маны' })).toBeVisible();
+  await expect(page.locator('.own-hero-row .hero-armor')).toHaveText('10');
+  await page.getByRole('button', { name: 'История сражения' }).click();
+  await expect(page.locator('.battle-log')).toContainText('Джайна даёт 10 брони');
 });

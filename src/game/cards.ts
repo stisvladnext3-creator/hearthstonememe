@@ -1,9 +1,9 @@
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
-export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy';
+export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer';
 export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
-  text: string; flavor: string; rarity: 'common' | 'rare' | 'legendary';
+  text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean;
   immuneSilence?: boolean; effect?: Effect; tribe?: string;
 }
@@ -13,11 +13,19 @@ export const CARDS: CardDef[] = [
   { id: 'goodgame', name: 'Хорошая игра.', cost: 0, kind: 'minion', attack: 99, health: 99, text: 'Боевой клич: уничтожает вашего персонажа.', flavor: 'Самая быстрая дорога к следующей игре.', rarity: 'common', art: 1, custom: true, effect: 'concede', tribe: 'Я сдаюсь.' },
   { id: 'ruslan', name: 'Русланчик', cost: 4, kind: 'minion', attack: 10, health: 10, text: 'Не может атаковать. Нельзя наложить немоту. Он всегда прав.', flavor: 'Спорить бесполезно. Атаковать, кстати, тоже.', rarity: 'common', art: 2, custom: true, cannotAttack: true, immuneSilence: true, tribe: 'Сверхчеловек' },
   { id: 'casino', name: 'Козиныч', cost: 3, kind: 'spell', text: 'С шансом 50% уничтожает половину колоды случайного игрока. Начало матча: вы берёте эту карту.', flavor: 'Крутить или не крутить? Как будто есть выбор.', rarity: 'legendary', art: 3, custom: true, effect: 'casino' },
-  { id: 'trachukcha', name: 'Трачукча', cost: 0, kind: 'hero', armor: 99, text: 'Боевой клич: тупит до конца матча. Заменяет силу героя на «Дибильнутый!».', flavor: 'На оригинале стоит −1 маны. В прототипе — бесплатно. Новая сила за 2 маны: возьмите карту и получите 2 урона.', rarity: 'legendary', art: 4, custom: true, effect: 'trachukcha' },
+  { id: 'trachukcha', name: 'Трачукча', cost: 0, printedCost: -1, kind: 'hero', armor: 99, text: 'Боевой клич: тупит до конца матча. Заменяет силу героя на «Дибильнутый!».', flavor: 'Цена на оригинале −1; разыгрывается бесплатно. «Дибильнутый!» теперь работает по присланной карте: за 3 маны превращает всех существ противника в случайных на 5 маны дешевле.', rarity: 'legendary', art: 4, custom: true, effect: 'trachukcha' },
   { id: 'me', name: 'Я', cost: 10, kind: 'minion', attack: 5, health: 7, text: 'Боевой клич: заполняет вашу руку легендарными существами.', flavor: 'Колода мечты. Все остальные просто завидуют.', rarity: 'legendary', art: 5, custom: true, effect: 'legendaryHand', tribe: 'Сверхчеловек' },
   { id: 'deathwing', name: 'Смертокрыл', cost: 5, kind: 'minion', attack: 1, health: 1, text: 'Боевой клич: уничтожает всех других существ. Вы сбрасываете все карты. В конце вашего хода это существо распыляется.', flavor: 'Пришёл. Увидел. Всё испортил. Ушёл.', rarity: 'legendary', art: 6, custom: true, effect: 'deathwing', tribe: 'Дракон' },
   { id: 'maratik', name: 'Маратик', cost: 10, kind: 'hero', armor: 5, text: 'Боевой клич: заменяет вашу силу героя на «Ой».', flavor: '«Ой» за 6 маны добавляет в руку Смертокрыла 1/1. Кажется, сейчас что-то произойдёт.', rarity: 'legendary', art: 7, custom: true, effect: 'maratik' },
   { id: 'oy', name: 'Ой', cost: 6, kind: 'power', text: 'Вы кладёте в руку Смертокрыла 1/1.', flavor: 'Сила героя Маратика. Одно маленькое слово. Очень большие последствия.', rarity: 'rare', art: 6, custom: true, effect: 'oy' },
+  { id: 'jaina', name: 'Джайна-ассасин', cost: 12, kind: 'hero', armor: 10, text: 'Стоит на 1 ману меньше за каждое РАШ, погибшее в матче. Боевой клич: ваша сила героя меняется на «Сила РДШ».', flavor: 'Погибшие РАШ обоих игроков снижают стоимость, но не ниже нуля. Новая сила за 4 маны призывает РАШ 2/5.', rarity: 'legendary', art: 10, custom: true, effect: 'jaina' },
+  { id: 'rds-power', name: 'Сила РДШ', cost: 4, kind: 'power', text: 'Призывает РАШ 2/5.', flavor: 'Сила героя Джайны-ассасина. Новому РАШ нужен ход, чтобы подготовиться к атаке.', rarity: 'rare', art: 10, custom: true, effect: 'rds' },
+  { id: 'fool-power', name: 'Дибильнутый!', cost: 3, kind: 'power', text: 'Превращает существ противника в случайных существ на 5 маны дешевле.', flavor: 'Стоимость результата не ниже нуля. Превращение не запускает боевые кличи и не считается гибелью.', rarity: 'epic', art: 4, custom: true, effect: 'devolve' },
+  { id: 'maxim', name: 'Максимка-разведчик', cost: 6, kind: 'minion', attack: 3, health: 5, text: 'Боевой клич: уничтожает всех существ «Жанна» в колодах обоих игроков.', flavor: 'Трогает только колоды. Существа на столе и карты в руке остаются на месте.', rarity: 'epic', art: 5, custom: true, effect: 'purgeZhanna', tribe: 'Максим' },
+  { id: 'volunteer', name: 'Волонтер-босс', cost: 5, kind: 'minion', attack: 8, health: 8, text: 'Уничтожает ВСЕХ существ на столе. Призывает два РАШ 2/4.', flavor: 'В прототипе срабатывает при розыгрыше: уничтожает и себя, затем оставляет двух РАШ 2/4.', rarity: 'common', art: 11, custom: true, effect: 'volunteer', tribe: 'Лох' },
+  { id: 'rash', name: 'РАШ', cost: 3, kind: 'token', attack: 2, health: 5, text: 'Призван силой РДШ. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Считает не только своих.', rarity: 'common', art: 10, tribe: 'РАШ' },
+  { id: 'rash-volunteer', name: 'РАШ', cost: 2, kind: 'token', attack: 2, health: 4, text: 'Призван Волонтером-боссом. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Работают парами.', rarity: 'common', art: 11, tribe: 'РАШ' },
+  { id: 'zhanna', name: 'Жанна', cost: 4, kind: 'minion', attack: 3, health: 5, text: 'Базовое тестовое существо типа «Жанна».', flavor: 'Добавлена как тестовая цель для Максимки-разведчика. Оригинальная карта Жанны пока не прислана.', rarity: 'common', art: 10, tribe: 'Жанна' },
   { id: 'pushkin', name: 'Пушкин', cost: 10, kind: 'token', attack: 15, health: 15, text: 'Провокация. Призывается Галинкой.', flavor: 'Я помню чудное мгновенье. У противника — пятнадцать ран.', rarity: 'legendary', art: 8, taunt: true, tribe: 'Поэт' },
   { id: 'regular', name: 'Завсегдатай', cost: 1, kind: 'minion', attack: 1, health: 2, text: 'Всегда готов к хорошей партии.', flavor: 'Сидит тут с закрытой беты.', rarity: 'common', art: 9, tribe: 'Житель' },
   { id: 'bouncer', name: 'Вышибала', cost: 2, kind: 'minion', attack: 2, health: 3, text: 'Провокация.', flavor: 'Сначала разберитесь с ним.', rarity: 'common', art: 9, taunt: true, tribe: 'Дворф' },
@@ -35,7 +43,7 @@ export const COLLECTIBLE = CARDS.filter(c => c.kind !== 'power' && c.kind !== 't
 export const STARTER_DECK = [
   'casino', 'galinka', 'goodgame', 'ruslan', 'ruslan', 'trachukcha', 'me', 'deathwing', 'maratik',
   'regular', 'regular', 'bouncer', 'bouncer', 'goblin', 'goblin', 'mage', 'mage', 'guardian', 'guardian',
-  'dragon', 'dragon', 'bolt', 'bolt', 'heal', 'heal', 'draw', 'draw', 'silence', 'silence', 'regular',
+  'dragon', 'jaina', 'bolt', 'bolt', 'heal', 'heal', 'draw', 'maxim', 'silence', 'volunteer', 'zhanna',
 ];
 export const BOT_DECK = [
   'regular', 'regular', 'regular', 'regular', 'bouncer', 'bouncer', 'bouncer', 'goblin', 'goblin', 'goblin',

@@ -1,0 +1,16 @@
+import { CARD, type CardDef } from './cards';
+
+export const HEROES: Record<string, { name: string; art: number; title: string }> = {
+  mage: { name: 'Лира', art: 10, title: 'Хранительница мемов' },
+  boris: { name: 'Борис', art: 9, title: 'Трактирщик' },
+  trachukcha: { name: 'Трачукча', art: 4, title: 'Думает о вечном' },
+  maratik: { name: 'Маратик', art: 7, title: 'Повелитель «Ой»' },
+  jaina: { name: 'Джайна-ассасин', art: 10, title: 'Сила РДШ' },
+};
+export const POWER_CARDS = { spark: 'spark-power', fool: 'fool-power', oy: 'oy', rds: 'rds-power' } as const;
+export function heroCard(id: string): CardDef {
+  if (CARD[id]?.kind === 'hero') return CARD[id];
+  const hero = HEROES[id] ?? HEROES.mage;
+  return { id, name: hero.name, kind: 'hero', cost: 0, art: hero.art, rarity: 'rare',
+    text: 'Герой начинает бой с 30 здоровья. Броня поглощает урон первой. При потере всего здоровья герой проигрывает.', flavor: hero.title };
+}

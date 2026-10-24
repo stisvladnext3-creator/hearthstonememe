@@ -13,6 +13,19 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
   const timers = useRef<number[]>([]);
   const [effects, setEffects] = useState<Effect[]>([]);
   useLayoutEffect(() => {
+    const refresh = () => {
+      const positions = new Map<string, Box>();
+      document.querySelectorAll<HTMLElement>('[data-combat-anchor]').forEach(el => {
+        const b = el.getBoundingClientRect();
+        positions.set(el.dataset.combatAnchor!, { x: b.x, y: b.y, width: b.width, height: b.height });
+      });
+      previous.current = positions;
+    };
+    window.addEventListener('scroll', refresh, { capture: true, passive: true });
+    window.addEventListener('resize', refresh);
+    return () => { window.removeEventListener('scroll', refresh, true); window.removeEventListener('resize', refresh); };
+  }, []);
+  useLayoutEffect(() => {
     const current = new Map<string, Box>();
     document.querySelectorAll<HTMLElement>('[data-combat-anchor]').forEach(el => {
       const b = el.getBoundingClientRect();

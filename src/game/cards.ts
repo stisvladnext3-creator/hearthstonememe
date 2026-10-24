@@ -10,7 +10,7 @@ export interface CardDef {
 
 export const CARDS: CardDef[] = [
   { id: 'galinka', name: 'Галинка', cost: 10, kind: 'minion', attack: 0, health: 1, text: 'Провокация. Боевой клич: призывает Пушкина 15/15 с провокацией.', flavor: 'За каждой великой женщиной стоит Пушкин 15/15.', rarity: 'legendary', art: 0, custom: true, taunt: true, effect: 'galinka', tribe: 'Сверхчеловек' },
-  { id: 'goodgame', name: 'Хорошая игра.', cost: 0, kind: 'minion', attack: 99, health: 99, text: 'Боевой клич: уничтожает вашего персонажа.', flavor: 'Самая быстрая дорога к следующей игре.', rarity: 'common', art: 1, custom: true, effect: 'concede', tribe: 'Я сдаюсь.' },
+  { id: 'goodgame', name: 'Хорошая игра.', cost: 0, kind: 'minion', attack: 99, health: 99, text: 'Боевой клич: уничтожает вашего персонажа.', flavor: 'Боевой клич срабатывает только при розыгрыше из руки. Если существо появилось через призыв или превращение, герой не уничтожается.', rarity: 'common', art: 1, custom: true, effect: 'concede', tribe: 'Я сдаюсь.' },
   { id: 'ruslan', name: 'Русланчик', cost: 4, kind: 'minion', attack: 10, health: 10, text: 'Не может атаковать. Нельзя наложить немоту. Он всегда прав.', flavor: 'Спорить бесполезно. Атаковать, кстати, тоже.', rarity: 'common', art: 2, custom: true, cannotAttack: true, immuneSilence: true, tribe: 'Сверхчеловек' },
   { id: 'casino', name: 'Козиныч', cost: 3, kind: 'spell', text: 'С шансом 50% уничтожает половину колоды случайного игрока. Начало матча: вы берёте эту карту.', flavor: 'Крутить или не крутить? Как будто есть выбор.', rarity: 'legendary', art: 3, custom: true, effect: 'casino' },
   { id: 'trachukcha', name: 'Трачукча', cost: 0, printedCost: -1, kind: 'hero', armor: 99, text: 'Боевой клич: тупит до конца матча. Заменяет силу героя на «Дибильнутый!».', flavor: 'Цена на оригинале −1; разыгрывается бесплатно. «Дибильнутый!» теперь работает по присланной карте: за 3 маны превращает всех существ противника в случайных на 5 маны дешевле.', rarity: 'legendary', art: 4, custom: true, effect: 'trachukcha' },
@@ -18,6 +18,7 @@ export const CARDS: CardDef[] = [
   { id: 'deathwing', name: 'Смертокрыл', cost: 5, kind: 'minion', attack: 1, health: 1, text: 'Боевой клич: уничтожает всех других существ. Вы сбрасываете все карты. В конце вашего хода это существо распыляется.', flavor: 'Пришёл. Увидел. Всё испортил. Ушёл.', rarity: 'legendary', art: 6, custom: true, effect: 'deathwing', tribe: 'Дракон' },
   { id: 'maratik', name: 'Маратик', cost: 10, kind: 'hero', armor: 5, text: 'Боевой клич: заменяет вашу силу героя на «Ой».', flavor: '«Ой» за 6 маны добавляет в руку Смертокрыла 1/1. Кажется, сейчас что-то произойдёт.', rarity: 'legendary', art: 7, custom: true, effect: 'maratik' },
   { id: 'oy', name: 'Ой', cost: 6, kind: 'power', text: 'Вы кладёте в руку Смертокрыла 1/1.', flavor: 'Сила героя Маратика. Одно маленькое слово. Очень большие последствия.', rarity: 'rare', art: 6, custom: true, effect: 'oy' },
+  { id: 'spark-power', name: 'Искра', cost: 2, kind: 'power', text: 'Наносит 1 урон выбранному врагу. Один раз за ход.', flavor: 'Стартовая сила героя. Заклинание «Искра хаоса» — отдельная карта и наносит 3 урона.', rarity: 'common', art: 10 },
   { id: 'jaina', name: 'Джайна-ассасин', cost: 12, kind: 'hero', armor: 10, text: 'Стоит на 1 ману меньше за каждое РАШ, погибшее в матче. Боевой клич: ваша сила героя меняется на «Сила РДШ».', flavor: 'Погибшие РАШ обоих игроков снижают стоимость, но не ниже нуля. Новая сила за 4 маны призывает РАШ 2/5.', rarity: 'legendary', art: 10, custom: true, effect: 'jaina' },
   { id: 'rds-power', name: 'Сила РДШ', cost: 4, kind: 'power', text: 'Призывает РАШ 2/5.', flavor: 'Сила героя Джайны-ассасина. Новому РАШ нужен ход, чтобы подготовиться к атаке.', rarity: 'rare', art: 10, custom: true, effect: 'rds' },
   { id: 'fool-power', name: 'Дибильнутый!', cost: 3, kind: 'power', text: 'Превращает существ противника в случайных существ на 5 маны дешевле.', flavor: 'Стоимость результата не ниже нуля. Превращение не запускает боевые кличи и не считается гибелью.', rarity: 'epic', art: 4, custom: true, effect: 'devolve' },
@@ -46,7 +47,7 @@ export const STARTER_DECK = [
   'dragon', 'jaina', 'bolt', 'bolt', 'heal', 'heal', 'draw', 'maxim', 'silence', 'volunteer', 'zhanna',
 ];
 export const BOT_DECK = [
-  'regular', 'regular', 'regular', 'regular', 'bouncer', 'bouncer', 'bouncer', 'goblin', 'goblin', 'goblin',
+  'regular', 'regular', 'regular', 'volunteer', 'bouncer', 'bouncer', 'bouncer', 'goblin', 'goblin', 'goblin',
   'mage', 'mage', 'mage', 'guardian', 'guardian', 'guardian', 'dragon', 'dragon', 'bolt', 'bolt',
   'heal', 'heal', 'draw', 'draw', 'silence', 'silence', 'ruslan', 'casino', 'galinka', 'deathwing',
 ];

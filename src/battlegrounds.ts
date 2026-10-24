@@ -1,6 +1,7 @@
 export const BATTLEGROUNDS = [
   { id: 'knights', name: 'Фиолетовая цитадель', description: 'Каменные рыцари, золото и фиолетовые знамёна.', image: 'art/knights-board.png' },
   { id: 'tavern', name: 'Стол в трактире', description: 'Зелёное сукно, свечи и магические кристаллы.', image: 'art/battlefield.png' },
+  { id: 'forge', name: 'Огненная кузница', description: 'Лава, наковальня, шестерни и оружейная мастерская.', image: 'art/forge-board.png' },
 ] as const;
 export type BattlegroundId = typeof BATTLEGROUNDS[number]['id'];
 export function battleground(id: unknown) {

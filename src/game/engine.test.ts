@@ -206,7 +206,7 @@ describe('custom meme cards and powers', () => {
   });
 });
 describe('new cards, death accounting and history', () => {
-  it('counts РАШ deaths on both sides and discounts Джайна without going negative', () => {
+  it('counts РДШ deaths on both sides and discounts Джайна without going negative', () => {
     const g = fixture();
     const a = unit(g, 'rash'), b = unit(g, 'rash-volunteer', 'bot'); a.attack = 5; b.attack = 5;
     const next = act(g, 'player', { type: 'attack', uid: a.uid, target: b.uid }).state;
@@ -217,7 +217,7 @@ describe('new cards, death accounting and history', () => {
     expect(played.state.player.power).toBe('rds');
     next.rashDeaths = 20; expect(cardCost(next, 'jaina')).toBe(0);
   });
-  it('keeps Джайна unplayable at 12 mana until enough РАШ have died', () => {
+  it('keeps Джайна unplayable at 12 mana until enough РДШ have died', () => {
     const g = fixture(); expect(play(g, 'jaina').error).toBe('Недостаточно маны.');
   });
   it('Сила РДШ pays 4 mana, summons a sleeping 2/5 and respects board and turn limits', () => {
@@ -261,7 +261,7 @@ describe('new cards, death accounting and history', () => {
     const result = act(g, 'player', { type: 'power' }); expect(result.error).toBeTruthy();
     expect(result.state.player.mana).toBe(10); expect(result.state.player.powerUsed).toBe(false);
   });
-  it('Смертокрыл counts destroyed РАШ and silence does not remove the РАШ type', () => {
+  it('Смертокрыл counts destroyed РДШ and silence does not remove the РДШ type', () => {
     const g = fixture(); unit(g, 'rash'); const m = unit(g, 'rash', 'bot');
     const silence = play(g, 'silence', m.uid).state; silence.player.mana = 10;
     expect(play(silence, 'deathwing').state.rashDeaths).toBe(2);

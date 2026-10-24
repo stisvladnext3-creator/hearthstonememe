@@ -3,7 +3,30 @@
 export type ImageFormat = 'card' | 'editor' | 'portrait';
 export interface ArtCredit { title: string; author: string; source: string; license: string; licenseUrl: string }
 export interface SharedArtwork { path: string; format: ImageFormat; position?: string; size?: string; credit?: ArtCredit }
+function generatedAtlas(file: 'a' | 'b', column: number, row: number): SharedArtwork {
+  return { path: `art/generated/characters-${file}.png`, format: 'portrait', position: `${column * 100 / 3}% ${row * 100}%`, size: '400% 200%' };
+}
 export const ORIGINAL_ART: Record<string, SharedArtwork> = {
+  galinka: generatedAtlas('a', 0, 0),
+  goodgame: generatedAtlas('a', 1, 0),
+  ruslan: generatedAtlas('a', 2, 0),
+  casino: generatedAtlas('a', 3, 0),
+  trachukcha: generatedAtlas('a', 0, 1),
+  me: generatedAtlas('a', 1, 1),
+  deathwing: generatedAtlas('a', 2, 1),
+  maratik: generatedAtlas('a', 3, 1),
+  jaina: generatedAtlas('b', 0, 0),
+  'rds-power': generatedAtlas('b', 1, 0),
+  'fool-power': generatedAtlas('b', 2, 0),
+  maxim: generatedAtlas('b', 3, 0),
+  volunteer: generatedAtlas('b', 0, 1),
+  oy: generatedAtlas('b', 1, 1),
+  'rds-guard': generatedAtlas('b', 2, 1),
+  'rds-helper': generatedAtlas('b', 3, 1),
+  rash: generatedAtlas('b', 2, 1),
+  'rash-volunteer': generatedAtlas('b', 2, 1),
+  'jaina-rusher': { path: 'art/user/jaina-portraits.png', format: 'portrait', position: '0% 0%', size: '200% 100%' },
+  'jaina-volunteer': { path: 'art/user/jaina-portraits.png', format: 'portrait', position: '100% 0%', size: '200% 100%' },
   'paper-army': { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '0% 0%', size: '200% 200%' },
   paper: { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '0% 0%', size: '200% 200%' },
   briefing: { path: 'art/user/new-cards-atlas.png', format: 'portrait', position: '100% 0%', size: '200% 200%' },

@@ -1,11 +1,11 @@
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
-export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw';
+export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
 export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean;
-  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; echo?: boolean;
+  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; deathrattle?: 'rds-guard';
 }
 
 export const CARDS: CardDef[] = [
@@ -19,13 +19,13 @@ export const CARDS: CardDef[] = [
   { id: 'maratik', name: 'Маратик', cost: 10, kind: 'hero', armor: 5, text: 'Боевой клич: заменяет вашу силу героя на «Ой».', flavor: '«Ой» за 6 маны добавляет в руку Смертокрыла 1/1. Кажется, сейчас что-то произойдёт.', rarity: 'legendary', art: 7, custom: true, effect: 'maratik' },
   { id: 'oy', name: 'Ой', cost: 6, kind: 'power', text: 'Вы кладёте в руку Смертокрыла 1/1.', flavor: 'Сила героя Маратика. Одно маленькое слово. Очень большие последствия.', rarity: 'rare', art: 6, custom: true, effect: 'oy' },
   { id: 'spark-power', name: 'Искра', cost: 2, kind: 'power', text: 'Наносит 1 урон выбранному врагу. Один раз за ход.', flavor: 'Стартовая сила героя. Заклинание «Искра хаоса» — отдельная карта и наносит 3 урона.', rarity: 'common', art: 10 },
-  { id: 'jaina', name: 'Джайна-ассасин', cost: 12, kind: 'hero', armor: 10, text: 'Стоит на 1 ману меньше за каждое РАШ, погибшее в матче. Боевой клич: ваша сила героя меняется на «Сила РДШ».', flavor: 'Погибшие РАШ обоих игроков снижают стоимость, но не ниже нуля. Новая сила за 4 маны призывает РАШ 2/5.', rarity: 'legendary', art: 10, custom: true, effect: 'jaina' },
-  { id: 'rds-power', name: 'Сила РДШ', cost: 4, kind: 'power', text: 'Призывает РАШ 2/5.', flavor: 'Сила героя Джайны-ассасина. Новому РАШ нужен ход, чтобы подготовиться к атаке.', rarity: 'rare', art: 10, custom: true, effect: 'rds' },
+  { id: 'jaina', name: 'Джайна-ассасин', cost: 12, kind: 'hero', armor: 10, text: 'Стоит на 1 ману меньше за каждое РДШ, погибшее в матче. Боевой клич: ваша сила героя меняется на «Сила РДШ».', flavor: 'Погибшие РДШ обоих игроков снижают стоимость, но не ниже нуля. Новая сила за 4 маны призывает РДШ 2/5.', rarity: 'legendary', art: 10, custom: true, effect: 'jaina' },
+  { id: 'rds-power', name: 'Сила РДШ', cost: 4, kind: 'power', text: 'Призывает РДШ 2/5.', flavor: 'Сила героя Джайны-ассасина. Новому РДШ нужен ход, чтобы подготовиться к атаке.', rarity: 'rare', art: 10, custom: true, effect: 'rds' },
   { id: 'fool-power', name: 'Дибильнутый!', cost: 3, kind: 'power', text: 'Превращает существ противника в случайных существ на 5 маны дешевле.', flavor: 'Стоимость результата не ниже нуля. Превращение не запускает боевые кличи и не считается гибелью.', rarity: 'epic', art: 4, custom: true, effect: 'devolve' },
   { id: 'maxim', name: 'Максимка-разведчик', cost: 6, kind: 'minion', attack: 3, health: 5, text: 'Боевой клич: уничтожает всех существ «Жанна» в колодах обоих игроков.', flavor: 'Трогает только колоды. Существа на столе и карты в руке остаются на месте.', rarity: 'epic', art: 5, custom: true, effect: 'purgeZhanna', tribe: 'Максим' },
-  { id: 'volunteer', name: 'Волонтер-босс', cost: 5, kind: 'minion', attack: 8, health: 8, text: 'Уничтожает ВСЕХ существ на столе. Призывает два РАШ 2/4.', flavor: 'В прототипе срабатывает при розыгрыше: уничтожает и себя, затем оставляет двух РАШ 2/4.', rarity: 'common', art: 11, custom: true, effect: 'volunteer', tribe: 'Лох' },
-  { id: 'rash', name: 'РАШ', cost: 3, kind: 'token', attack: 2, health: 5, text: 'Призван силой РДШ. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Считает не только своих.', rarity: 'common', art: 10, tribe: 'РАШ' },
-  { id: 'rash-volunteer', name: 'РАШ', cost: 2, kind: 'token', attack: 2, health: 4, text: 'Призван Волонтером-боссом. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Работают парами.', rarity: 'common', art: 11, tribe: 'РАШ' },
+  { id: 'volunteer', name: 'Волонтер-босс', cost: 5, kind: 'minion', attack: 8, health: 8, text: 'Уничтожает ВСЕХ существ на столе. Призывает два РДШ 2/4.', flavor: 'В прототипе срабатывает при розыгрыше: уничтожает и себя, затем оставляет двух РДШ 2/4.', rarity: 'common', art: 11, custom: true, effect: 'volunteer', tribe: 'Лох' },
+  { id: 'rash', name: 'РДШ', cost: 3, kind: 'token', attack: 2, health: 5, text: 'Призван силой РДШ. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Считает не только своих.', rarity: 'common', art: 10, tribe: 'РДШ' },
+  { id: 'rash-volunteer', name: 'РДШ', cost: 2, kind: 'token', attack: 2, health: 4, text: 'Призван Волонтером-боссом. Гибель снижает стоимость Джайны-ассасина.', flavor: 'Работают парами.', rarity: 'common', art: 11, tribe: 'РДШ' },
   { id: 'zhanna', name: 'Жанна', cost: 4, kind: 'minion', attack: 3, health: 5, text: 'Базовое тестовое существо типа «Жанна».', flavor: 'Добавлена как тестовая цель для Максимки-разведчика. Оригинальная карта Жанны пока не прислана.', rarity: 'common', art: 10, tribe: 'Жанна' },
   { id: 'pushkin', name: 'Пушкин', cost: 10, kind: 'token', attack: 15, health: 15, text: 'Провокация. Призывается Галинкой.', flavor: 'Я помню чудное мгновенье. У противника — пятнадцать ран.', rarity: 'legendary', art: 8, taunt: true, tribe: 'Поэт' },
   { id: 'regular', name: 'Завсегдатай', cost: 1, kind: 'minion', attack: 1, health: 2, text: 'Всегда готов к хорошей партии.', flavor: 'Сидит тут с закрытой беты.', rarity: 'common', art: 9, tribe: 'Житель' },
@@ -44,21 +44,25 @@ export const CARDS: CardDef[] = [
   { id: 'masik', name: 'Масик, уничтожитель миров', cost: 7, kind: 'minion', attack: 6, health: 4, text: 'Рывок. Боевой клич: немота выбранного персонажа. На героя действует 2 хода.', flavor: 'Рывок позволяет атаковать сразу, включая героя, но не обходит провокацию. Немота существа снимает его способности; немота героя отключает его силу на 2 его хода.', rarity: 'legendary', art: 9, custom: true, charge: true, effect: 'masik', tribe: 'Мяу' },
   { id: 'paper-army', name: 'Армия бумажек', cost: 7, kind: 'spell', text: 'Заполняет стол обоих игроков Бумажками 2/2.', flavor: 'Занимает только свободные места. Во время «Держать в курсе» учитывает ограничение в одно существо.', rarity: 'legendary', art: 5, custom: true, effect: 'paperArmy' },
   { id: 'briefing', name: 'Держать в курсе!', cost: 10, kind: 'spell', text: 'На 5 ходов каждого игрока: не больше одного существа на стороне. Силы героев: взять карту за 6 маны.', flavor: 'Текущий ход считается первым ходом разыгравшего. На каждой стороне остаётся случайное существо, остальные уничтожаются. После пяти ходов обоих игроков возвращаются обычный лимит и прежние силы героев.', rarity: 'legendary', art: 9, custom: true, effect: 'briefing' },
-  { id: 'rash-quest', name: 'Сам ты говно', cost: 1, kind: 'spell', text: 'Задача: призовите 8 РАШ. Награда: Волонтер-босс в руку.', flavor: 'Считает только ваших РАШ, призванных после начала задачи. Превращения не считаются призывами. Если рука полна, награда сгорает.', rarity: 'legendary', art: 11, custom: true, effect: 'rashQuest' },
+  { id: 'rash-quest', name: 'Сам ты говно', cost: 1, kind: 'spell', text: 'Задача: призовите 8 РДШ. Награда: Волонтер-босс в руку.', flavor: 'Считает только ваших РДШ, призванных после начала задачи. Превращения не считаются призывами. Если рука полна, награда сгорает.', rarity: 'legendary', art: 11, custom: true, effect: 'rashQuest' },
   { id: 'echo-maxim', name: 'Забивной Максимка', cost: 2, kind: 'minion', attack: 2, health: 2, text: 'Эхо. Боевой клич: 2 урона случайному врагу. Даёт +1 к атаке выбранному своему существу.', flavor: 'Эхо добавляет повторную копию в руку до конца хода. Если других своих существ нет, Максимка усиливает себя. Случайный урон может попасть в героя или существо врага.', rarity: 'epic', art: 5, custom: true, echo: true, effect: 'echoMaxim', tribe: 'Максим' },
   { id: 'paper', name: 'Бумажка', cost: 1, kind: 'token', attack: 2, health: 2, text: 'Призвана «Армией бумажек».', flavor: 'Безобидна, пока не порежешься.', rarity: 'common', art: 5 },
   { id: 'briefing-power', name: 'Взять карту', cost: 6, kind: 'power', text: 'Вы берёте одну карту. Один раз за ход.', flavor: 'Временная сила обоих героев во время «Держать в курсе». При пустой колоде наносит усталость.', rarity: 'common', art: 9, custom: true, effect: 'briefingDraw' },
+  { id: 'jaina-rusher', name: 'Джайна-рашер', cost: 4, kind: 'minion', attack: 5, health: 1, text: 'Натиск. Предсмертный хрип: призывает РДШ 1/3 с провокацией.', flavor: 'Натиск позволяет сразу атаковать существ, но не героя. При гибели без немоты призывает защитника РДШ, если есть свободное место.', rarity: 'common', art: 10, custom: true, rush: true, deathrattle: 'rds-guard', tribe: 'Жанна', frame: 'simple' },
+  { id: 'jaina-volunteer', name: 'Джайна-волонтер', cost: 1, kind: 'minion', attack: 2, health: 1, text: 'Боевой клич: призывает РДШ 0/2 с провокацией.', flavor: 'Самой Джайне нужен ход для подготовки атаки. Боевой клич призывает отдельного защитника, если на столе есть место.', rarity: 'common', art: 10, custom: true, effect: 'jainaVolunteer', tribe: 'Жанна', frame: 'simple' },
+  { id: 'rds-guard', name: 'РДШ — защитник', cost: 1, kind: 'token', attack: 1, health: 3, text: 'Провокация. Призывается предсмертным хрипом Джайны-рашера.', flavor: 'Его призыв продвигает задачу, а гибель удешевляет Джайну-ассасина.', rarity: 'common', art: 10, taunt: true, tribe: 'РДШ', frame: 'simple' },
+  { id: 'rds-helper', name: 'РДШ — помощник', cost: 1, kind: 'token', attack: 0, health: 2, text: 'Провокация. Призывается Джайной-волонтером.', flavor: 'Не наносит урон без усиления атаки, но защищает героя.', rarity: 'common', art: 10, taunt: true, tribe: 'РДШ', frame: 'simple' },
 ];
 export const CARD = Object.fromEntries(CARDS.map(c => [c.id, c])) as Record<string, CardDef>;
 export const COLLECTIBLE = CARDS.filter(c => c.kind !== 'power' && c.kind !== 'token');
 export const STARTER_DECK = [
   'casino', 'galinka', 'goodgame', 'ruslan', 'ruslan', 'trachukcha', 'me', 'deathwing', 'maratik',
-  'regular', 'echo-maxim', 'bouncer', 'bouncer', 'goblin', 'dragonslayer', 'mage', 'paper-army', 'guardian', 'vasiliy',
+  'regular', 'echo-maxim', 'bouncer', 'bouncer', 'jaina-volunteer', 'dragonslayer', 'jaina-rusher', 'paper-army', 'guardian', 'vasiliy',
   'masik', 'jaina', 'bolt', 'briefing', 'heal', 'dog-spell', 'draw', 'maxim', 'silence', 'volunteer', 'rash-quest',
 ];
 export const BOT_DECK = [
-  'regular', 'echo-maxim', 'regular', 'volunteer', 'bouncer', 'bouncer', 'bouncer', 'goblin', 'rash-quest', 'dragonslayer',
-  'mage', 'paper-army', 'mage', 'guardian', 'guardian', 'vasiliy', 'dragon', 'masik', 'bolt', 'bolt',
+  'regular', 'echo-maxim', 'regular', 'volunteer', 'bouncer', 'bouncer', 'bouncer', 'jaina-volunteer', 'rash-quest', 'dragonslayer',
+  'jaina-rusher', 'paper-army', 'mage', 'guardian', 'guardian', 'vasiliy', 'dragon', 'masik', 'bolt', 'bolt',
   'heal', 'dog-spell', 'draw', 'briefing', 'silence', 'silence', 'ruslan', 'casino', 'galinka', 'deathwing',
 ];
 export function deckError(ids: string[]): string | undefined {

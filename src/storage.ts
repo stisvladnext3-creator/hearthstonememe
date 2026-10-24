@@ -41,6 +41,7 @@ function validPlayer(p: Player): boolean {
       && (m.auraBonus === undefined || finite(m.auraBonus) && m.auraBonus >= 0)
       && (m.attackBuff === undefined || finite(m.attackBuff) && m.attackBuff >= 0)
       && (m.charge === undefined || typeof m.charge === 'boolean') && (m.attackedThisTurn === undefined || typeof m.attackedThisTurn === 'boolean')
+      && (m.rush === undefined || typeof m.rush === 'boolean')
       && (m.enteredTurn === undefined || Number.isSafeInteger(m.enteredTurn) && m.enteredTurn >= 0)
       && (m.origin === undefined || ['played', 'summoned', 'transformed'].includes(m.origin))
       && [m.ready, m.taunt, m.cannotAttack, m.silenced, m.ephemeral].every(x => typeof x === 'boolean'));
@@ -66,9 +67,14 @@ export function loadGame(): Game | null {
     p.powerSilenceTurns ??= 0;
     for (const m of p.board) {
       m.charge ??= !!CARD[m.id].charge && !m.silenced;
+      m.rush ??= !!CARD[m.id].rush && !m.silenced;
       m.enteredTurn ??= 0;
       m.attackedThisTurn ??= false;
     }
+  }
+  for (const entry of g.log) {
+    entry.text = entry.text.replaceAll('Р' + 'АШ', 'РДШ');
+    for (const entity of [entry.actor, entry.target, entry.hero, entry.result]) if (entity) entity.name = entity.name.replaceAll('Р' + 'АШ', 'РДШ');
   }
   refreshAuras(g);
   return g;

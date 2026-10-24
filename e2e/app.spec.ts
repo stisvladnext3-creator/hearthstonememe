@@ -156,7 +156,8 @@ test('original image replaces the full card, persists after reload, and can be r
   await expect(dialog.getByAltText('Оригинальная карта Галинка')).toBeVisible();
   await dialog.getByRole('button', { name: 'Убрать свою картинку' }).click();
   await expect(dialog.getByAltText('Оригинальная карта Галинка')).toHaveCount(0);
-  await expect(dialog.locator('.awaiting-original')).toBeVisible();
+  await expect(dialog.locator('.awaiting-original')).toHaveCount(0);
+  await expect(dialog.locator('.original-portrait')).toBeVisible();
 });
 
 test('history shows source, target, reciprocal damage and turn, then survives reload', async ({ page }) => {
@@ -542,7 +543,7 @@ for (const [width, height] of [[1440, 900], [1366, 768], [390, 844], [320, 568],
       const hand = [...document.querySelectorAll('.player-hand .game-card')].map(e => {
         const r = e.getBoundingClientRect();
         for (let x = r.left + 4; x < r.right - 4; x += 4) for (let y = r.top + 8; y < r.bottom - 8; y += 8) {
-          if (document.elementFromPoint(x, y)?.closest('.game-card') === e) return true;
+          if (document.elementFromPoint(x, y)?.closest('.hand-card-button')?.contains(e)) return true;
         }
         return false;
       });
@@ -641,4 +642,91 @@ test('Maxim chooses an ally, creates a reusable echo, and temporary copies disap
   await page.getByRole('button', { name: 'Завершить', exact: true }).click();
   await expect(page.locator('.echo-copy')).toHaveCount(0);
   expect((await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!))).player.hand).toHaveLength(0);
+});
+
+test('both new Jainas have their supplied portraits, correct stats and complete rules', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  for (const [id, attack, health] of [['jaina-rusher', '5', '1'], ['jaina-volunteer', '2', '1']]) {
+    await page.getByLabel('Поиск карт').fill(CARD[id].name); await page.locator('.card-grid .game-card').first().click();
+    const detail = page.getByRole('dialog', { name: CARD[id].name, exact: true });
+    await expect(detail.locator('.effect-description')).toContainText('РДШ'); await expect(detail.locator('.awaiting-original')).toHaveCount(0);
+    await expect(detail.locator('.attack-stat')).toHaveText(attack); await expect(detail.locator('.health-stat')).toHaveText(health);
+    expect(await detail.locator('.original-portrait').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('jaina-portraits.png');
+    await page.keyboard.press('Escape');
+  }
+});
+
+test('mobile rush attacks a taunt immediately and deathrattle summons a guard with illustrated history', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const g = fixture(); unit(g, 'bouncer', true); g.player.hand = [{ id: 'jaina-rusher', uid: g.nextUid++ }];
+  await seed(page, g); await page.getByRole('button', { name: 'Джайна-рашер, 4 маны', exact: true }).click();
+  const rusher = page.getByRole('button', { name: 'Джайна-рашер: 5 атаки, 1 здоровья, готов атаковать', exact: true });
+  await expect(rusher.locator('.rush-badge')).toBeVisible(); await rusher.click();
+  await expect(page.getByRole('button', { name: 'Герой противника: 30 здоровья', exact: true })).toHaveAttribute('aria-disabled', 'true');
+  await page.getByRole('button', { name: 'Вышибала: 2 атаки, 3 здоровья', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'РДШ — защитник: 1 атаки, 3 здоровья', exact: true })).toHaveClass(/taunt/);
+  await expect(page.locator('.enemy-board .board-unit')).toHaveCount(0);
+  await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  const log = page.locator('.history-entry').filter({ hasText: 'Предсмертный хрип «Джайна-рашер»' });
+  await expect(log.locator('.history-entity')).toHaveCount(2); await expect(log).toContainText('РДШ — защитник');
+});
+
+test('a rusher can attack the hero only on its next own turn', async ({ page }) => {
+  const g = fixture(); g.player.hand = [{ id: 'jaina-rusher', uid: g.nextUid++ }]; g.bot.hand = []; g.bot.deck = ['heal']; g.bot.power = 'oy';
+  await seed(page, g); await page.getByRole('button', { name: 'Джайна-рашер, 4 маны', exact: true }).click();
+  await expect(page.locator('.player-board .board-unit')).not.toHaveClass(/ready/);
+  await page.getByRole('button', { name: 'Завершить', exact: true }).click(); await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled({ timeout: 12000 });
+  await page.getByRole('button', { name: 'Джайна-рашер: 5 атаки, 1 здоровья, готов атаковать', exact: true }).click();
+  await page.getByRole('button', { name: 'Герой противника: 30 здоровья, атаковать', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Герой противника: 25 здоровья', exact: true })).toBeVisible();
+});
+
+test('Jaina volunteer summons a zero-attack taunt and advances the RDS quest', async ({ page }) => {
+  const g = fixture(); g.player.quest = { id: 'rash-quest', progress: 2 }; g.player.hand = [{ id: 'jaina-volunteer', uid: g.nextUid++ }];
+  await seed(page, g); await page.getByRole('button', { name: 'Джайна-волонтер, 1 маны', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'РДШ — помощник: 0 атаки, 2 здоровья', exact: true })).toHaveClass(/taunt/);
+  await expect(page.locator('.quest-progress.player')).toContainText('РДШ 3/8');
+});
+
+test('old saved history changes the RDS spelling without discarding the battle', async ({ page }) => {
+  const g = fixture(); const old = 'Р' + 'АШ'; g.log.push({ id: g.nextLog++, text: `Призван ${old} 2/5.`, side: 'player', actor: { type: 'card', id: 'rash', name: old, art: 10, side: 'player' } });
+  await seed(page, g); await page.getByRole('button', { name: 'История сражения', exact: true }).click();
+  await expect(page.locator('.battle-log')).toContainText('Призван РДШ 2/5.'); await expect(page.locator('.battle-log')).not.toContainText(old);
+  expect((await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!))).id).toBe(g.id);
+});
+
+test('every album page has illustrations and no missing-photo placeholders', async ({ page }) => {
+  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  for (let n = 0; n < Math.ceil(CARDS.length / 8); n++) {
+    await expect(page.locator('.card-grid .awaiting-original')).toHaveCount(0);
+    if (n < Math.ceil(CARDS.length / 8) - 1) await page.getByRole('button', { name: 'Следующая страница' }).click();
+  }
+  for (const path of ['/art/generated/characters-a.png', '/art/generated/characters-b.png']) expect((await page.request.get(path)).status()).toBe(200);
+});
+
+test('hand cards show complete descriptions, enlarge on hover, and shrink while choosing a target', async ({ page }) => {
+  const g = fixture(); unit(g, 'regular'); g.player.hand = ['deathwing', 'silence', 'jaina-rusher'].map(id => ({ id, uid: g.nextUid++ }));
+  await seed(page, g);
+  const card = page.getByRole('button', { name: 'Смертокрыл, 5 маны', exact: true });
+  await expect(card.locator('.card-copy p')).toBeVisible(); await expect(card.locator('.card-copy p')).toHaveText(CARD.deathwing.text);
+  const before = (await card.locator('.game-card').boundingBox())!; await card.hover(); const after = (await card.locator('.game-card').boundingBox())!;
+  expect(after.width / before.width).toBeGreaterThan(1.4); expect(after.width / before.width).toBeLessThan(1.9);
+  expect(after.y).toBeLessThan(before.y); expect(after.x).toBeGreaterThanOrEqual(0);
+  const silent = page.getByRole('button', { name: 'Тихий час, 1 маны', exact: true });
+  await silent.click(); await expect(page.locator('.battle-hint')).toContainText('своё или вражеское');
+  expect((await silent.locator('.game-card').boundingBox())!.width).toBeCloseTo(before.width, 0);
+  await page.getByRole('button', { name: /Завсегдатай: 1 атаки, 2 здоровья/ }).click();
+  await expect(page.locator('.player-board .silence-mark')).toBeVisible();
+});
+
+test('the forge field is selectable, persists and has a portrait background', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.getByRole('button', { name: 'Выбор игрового поля', exact: true }).click();
+  await page.getByRole('radio', { name: /Огненная кузница/ }).check(); await page.getByRole('button', { name: 'Вернуться в бой', exact: true }).click();
+  await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'forge');
+  expect(await page.locator('.battle-arena').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('forge-board-portrait.png');
+  await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
+  await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'forge');
+  expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

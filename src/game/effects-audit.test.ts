@@ -40,7 +40,7 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     expect(n.log.some(l => l.kind === 'play' && l.actor?.id === id && l.side === side)).toBe(true);
     const body = p.board.find(m => m.id === id);
     if (c.kind === 'minion' && id !== 'volunteer') {
-      expect(body).toMatchObject({ attack: c.attack! + (c.auraAttack ?? 0), health: c.health, ready: !!c.charge, origin: 'played' });
+      expect(body).toMatchObject({ attack: c.attack! + (c.auraAttack ?? 0), health: c.health, ready: !!(c.charge || c.rush), origin: 'played' });
     }
     if (!c.effect) {
       expect(p.health).toBe(17); expect(e.health).toBe(28); expect(n.winner).toBeNull();
@@ -67,6 +67,7 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
       briefing: () => { expect(n.briefing?.remainingTurns).toEqual({ player: 5, bot: 5 }); expect(e.board).toHaveLength(1); expect(p.board).toHaveLength(0); expect(n.log.some(l => l.text.includes('Взять карту'))).toBe(true); },
       'rash-quest': () => { expect(p.quest).toEqual({ id: 'rash-quest', progress: 0 }); },
       'echo-maxim': () => { expect(p.board[0].attack).toBe(2); expect(p.hand[0]).toMatchObject({ id: 'echo-maxim', expiresTurn: g.turn }); expect(e.health).toBe(26); },
+      'jaina-volunteer': () => { expect(p.board.find(m => m.id === 'rds-helper')).toMatchObject({ attack: 0, health: 2, taunt: true, ready: false }); },
       dragonslayer: () => { expect(e.health).toBe(24); expect(p.health).toBe(17); expect(n.log.find(l => l.actor?.id === id && l.amount === 4)?.target?.side).toBe(foe); },
       'dog-spell': () => {
         expect(n.discovery).toMatchObject({ side, sourceId: id, target: target.uid });

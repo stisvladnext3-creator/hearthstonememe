@@ -31,6 +31,9 @@
 .wood-side-button.packs:disabled { opacity: 1; cursor: default; }
 .wood-side-button.packs:disabled:hover { filter: none; }
 @media (max-width: 600px) {
+  .wood-topbar { gap: 8px; }
+  .wood-topbar > div:last-child, .wood-player-controls > .wood-counter { flex-shrink: 0; }
+  .wood-topbar > .wood-player-controls, .wood-class-button, .wood-class-button > span { min-width: 0; }
   .wood-side-button.packs .wood-side-caption { font-size: clamp(10px, 3vw, 17px); gap: 2px; }
   .wood-side-button.packs .wood-side-caption small { font-size: 9px; }
   .wood-side-button.collection .wood-side-caption { font-size: clamp(13px, 4.3vw, 17px); }

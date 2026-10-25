@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Check, Menu, Settings, Sparkles, X } from 'lucide-react';
 import { CARDS, type CardDef } from './game/cards';
 import { act, chooseBotAction, createGame, expireMulligan, type Action } from './game/engine';
-import { loadGame, loadStats, read, write } from './storage';
+import { loadGame, loadStats, read, write, recordMatchStats } from './storage';
 import { Art } from './components/Card';
 import Collection from './components/Collection';
 import Battle from './components/Battle';
@@ -18,6 +18,7 @@ import CardDetails from './components/CardDetails';
 import HelpDialog from './components/HelpDialog';
 import SettingsDialog, { type Settings as GameSettings } from './components/SettingsDialog';
 import CardWorkshop from './components/CardWorkshop';
+import FullscreenButton from './components/FullscreenButton';
 import DeckPicker from './components/DeckPicker';
 import type { HeroClass } from './game/classes';
 import { createDeck, DECK_LIMIT, deckName, draftError, loadDeckBook, readyDeck, saveDeckBook, type SavedDeck } from './decks';
@@ -48,6 +49,7 @@ export default function App() {
   const audio = useRef<AudioContext | null>(null);
   const botBudget = useRef({ turn: '', actions: 0 });
   const notify = useCallback((text: string) => setToast(text), []);
+  const updateStats = useCallback((match: NonNullable<typeof game>) => setStats(recordMatchStats(match)), []);
   const sound = useCallback(() => {
     if (!settings.sound || settings.volume === 0) return;
     try {
@@ -68,11 +70,12 @@ export default function App() {
   useEffect(() => {
     if (!game) return;
     write('game', game.winner ? null : game);
-    if (game.winner && stats.lastResult !== game.id) {
-      const next = { wins: stats.wins + (game.winner === 'player' ? 1 : 0), games: stats.games + 1, lastResult: game.id };
-      setStats(next); write('stats', next);
-    }
-  }, [game, stats]);
+    updateStats(game);
+  }, [game, updateStats]);
+  useEffect(() => {
+    const sync = (event: StorageEvent) => { if (event.key === 'memestone.v1.stats') setStats(loadStats()); };
+    window.addEventListener('storage', sync); return () => window.removeEventListener('storage', sync);
+  }, []);
   useEffect(() => {
     if (page !== 'battle' || !game || game.winner || !game.mulligan && (modal || inspected)) return;
     if (game.mulligan ? game.mulligan.ready.bot : game.active !== 'bot') return;
@@ -118,19 +121,19 @@ export default function App() {
   const inspect: Inspect = useCallback((c: CardDef, info?: InspectionInfo) => { setInspected(c); setInspectInfo(info); }, []);
   const closeModal = useCallback(() => setModal(null), []);
   const closeCard = useCallback(() => { setInspected(null); setInspectInfo(undefined); }, []);
-  return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : page === 'collection' ? 'collection-home' : 'parchment-view'}`}>
-    <header className="site-header"><div className="header-inner"><button className="logo-button" onClick={() => navigate('home')} aria-label="Memestone — главная"><Logo /></button>
+  return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : page === 'collection' ? 'collection-home' : page === 'editor' ? 'editor-home parchment-view' : 'parchment-view'}`}>
+    <FullscreenButton global notify={notify} />{page !== 'editor' && <header className="site-header"><div className="header-inner"><button className="logo-button" onClick={() => navigate('home')} aria-label="Memestone — главная"><Logo /></button>
       <nav className={mobileNav ? 'open' : ''} aria-label="Главная навигация"><button className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>Главная</button><button className={page === 'collection' ? 'active' : ''} onClick={() => navigate('collection')}>Коллекция<span className="nav-count">{CARDS.length}</span></button><button onClick={() => { setModal('help'); setMobileNav(false); }}>Как играть <ArrowUpRight size={13} /></button>{game && !game.winner && <button className={page === 'battle' ? 'active' : ''} onClick={() => navigate('battle')}>Текущий бой<span className="live-dot" /></button>}</nav>
-      <div className="header-actions"><span className="alpha-tag">ALPHA 0.17.0</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
-    </div></header>
+      <div className="header-actions"><span className="alpha-tag">ALPHA 0.18.0</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
+    </div></header>}
     <main className="main-container">
       {page === 'home' && <WoodMenu deckName={selectedDeck?.name ?? 'Нет колоды'} chooseDeck={() => chooseDeck(newMatch, 'Играть')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => { navigate('collection'); }} help={() => setModal('help')} settings={() => setModal('settings')} profile={() => setModal('about')} wins={stats.wins} />}
       {page === 'collection' && <Collection deckInfo={selectedDeck} decks={deckBook.decks} selectDeck={selectDeck} createDeck={addDeck} deleteDeck={deleteDeck} saveDeck={saveDeck} inspect={inspect} back={() => navigate('home')} notify={notify} editCards={() => navigate('editor')} revision={cardRevision} />}
       {page === 'editor' && <CardWorkshop back={() => navigate('collection')} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deckBook.decks.flatMap(d => d.cards)} />}
       {page === 'battle' && game && <Battle settings={() => setModal('settings')} board={settings.board} chooseBoard={() => setModal('fields')} overlayOpen={!!modal || !!inspected} animations={settings.motion} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} help={() => setModal('help')} />}
-      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={() => setModal('settings')} help={() => setModal('help')} chooseBoard={() => setModal('fields')} home={() => navigate('home')} battleChanged={setOnlineBattle} />
+      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={() => setModal('settings')} help={() => setModal('help')} chooseBoard={() => setModal('fields')} home={() => navigate('home')} battleChanged={setOnlineBattle} recordStats={updateStats} />
     </main>
-    <footer className="site-footer"><div><Logo small /><span>Создано для своих.</span></div><p>Независимый фан-проект. Не связан с Blizzard Entertainment.</p><button className="text-button" onClick={() => setModal('about')}>О проекте <ArrowUpRight size={13} /></button></footer>
+    {page !== 'editor' && <footer className="site-footer"><div><Logo small /><span>Создано для своих.</span></div><p>Независимый фан-проект. Не связан с Blizzard Entertainment.</p><button className="text-button" onClick={() => setModal('about')}>О проекте <ArrowUpRight size={13} /></button></footer>}
     {toast && <div className="toast" role="status"><Sparkles size={18} /><span>{toast}</span><button className="icon-button" aria-label="Скрыть сообщение" onClick={() => setToast('')}><X size={15} /></button></div>}
     {inspected && <CardDetails card={inspected} info={inspectInfo} close={closeCard} notify={notify} />}
     {modal === 'help' && <HelpDialog close={closeModal} />}

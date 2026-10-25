@@ -2,6 +2,7 @@ import { CARD, cardAbilities, deckError, type CardDef } from '../game/cards';
 import { registerCardPack, validContinuation, validCustomCounts } from '../game/custom-cards';
 import { createGame, other, type Action, type Game, type Side } from '../game/engine';
 import type { HistoryEntity } from '../game/history';
+import { validMetrics } from '../game/metrics';
 import { HEROES, knownPower } from '../game/presentation';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
@@ -119,6 +120,7 @@ export function validRoomView(value: unknown): value is Game {
   for (const side of ['player', 'bot'] as const) {
     const p = g[side];
     if (!p || ![p.health, p.armor, p.mana, p.maxMana].every(Number.isFinite) || !knownPower(p.power) || !knownHero(p.hero)) return false;
+    if (p.metrics !== undefined && !validMetrics(p.metrics)) return false;
     if (p.quest && (!knownCard(p.quest.id) || !Number.isSafeInteger(p.quest.progress) || p.quest.progress < 0 || p.quest.progress >= (cardAbilities(CARD[p.quest.id])?.quest?.goal ?? 8))) return false;
     if (p.name !== undefined && (typeof p.name !== 'string' || p.name.length > 20)) return false;
     if (!Array.isArray(p.hand) || p.hand.length > 10 || !p.hand.every(c => c && Number.isSafeInteger(c.uid) && (side === 'bot' ? c.id === 'hidden' : knownCard(c.id)))) return false;

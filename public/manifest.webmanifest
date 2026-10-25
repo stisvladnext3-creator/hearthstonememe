@@ -1,0 +1,11 @@
+{
+  "name": "Memestone — Твои карты. Твои правила.",
+  "short_name": "Memestone",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#35291c",
+  "theme_color": "#35291c",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -44,7 +44,7 @@ for (const [width, height] of [[320, 568], [390, 844], [844, 390], [667, 375]]) 
   for (const tab of ['Детали', 'Оформление', 'Картинка']) { await page.getByRole('tab', { name: tab, exact: true }).click(); await fits(page); }
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Из коллекции в меню' }).click();
   await page.locator('.wood-side-button.rules').click();
-  for (const tab of ['Начало', 'Бой', 'Победа']) { await page.getByRole('tab', { name: tab, exact: true }).click(); await fits(page); }
+  for (const tab of ['Основы', 'Ключевые слова', 'Герои']) { await page.getByRole('tab', { name: tab, exact: true }).click(); await fits(page); }
   await page.getByRole('button', { name: 'Всё понятно' }).click(); await page.getByRole('button', { name: 'Статистика побед' }).click(); await fits(page);
   await page.getByRole('tab', { name: 'О проекте', exact: true }).click(); await fits(page); await page.keyboard.press('Escape');
   await rooms.click(); await fits(page); await page.getByRole('button', { name: 'Создать комнату', exact: true }).click();

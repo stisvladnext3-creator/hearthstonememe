@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
+import FullscreenButton from './FullscreenButton';
 
 export default function Modal({ title, close, children, className = '', dismissible = true }: {
   title: string; close: () => void; children: ReactNode; className?: string; dismissible?: boolean;
@@ -26,6 +27,7 @@ export default function Modal({ title, close, children, className = '', dismissi
   }, [dismissible]);
   return <div className="modal-backdrop" onMouseDown={e => { if (dismissible && e.target === e.currentTarget) close(); }}>
     <div ref={ref} className={`modal ${className}`} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}>
+      <FullscreenButton />
       {dismissible && <button className="icon-button modal-close" onClick={close} aria-label="Закрыть"><X size={20} /></button>}
       {children}
     </div>

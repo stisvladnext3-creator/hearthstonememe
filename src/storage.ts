@@ -4,6 +4,7 @@ import { HEROES } from './game/presentation';
 import { knownPower } from './game/presentation';
 import { registerCardPack, validContinuation, validCustomCounts } from './game/custom-cards';
 import type { HistoryEntity, HistoryEntry } from './game/history';
+import { emptyMetrics, validMetrics, METRIC_KEYS, type MatchMetrics } from './game/metrics';
 
 const PREFIX = 'memestone.v1.';
 export function read<T>(key: string, fallback: T): T {
@@ -34,6 +35,7 @@ function validEntry(entry: HistoryEntry): boolean {
 }
 function validPlayer(p: Player): boolean {
   return !!p && [p.health, p.armor, p.mana, p.maxMana, p.fatigue].every(finite)
+    && (p.metrics === undefined || validMetrics(p.metrics))
     && p.mana >= 0 && p.maxMana >= 0 && p.maxMana <= 10 && p.mana <= p.maxMana && p.armor >= 0
     && knownPower(p.power) && typeof p.powerUsed === 'boolean' && typeof p.hero === 'string'
     && (p.name === undefined || typeof p.name === 'string' && p.name.length <= 20)
@@ -92,9 +94,36 @@ export function loadGame(): Game | null {
   refreshAuras(g);
   return g;
 }
-export interface Stats { wins: number; games: number; lastResult: string | null }
+export interface Stats extends MatchMetrics {
+  wins: number; games: number; lastResult: string | null;
+  matches: Record<string, MatchMetrics & { finished: boolean }>;
+}
 export function loadStats(): Stats {
-  const s = read<Stats>('stats', { wins: 0, games: 0, lastResult: null });
-  return s && Number.isSafeInteger(s.wins) && Number.isSafeInteger(s.games) && s.wins >= 0 && s.games >= s.wins
-    ? s : { wins: 0, games: 0, lastResult: null };
+  const raw = read<Partial<Stats> | null>('stats', null);
+  const valid = raw && Number.isSafeInteger(raw.wins) && Number.isSafeInteger(raw.games) && raw.wins! >= 0 && raw.games! >= raw.wins!;
+  const result: Stats = { ...emptyMetrics(), wins: valid ? raw.wins! : 0, games: valid ? raw.games! : 0,
+    lastResult: typeof raw?.lastResult === 'string' ? raw.lastResult : null, matches: {} };
+  if (valid) for (const key of METRIC_KEYS) if (Number.isSafeInteger(raw[key]) && raw[key]! >= 0) result[key] = raw[key]!;
+  if (valid && raw.matches && typeof raw.matches === 'object') {
+    result.matches = Object.fromEntries(Object.entries(raw.matches).filter(([, m]) => validMetrics(m) && typeof m.finished === 'boolean'));
+  }
+  return result;
+}
+export function recordMatchStats(game: Game): Stats {
+  const stats = loadStats();
+  const current = validMetrics(game.player.metrics) ? game.player.metrics : emptyMetrics();
+  const previous = Object.hasOwn(stats.matches, game.id) ? stats.matches[game.id] : { ...emptyMetrics(), finished: stats.lastResult === game.id };
+  const checkpoint = { ...previous };
+  let changed = !!game.winner && previous.finished && !Object.hasOwn(stats.matches, game.id);
+  for (const key of METRIC_KEYS) {
+    const delta = Math.max(0, current[key] - previous[key]);
+    if (delta) { stats[key] = Math.min(Number.MAX_SAFE_INTEGER, stats[key] + delta); changed = true; }
+    checkpoint[key] = Math.max(previous[key], current[key]);
+  }
+  if (game.winner && !previous.finished) {
+    stats.games = Math.min(Number.MAX_SAFE_INTEGER, stats.games + 1); if (game.winner === 'player') stats.wins = Math.min(Number.MAX_SAFE_INTEGER, stats.wins + 1);
+    checkpoint.finished = true; stats.lastResult = game.id; changed = true;
+  }
+  if (changed) { stats.matches = { ...stats.matches, [game.id]: checkpoint }; write('stats', stats); }
+  return stats;
 }

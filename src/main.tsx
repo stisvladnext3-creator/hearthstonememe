@@ -25,6 +25,7 @@ import './menu.css';
 import './options.css';
 import './mana.css';
 import './classic-theme.css';
+import './readable-ui.css';
 
 restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(

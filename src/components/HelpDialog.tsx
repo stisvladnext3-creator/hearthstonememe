@@ -1,19 +1,18 @@
-import { ArrowRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import Modal from './Modal';
-import WindowPages from './WindowPages';
-const RULES = [
-  ['Стартовая рука', 'До начала боя у каждого три карты и 30 секунд на замену. Нажми на ненужные карты и подтверди выбор. Можно заменить все три. Задача из колоды предлагается первой.'],
-  ['Мана и карты', 'Первый ход начинается с одной маны и добора карты. Каждый свой ход получаешь ещё кристалл, максимум 10. Рука вмещает 10 карт, стол — 7 существ. Удержание карты открывает её описание.'],
-  ['Атака', 'Выбери своё готовое существо, затем врага. Существа одновременно наносят друг другу урон. Рывок позволяет атаковать сразу, включая героя. Натиск в ход призыва позволяет атаковать только существ.'],
-  ['Способности', 'Провокацию нужно атаковать первой. Заклинания и сила героя обходят её. Боевой клич срабатывает при розыгрыше из руки. Предсмертный хрип — при гибели. Немота отключает способности. Эхо даёт копию до конца хода.'],
-  ['Герои и победа', 'У героев 30 здоровья. Маг наносит 1 урон любому персонажу, воин получает 2 брони, чернокнижник наносит себе 2 урона и берёт карту; Предвестник бури призывает элементаля 2/1. Эти силы стоят 2 маны и используются раз за ход. Класс закреплён за колодой; перед боем выбирается колода. Броня поглощает урон перед здоровьем; герой с нулём здоровья проигрывает.'],
-  ['Колода и задача', 'Пустая колода наносит растущий урон от усталости. Колода: 30 карт; обычных и редких — до 3 копий, эпических — 2, легендарных — 1. Волонтер-босс выдаётся только за задачу: призови 8 РДШ после её розыгрыша.'],
-];
+import PagedText from './PagedText';
+import { HANDBOOK } from '../game/handbook';
+const categories = [['all', 'Всё'], ['basics', 'Основы'], ['keywords', 'Ключевые слова'], ['heroes', 'Герои']] as const;
 export default function HelpDialog({ close }: { close: () => void }) {
-  return <Modal title="Как играть" close={close} className="help-modal paged-modal"><h2>Правила трактира</h2><WindowPages pages={[
-    { id: 'start', label: 'Начало', content: RULES.slice(0, 2) },
-    { id: 'combat', label: 'Бой', content: RULES.slice(2, 4) },
-    { id: 'victory', label: 'Победа', content: RULES.slice(4, 6) },
-  ].map(p => ({ ...p, content: <div className="rules-grid">{p.content.map(([title, text]) => <div key={title}><h3>{title}</h3><p>{text}</p></div>)}</div> }))} />
-    <button className="button primary window-done" onClick={close}>Всё понятно <ArrowRight size={17} /></button></Modal>;
+  const [query, setQuery] = useState(''), [category, setCategory] = useState<string>('all'), [id, setId] = useState(HANDBOOK[0].id);
+  const articles = useMemo(() => HANDBOOK.filter(a => (query.trim() || category === 'all' || a.category === category) && `${a.title} ${a.text}`.toLowerCase().includes(query.trim().toLowerCase())), [query, category]);
+  const index = Math.max(0, articles.findIndex(a => a.id === id)), article = articles[index];
+  return <Modal title="Как играть" close={close} className="help-modal handbook-modal">
+    <header className="readable-heading"><h2>Правила и справочник</h2><p>Механики игры и каждое ключевое слово отдельно</p></header>
+    <label className="handbook-search"><Search size={18} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Найти правило или ключевое слово" aria-label="Поиск по правилам" /></label>
+    <div className="handbook-categories" role="tablist" aria-label="Разделы справочника">{categories.map(([key, name]) => <button key={key} role="tab" aria-selected={key === category} onClick={() => { setCategory(key); setQuery(''); setId(HANDBOOK.find(a => key === 'all' || a.category === key)!.id); }}>{name}</button>)}</div>
+    {article ? <><div className="handbook-select"><button aria-label="Предыдущая статья" disabled={index === 0} onClick={() => setId(articles[index - 1].id)}><ChevronLeft size={20} /></button><select aria-label="Статья справочника" value={article.id} onChange={e => setId(e.target.value)}>{articles.map(a => <option key={a.id} value={a.id}>{a.title}</option>)}</select><button aria-label="Следующая статья" disabled={index + 1 === articles.length} onClick={() => setId(articles[index + 1].id)}><ChevronRight size={20} /></button></div><article className="handbook-article"><h3>{article.title}</h3><PagedText key={article.id} text={article.text} /></article></> : <div className="handbook-empty">Ничего не найдено. Попробуйте другое слово.</div>}
+    <footer className="handbook-footer"><span>{articles.length} статей</span><button className="button primary" onClick={close}>Всё понятно</button></footer>
+  </Modal>;
 }

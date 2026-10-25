@@ -6,6 +6,7 @@ import { createCustomEngine, customDiscount, customPool, customSelectedTargets, 
 import type { CardDef } from './cards';
 import { matchesCard } from './custom-schema';
 import { belongsToClass, HERO_CLASSES, type HeroClass } from './classes';
+import { addMetric, emptyMetrics, type MatchMetrics } from './metrics';
 
 export type Side = 'player' | 'bot';
 export interface HandCard { uid: number; id: string; expiresTurn?: number }
@@ -21,6 +22,7 @@ export interface Minion extends HandCard {
   healthBuff?: number;
 }
 export interface Player {
+  metrics?: MatchMetrics;
   name?: string;
   health: number; armor: number; mana: number; maxMana: number;
   hand: HandCard[]; deck: string[]; board: Minion[];
@@ -99,6 +101,9 @@ function log(g: Game, text: string, side: Side | 'system' = g.active, details: H
   g.log = g.log.slice(-1000);
 }
 function emit(g: Game, event: Omit<GameEvent, 'id'>) {
+  if (event.kind === 'damage' && event.target && event.side !== event.target.side) {
+    addMetric(g[event.side], event.target.uid === 'hero' ? 'heroDamage' : 'minionDamage', event.amount ?? 0);
+  }
   g.events.push({ ...event, id: (g.events.at(-1)?.id ?? 0) + 1 });
   g.events = g.events.slice(-40);
 }
@@ -165,7 +170,7 @@ function resolve(g: Game) {
         const victim = body ? cardEntity(body.id, foe, body) : heroEntity(enemy, foe);
         if (body) body.health--; else damageHero(enemy, 1);
         emit(g, { kind: 'spell', side, source: minion.uid, cardId: minion.id, target: { side: foe, uid } });
-        emit(g, { kind: 'damage', side: foe, cardId: minion.id, target: { side: foe, uid }, amount: 1 });
+        emit(g, { kind: 'damage', side, cardId: minion.id, target: { side: foe, uid }, amount: 1 });
         log(g, `Предсмертный хрип «${CARD[minion.id].name}» → ${victim.name}: 1 урон.`, side,
           { actor: cardEntity(minion.id, side, minion), target: victim, amount: 1 });
       } else if (deathrattle === 'clawFuryThree') {
@@ -247,7 +252,7 @@ function summon(g: Game, side: Side, id: string, source?: number | 'hero', creat
 }
 function emptyPlayer(hero: string, power = 'spark'): Player {
   return { health: 30, armor: 0, mana: 0, maxMana: 0, hand: [], deck: [], board: [],
-    fatigue: 0, hero, power, powerUsed: false, powerSilenceTurns: 0 };
+    fatigue: 0, hero, power, powerUsed: false, powerSilenceTurns: 0, metrics: emptyMetrics() };
 }
 const custom = createCustomEngine({ random, log, emit, damageHero, destroy, summon, draw, addToHand, boardLimit, reveal });
 export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck = BOT_DECK, mulliganDeadline?: number, classes: { player?: HeroClass; bot?: HeroClass } = {}): Game {
@@ -411,6 +416,8 @@ export function act(input: Game, side: Side, action: Action): Result {
       if (action.target === undefined || !legalTargets(g, c.effect === 'discoverBlast' ? 'bolt' : c.effect).includes(action.target)) return fail('Выберите подходящую цель.');
     }
     p.mana -= cost;
+    addMetric(p, 'manaSpent', cost);
+    addMetric(p, 'cardsPlayed', 1);
     p.hand.splice(index, 1);
     actor = cardEntity(c.id, side);
     record(`Разыграна карта «${c.name}» за ${cost} маны.`, { kind: 'play' });
@@ -598,6 +605,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     if (power === 'spark' && (action.target === undefined || !legalTargets(g, 'spark').includes(action.target))) return fail('Выберите персонажа для Искры.');
     p.powerUsed = true;
     p.mana -= cost;
+    addMetric(p, 'manaSpent', cost);
     const powerId = powerCardId(power);
     actor = powerEntity(p, side, power); actingHero = heroEntity(p, side);
     emit(g, { kind: 'power', side, source: 'hero', target: power === 'spark' ? anchorFor(action.target!) : { side, uid: 'hero' }, cardId: powerId });

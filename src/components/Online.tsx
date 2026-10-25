@@ -11,11 +11,13 @@ import type { BattlegroundId } from '../battlegrounds';
 import { read, write } from '../storage';
 import { HERO_CLASSES } from '../game/classes';
 import { readyDeck, type SavedDeck } from '../decks';
+import type { Game } from '../game/engine';
 
-export default function Online({ active, board, animations, overlayOpen, inspect, settings, help, chooseBoard, home, battleChanged, selectedDeck, chooseDeck }: {
+export default function Online({ active, board, animations, overlayOpen, inspect, settings, help, chooseBoard, home, battleChanged, selectedDeck, chooseDeck, recordStats }: {
   active: boolean; board: BattlegroundId; animations: boolean; overlayOpen: boolean; inspect: Inspect;
   settings: () => void; help: () => void; chooseBoard: () => void; home: () => void; battleChanged: (value: boolean) => void;
   selectedDeck: SavedDeck | null; chooseDeck: (done?: (deck: SavedDeck) => void, label?: string) => void;
+  recordStats: (game: Game) => void;
 }) {
   const viewport = useViewport();
   const [roomCapacity, setRoomCapacity] = useState(3);
@@ -43,6 +45,7 @@ export default function Online({ active, board, animations, overlayOpen, inspect
     return () => observer.disconnect();
   }, [active, room.phase, directory.status, directory.rooms.length]);
   useEffect(() => { battleChanged(inBattle); }, [inBattle, battleChanged]);
+  useEffect(() => { if (room.game) recordStats(room.game); }, [room.game, recordStats]);
   useEffect(() => { if (active && !directoryController.current) directoryController.current = new RoomDirectory(setDirectory); }, [active]);
   useEffect(() => () => {
     controller.current?.close(); directoryController.current?.close(); directoryController.current = null;
@@ -62,6 +65,7 @@ export default function Online({ active, board, animations, overlayOpen, inspect
     void next.open(saved?.role ?? role, name, chosen?.cards ?? selectedDeck?.cards ?? [], saved?.code ?? destination ?? code, saved ?? undefined, listed, chosen?.heroClass ?? selectedDeck?.heroClass ?? 'mage');
   };
   const leave = () => {
+    if (room.game) recordStats(room.game.winner ? room.game : { ...room.game, winner: 'bot' });
     controller.current?.close(true); controller.current = null; setRoom({ ...EMPTY_ROOM });
     setResume(null); setLeaving(false); setShowLobby(false); matchId.current = '';
   };

@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { restoreCustomCards } from './game/custom-cards';
 import { ArtworkProvider } from './artwork';
 import { CardAppearanceProvider } from './card-appearance';
 import './styles.css';
@@ -12,7 +13,9 @@ import './battle-layout.css';
 import './rooms.css';
 import './card-layout.css';
 import './phone.css';
+import './card-editor.css';
 
+restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><ArtworkProvider><CardAppearanceProvider><App /></CardAppearanceProvider></ArtworkProvider></React.StrictMode>,
 );

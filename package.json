@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.10.1",
+  "version": "0.11.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -13,6 +13,9 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:connection": "node scripts/check-live-connection.mjs",
+    "test:editor": "vitest run src/game/custom-cards.test.ts src/online/protocol.test.ts",
+    "test:editor-ui": "node scripts/check-editor.mjs",
+    "test:custom-rooms": "CUSTOM_CARDS=1 node scripts/check-live-connection.mjs",
     "rooms:signaling": "node scripts/signaling.mjs"
   },
   "dependencies": {

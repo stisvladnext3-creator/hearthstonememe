@@ -1,3 +1,4 @@
+import type { EditorData } from './custom-schema';
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
 export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
 export interface CardDef {
@@ -6,6 +7,7 @@ export interface CardDef {
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean; reward?: boolean;
   effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage';
+  editor?: EditorData;
 }
 
 export const CARDS: CardDef[] = [
@@ -82,7 +84,7 @@ export function migrateRewardDeck(ids: string[]): string[] {
 }
 export function deckError(ids: string[]): string | undefined {
   if (ids.length !== 30) return 'В колоде должно быть ровно 30 карт.';
-  if (ids.some(id => !COLLECTIBLE.some(c => c.id === id))) return 'В колоде есть недоступная карта.';
+  if (ids.some(id => !Object.hasOwn(CARD, id) || !['minion', 'spell', 'hero'].includes(CARD[id].kind) || CARD[id].reward)) return 'В колоде есть недоступная карта.';
   if (ids.some(id => ids.filter(x => x === id).length > deckCopyLimit(CARD[id])))
     return 'Максимум: 3 обычных, 3 редких, 2 эпических и 1 легендарная копия карты.';
 }

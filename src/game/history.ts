@@ -1,5 +1,5 @@
 import { CARD } from './cards';
-import { HEROES, POWER_CARDS } from './presentation';
+import { heroDefinition, powerCardId } from './presentation';
 import type { Minion, Player, Side } from './engine';
 
 export interface HistoryEntity {
@@ -19,7 +19,7 @@ export function cardEntity(id: string, side: Side, minion?: Minion): HistoryEnti
     attack: minion?.attack ?? card.attack, health: minion?.health ?? card.health };
 }
 export function heroEntity(player: Player, side: Side): HistoryEntity {
-  const hero = HEROES[player.hero] ?? HEROES.mage;
+  const hero = heroDefinition(player.hero);
   return { type: 'hero', id: player.hero, name: player.name ?? hero.name, art: hero.art, side, health: player.health, armor: player.armor };
 }
-export const powerEntity = (player: Player, side: Side, power = player.power) => cardEntity(POWER_CARDS[power], side);
+export const powerEntity = (player: Player, side: Side, power = player.power) => cardEntity(powerCardId(power), side);

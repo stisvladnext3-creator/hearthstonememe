@@ -1,6 +1,8 @@
 import { CARD, STARTER_DECK, deckError, migrateRewardDeck } from './game/cards';
 import { refreshAuras, type Game, type Minion, type Player } from './game/engine';
 import { HEROES } from './game/presentation';
+import { knownPower } from './game/presentation';
+import { registerCardPack, validContinuation, validCustomCounts } from './game/custom-cards';
 import type { HistoryEntity, HistoryEntry } from './game/history';
 
 const PREFIX = 'memestone.v1.';
@@ -22,7 +24,7 @@ const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFi
 const cardId = (id: unknown): id is string => typeof id === 'string' && Object.hasOwn(CARD, id);
 function validEntity(e: HistoryEntity): boolean {
   return !!e && ['card', 'hero', 'power'].includes(e.type) && typeof e.name === 'string' && finite(e.art)
-    && ['player', 'bot'].includes(e.side) && (e.type === 'hero' ? Object.hasOwn(HEROES, e.id) : cardId(e.id))
+    && ['player', 'bot'].includes(e.side) && (e.type === 'hero' ? Object.hasOwn(HEROES, e.id) || CARD[e.id]?.kind === 'hero' : cardId(e.id))
     && [e.attack, e.health, e.armor].every(v => v === undefined || finite(v));
 }
 function validEntry(entry: HistoryEntry): boolean {
@@ -33,16 +35,16 @@ function validEntry(entry: HistoryEntry): boolean {
 function validPlayer(p: Player): boolean {
   return !!p && [p.health, p.armor, p.mana, p.maxMana, p.fatigue].every(finite)
     && p.mana >= 0 && p.maxMana >= 0 && p.maxMana <= 10 && p.mana <= p.maxMana && p.armor >= 0
-    && ['spark', 'fool', 'oy', 'rds'].includes(p.power) && typeof p.powerUsed === 'boolean' && typeof p.hero === 'string'
+    && knownPower(p.power) && typeof p.powerUsed === 'boolean' && typeof p.hero === 'string'
     && (p.name === undefined || typeof p.name === 'string' && p.name.length <= 20)
     && (p.powerSilenceTurns === undefined || Number.isSafeInteger(p.powerSilenceTurns) && p.powerSilenceTurns >= 0 && p.powerSilenceTurns <= 2)
-    && (p.quest === undefined || p.quest?.id === 'rash-quest' && Number.isSafeInteger(p.quest.progress) && p.quest.progress >= 0 && p.quest.progress < 8)
+    && (p.quest === undefined || !!CARD[p.quest?.id] && Number.isSafeInteger(p.quest.progress) && p.quest.progress >= 0 && p.quest.progress < (CARD[p.quest.id].editor?.quest?.goal ?? 8))
     && Array.isArray(p.deck) && p.deck.every(cardId)
     && Array.isArray(p.hand) && p.hand.length <= 10 && p.hand.every(c => c && cardId(c.id) && finite(c.uid) && (c.expiresTurn === undefined || Number.isSafeInteger(c.expiresTurn) && c.expiresTurn > 0))
     && Array.isArray(p.board) && p.board.length <= 7 && p.board.every((m: Minion) => m && cardId(m.id)
       && [m.uid, m.attack, m.health, m.maxHealth].every(finite)
       && (m.auraBonus === undefined || finite(m.auraBonus) && m.auraBonus >= 0)
-      && (m.attackBuff === undefined || finite(m.attackBuff) && m.attackBuff >= 0)
+      && (m.attackBuff === undefined || finite(m.attackBuff)) && (m.healthBuff === undefined || finite(m.healthBuff))
       && (m.charge === undefined || typeof m.charge === 'boolean') && (m.attackedThisTurn === undefined || typeof m.attackedThisTurn === 'boolean')
       && (m.rush === undefined || typeof m.rush === 'boolean')
       && (m.enteredTurn === undefined || Number.isSafeInteger(m.enteredTurn) && m.enteredTurn >= 0)
@@ -51,6 +53,8 @@ function validPlayer(p: Player): boolean {
 }
 export function loadGame(): Game | null {
   const g = read<Game | null>('game', null);
+  try { if (g) registerCardPack(g.customCards ?? []); } catch { return null; }
+  if (g && !validCustomCounts(g.customCounts)) return null;
   if (g && g.rashDeaths === undefined) g.rashDeaths = 0;
   if (g && g.events === undefined) g.events = [];
   if (!g || typeof g.id !== 'string' || !validPlayer(g.player) || !validPlayer(g.bot) || !['player', 'bot'].includes(g.active)
@@ -64,10 +68,10 @@ export function loadGame(): Game | null {
       && typeof g.mulligan!.ready[side] === 'boolean' && Array.isArray(selected) && selected.length <= 3
       && new Set(selected).size === selected.length && selected.every(n => g[side].hand.some(c => c.uid === n));
   }))) return null;
-  if (g.discovery && (g.discovery.side !== g.active || !cardId(g.discovery.sourceId) || CARD[g.discovery.sourceId].effect !== 'discoverBlast'
+  if (g.discovery && (g.discovery.side !== g.active || !cardId(g.discovery.sourceId) || (!g.discovery.custom && CARD[g.discovery.sourceId].effect !== 'discoverBlast')
     || !Array.isArray(g.discovery.options) || g.discovery.options.length < 1 || g.discovery.options.length > 3
     || new Set(g.discovery.options).size !== g.discovery.options.length || !g.discovery.options.every(id => cardId(id) && g[g.active].deck.includes(id))
-    || (g.discovery.target !== 'hero' && (!finite(g.discovery.target) || !g[g.active === 'player' ? 'bot' : 'player'].board.some(m => m.uid === g.discovery!.target))))) return null;
+    || (g.discovery.custom ? !validContinuation(g.discovery.sourceId, g.discovery.custom) : g.discovery.target !== 'hero' && !finite(g.discovery.target)))) return null;
   if (g.briefing && (!g.briefing.remainingTurns || !['player', 'bot'].every(side => {
     const n = g.briefing!.remainingTurns[side as 'player' | 'bot'];
     return Number.isSafeInteger(n) && n >= 0 && n <= 5;

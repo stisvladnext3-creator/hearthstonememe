@@ -1,4 +1,5 @@
 import { migrateRewardDeck } from '../game/cards';
+import { packForCards, registerCardPack } from '../game/custom-cards';
 import type { Peer, DataConnection } from 'peerjs';
 import { act, expireMulligan, type Action, type Game } from '../game/engine';
 import { cleanName, createRoomGame, EMPTY_ROOM, normalizeCode, ROOM_PREFIX, ROOM_PROTOCOL, roomCode, roomGameView, validAction, validCode, validDeck, validRoomView, type ClientMessage, type HostMessage, type Member, type RoomState } from './protocol';
@@ -10,6 +11,7 @@ const SAVE_KEY = 'memestone.room.v1';
 export function savedRoom(): SavedRoom | null {
   try {
     const s = JSON.parse(sessionStorage.getItem(SAVE_KEY) ?? 'null') as SavedRoom | null;
+    if (s) { registerCardPack(s.self?.cards ?? []); registerCardPack(s.guest?.cards ?? []); registerCardPack(s.game?.customCards ?? []); }
     if (s?.self && Array.isArray(s.self.deck)) s.self.deck = migrateRewardDeck(s.self.deck);
     if (s?.guest && Array.isArray(s.guest.deck)) s.guest.deck = migrateRewardDeck(s.guest.deck);
     if (!s || !['host', 'guest'].includes(s.role) || !validCode(s.code) || !validDeck(s.self?.deck) || typeof s.self.name !== 'string' || typeof s.self.token !== 'string') return null;
@@ -68,7 +70,8 @@ export class PeerRoom {
     if (!validDeck(deck)) { this.update({ phase: 'error', error: 'Собери корректную колоду из 30 карт.' }); return; }
     const normalized = role === 'host' ? resume?.code ?? roomCode() : normalizeCode(code ?? '');
     if (!validCode(normalized)) { this.update({ phase: 'error', error: 'Код комнаты состоит из 6 букв и цифр.' }); return; }
-    this.self = resume?.self ?? { name: cleanName(name), deck: [...deck], token: crypto.randomUUID() };
+    try { this.self = resume?.self ?? { name: cleanName(name), deck: [...deck], token: crypto.randomUUID(), cards: packForCards(deck) }; }
+    catch (error) { this.update({ phase: 'error', error: String((error as Error).message) }); return; }
     this.guest = resume?.guest; this.canonical = role === 'host' ? resume?.game : undefined;
     this.update({ ...EMPTY_ROOM, phase: 'connecting', role, code: normalized, name: this.self.name, revision: resume?.revision ?? 0, listed: role === 'host' && (resume?.listed ?? listed) });
     try {
@@ -130,11 +133,13 @@ export class PeerRoom {
         if (data.type !== 'hello') return;
         const reject = (message: string) => { this.send({ type: 'reject', message }, connection); clearTimeout(timeout); setTimeout(() => connection.close(), 100); };
         if (data.protocol !== ROOM_PROTOCOL || connection.serialization !== 'binary') { reject('Версии игры не совпадают. Обоим игрокам нужно обновить страницу.'); return; }
+        try { registerCardPack(data.cards ?? []); packForCards([...this.self!.deck, ...(Array.isArray(data.deck) ? data.deck : [])]); }
+        catch { reject('Не удалось загрузить набор своих карт. Проверь ссылки и размер набора в редакторе.'); return; }
         if (!validDeck(data.deck) || typeof data.name !== 'string' || typeof data.token !== 'string' || data.token.length > 100 || data.token.length < 16) { reject('Некорректные данные игрока или колода.'); return; }
         if (this.guest && data.token !== this.guest.token) { reject('Комната уже занята двумя игроками.'); return; }
         admitted = true; clearTimeout(timeout);
         const previous = this.connection;
-        this.connection = connection; this.guest ??= { name: cleanName(data.name), deck: [...data.deck], token: data.token };
+        this.connection = connection; this.guest ??= { name: cleanName(data.name), deck: [...data.deck], token: data.token, cards: packForCards(data.deck) };
         if (previous !== connection) previous?.close();
         this.watchConnection(connection);
         this.everConnected = true;

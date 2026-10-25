@@ -8,6 +8,10 @@ export const HEROES: Record<string, { name: string; art: number; title: string }
   jaina: { name: 'Джайна-ассасин', art: 10, title: 'Сила РДШ' },
 };
 export const POWER_CARDS = { spark: 'spark-power', fool: 'fool-power', oy: 'oy', rds: 'rds-power', briefing: 'briefing-power' } as const;
+export const powerCardId = (power: string): string => Object.hasOwn(POWER_CARDS, power) ? POWER_CARDS[power as keyof typeof POWER_CARDS] : power;
+export const powerKey = (id: string): string => Object.entries(POWER_CARDS).find(([, value]) => value === id)?.[0] ?? id;
+export const knownPower = (power: unknown): power is string => typeof power === 'string' && CARD[powerCardId(power)]?.kind === 'power';
+export const heroDefinition = (id: string) => CARD[id]?.kind === 'hero' ? { name: CARD[id].name, art: CARD[id].art, title: CARD[id].flavor || 'Твой герой' } : HEROES[id] ?? HEROES.mage;
 export function heroCard(id: string): CardDef {
   if (CARD[id]?.kind === 'hero') return CARD[id];
   const hero = HEROES[id] ?? HEROES.mage;

@@ -1,6 +1,7 @@
 import { chromium, expect } from '@playwright/test';
 import WebSocket from 'ws';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import { readFileSync } from 'node:fs';
 
 // Two independent browsers use the production relay, never ?localRooms=1.
 // In the managed environment Node supplies the configured proxy and trusted CA
@@ -9,8 +10,23 @@ const origin = process.env.CONNECTION_TEST_URL || 'http://127.0.0.1:4173';
 const proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', args: ['--no-sandbox'] });
 const errors = [];
-async function participant(viewport) {
+const withCustomCards = process.env.CUSTOM_CARDS === '1';
+const starter = [...readFileSync(new URL('../src/game/cards.ts', import.meta.url), 'utf8').match(/export const STARTER_DECK = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
+async function participant(viewport, role) {
   const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+  if (withCustomCards) {
+    const rule = { trigger: 'play', operation: 'damage', target: 'selectedEnemy', amount: 3, health: 0, count: 1, chance: 100, filter: { side: 'friendly' } };
+    const card = (name, kind) => ({ id: 'custom-' + crypto.randomUUID(), name, kind, cost: 0, text: 'Наносит урон выбранному врагу.', flavor: '', rarity: 'common', art: 10, custom: true, editor: { version: 1, tags: ['Проверка'], rules: [] } });
+    const power = card('Своя сила', 'power'); power.editor.rules = [rule];
+    const hero = card('Свой герой', 'hero'); hero.armor = 7; hero.editor.powerId = power.id; hero.editor.startInHand = true;
+    const spell = card('Своя молния', 'spell'); spell.editor.startInHand = true; spell.editor.rules = [{ ...rule, amount: 2 }];
+    const cards = role === 'host' ? [power, hero] : [spell], opening = role === 'host' ? hero.id : spell.id;
+    const deck = starter.map(id => id === 'casino' ? opening : id);
+    await context.addInitScript(({ cards, deck }) => {
+      if (!localStorage.getItem('memestone.v1.custom-cards')) localStorage.setItem('memestone.v1.custom-cards', JSON.stringify(cards));
+      if (!localStorage.getItem('memestone.v1.deck')) localStorage.setItem('memestone.v1.deck', JSON.stringify(deck));
+    }, { cards, deck });
+  }
   if (proxy) await context.routeWebSocket(/^wss:\/\/public\.cloud\.shiftr\.io(?:\/.*)?$/, route => {
     const upstream = new WebSocket(route.url(), 'mqtt', { agent: new HttpsProxyAgent(proxy) });
     const pending = [];
@@ -47,8 +63,8 @@ async function findRoom(page, code) {
   return row;
 }
 async function flow(listed) {
-  const host = await participant({ width: 1440, height: 900 });
-  const guest = await participant({ width: 390, height: 844 });
+  const host = await participant({ width: 1440, height: 900 }, 'host');
+  const guest = await participant({ width: 390, height: 844 }, 'guest');
   const name = `Проверка-${crypto.randomUUID().slice(0, 5)}`;
   try {
     await lobby(host.page, name);
@@ -74,11 +90,27 @@ async function flow(listed) {
     for (const { page } of [host, guest]) await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0, { timeout: 15_000 });
     const first = await host.page.locator('.end-turn').isEnabled() ? host.page : guest.page;
     const second = first === host.page ? guest.page : host.page;
+    const customMove = async page => {
+      if (page === host.page) {
+        await page.getByRole('button', { name: 'Свой герой, 0 маны', exact: true }).click();
+        await expect(guest.page.locator('.enemy-power strong')).toHaveText('Своя сила');
+        await page.getByRole('button', { name: 'Сила героя Своя сила, 0 маны', exact: true }).click();
+        await page.locator('[data-combat-anchor="bot:hero"]').click();
+        await expect(guest.page.locator('.own-hero-row .hero-hp')).toContainText('27');
+      } else {
+        await page.getByRole('button', { name: 'Своя молния, 0 маны', exact: true }).click();
+        await page.locator('[data-combat-anchor="bot:hero"]').click();
+        await expect(page.locator('.last-action')).toContainText('2 урона');
+      }
+    };
+    if (withCustomCards) await customMove(first);
     await first.getByRole('button', { name: 'Завершить', exact: true }).click();
     await expect(second.locator('.end-turn')).toBeEnabled({ timeout: 15_000 });
+    if (withCustomCards) await customMove(second);
     await second.getByRole('button', { name: 'Завершить', exact: true }).click();
     await expect(first.locator('.end-turn')).toBeEnabled({ timeout: 15_000 });
     console.log(`${listed ? 'Public list' : 'Room code'}: shared battle and both turn transfers received`);
+    if (withCustomCards) console.log('Custom hero, custom power and custom spell synchronized between different card libraries');
     if (!listed) {
       await guest.page.reload();
       if (await guest.page.getByRole('button', { name: 'Комнаты', exact: true }).isVisible()) await guest.page.getByRole('button', { name: 'Комнаты', exact: true }).click();

@@ -7,11 +7,16 @@ import { CardRules } from './CardRules';
 import { useArtwork } from '../artwork';
 import { useLongPress } from '../useLongPress';
 
-export function Art({ index, className = '', cardId }: { index: number; className?: string; cardId?: string }) {
+export function Art({ index, className = '', cardId, picture, sourceId }: { index: number; className?: string; cardId?: string; picture?: string; sourceId?: string }) {
   const { images } = useArtwork();
   const image = cardId ? images[cardId] : undefined;
   if (image) return <div className={`portrait-art original-portrait ${image.format} ${className}`} style={{ backgroundImage: `url("${image.url}")`, '--portrait-position': image.position, '--portrait-size': image.size } as CSSProperties} />;
-  if (cardId && CARD[cardId]?.custom) return <div className={`portrait-art awaiting-original ${className}`}><ImagePlus /><span>ТВОЙ ОРИГИНАЛ</span></div>;
+  const customImage = picture ?? (cardId ? CARD[cardId]?.editor?.image : undefined);
+  if (customImage) return <div className={`portrait-art original-portrait portrait ${className}`} style={{ backgroundImage: 'url("' + customImage + '")', backgroundPosition: 'center', backgroundSize: 'cover' }} />;
+  const source = sourceId ?? (cardId ? CARD[cardId]?.editor?.artSourceId : undefined);
+  const inherited = source ? images[source] : undefined;
+  if (inherited) return <div className={`portrait-art original-portrait ${inherited.format} ${className}`} style={{ backgroundImage: 'url("' + inherited.url + '")', '--portrait-position': inherited.position, '--portrait-size': inherited.size } as CSSProperties} />;
+  if (cardId && CARD[cardId]?.custom && !CARD[cardId].editor) return <div className={`portrait-art awaiting-original ${className}`}><ImagePlus /><span>ТВОЙ ОРИГИНАЛ</span></div>;
   return <div className={`portrait-art ${className}`} style={{ '--art-x': `${(index % 4) * 100 / 3}%`, '--art-y': `${Math.floor(index / 4) * 50}%` } as CSSProperties} />;
 }
 export const kindLabel = (kind: CardDef['kind']) => ({ minion: 'Существо', spell: 'Заклинание', hero: 'Герой', power: 'Сила героя', token: 'Призыв' })[kind];
@@ -51,7 +56,7 @@ export function Card({ card, onClick, onInspect, className = '', playable = fals
   const shownCost = cost ?? card.printedCost ?? card.cost;
   const content = <>
     {scanned ? <><span className={`scanned-card ${image.format}`}><img src={image.url} alt={`Оригинальная карта ${card.name}`} draggable="false" /></span><span className="visually-hidden">{card.text}</span></>
-      : <><div className="card-art"><Art index={card.art} cardId={card.id} /></div><CardFrame card={card} appearance={appearance} />
+      : <><div className="card-art"><Art index={card.art} cardId={card.id} picture={card.editor?.image} sourceId={card.editor?.artSourceId} /></div><CardFrame card={card} appearance={appearance} />
         <div className="card-copy"><CardName card={card} appearance={appearance} /><p><FittedText text={card.text} maximum={spell ? 5.3 : 4.8} rich /></p><CardTribe card={card} appearance={appearance} /></div>
         <div className="card-bottom">{card.attack !== undefined ? <><span className="attack-stat">{card.attack}</span><span className="health-stat">{card.health}</span></> : card.armor ? <span className="armor-stat">{card.armor}</span> : null}</div>
       </>}

@@ -28,8 +28,11 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Test game rules
-        if: ${{ !contains(github.event.head_commit.message, '[connection-only]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[connection-only]') && !contains(github.event.head_commit.message, '[editor-checks]') }}
         run: npm test
+      - name: Test custom cards and room protocol
+        if: ${{ contains(github.event.head_commit.message, '[editor-checks]') }}
+        run: npm run test:editor
       - name: Configure GitHub Pages
         id: pages
         uses: actions/configure-pages@v5

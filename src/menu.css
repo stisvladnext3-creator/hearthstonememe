@@ -1,0 +1,88 @@
+@font-face {
+  font-family: 'Menu Alegreya'; font-style: normal; font-weight: 800; font-display: swap;
+  src: url('/fonts/menu-alegreya-800.ttf') format('truetype');
+}
+/* The menu owns its typography and geometry, independent of the card windows. */
+.wood-menu { --menu-serif: 'Menu Alegreya', Georgia, 'Times New Roman', serif; }
+.wood-menu .wood-counter strong { font-family: var(--menu-serif); font-weight: 800; }
+.wood-menu .wood-small-button[aria-label="Настройки"] svg {
+  fill: #817e72; stroke: #2b2a25; stroke-width: 1.8; filter: drop-shadow(0 1px 1px #ded6bf);
+}
+.wood-menu .wood-medallion { width: min(56vw, 640px); height: auto; max-width: none; top: 49%; aspect-ratio: 1; }
+.wood-menu .wood-buttons {
+  top: 30%; bottom: auto; left: 11%; right: auto; width: 78%;
+  display: flex; flex-direction: column; gap: clamp(10px, 1.4vw, 18px);
+}
+.wood-menu .wood-main-button {
+  position: relative; width: 100%; height: auto; aspect-ratio: 540 / 104;
+  padding: 0; clip-path: none; border: 0; background: url('/art/menu-plaque.svg') center / 100% 100% no-repeat;
+  container-type: inline-size; filter: drop-shadow(0 5px 3px #2b120c);
+  transition: filter .15s, transform .15s;
+}
+.wood-menu .wood-main-button > span {
+  position: absolute; inset: 0; width: auto; height: auto; padding: 1cqw 0 0;
+  clip-path: none; background: none; box-shadow: none;
+  font: 800 8.5cqw / 1 var(--menu-serif); letter-spacing: -.025em; color: #372c19;
+  text-shadow: 0 1px 0 #f4e2bf, 0 -1px 0 #6e58403b;
+}
+.wood-menu .wood-main-button:first-child { filter: drop-shadow(0 5px 3px #2b120c) drop-shadow(0 0 6px #ffcb6b40); }
+.wood-menu .wood-main-button:hover { filter: brightness(1.12) drop-shadow(0 0 7px #ffcb6b70); transform: none; }
+.wood-menu .wood-main-button:active { transform: translateY(2px); filter: brightness(.96); }
+.wood-menu .wood-main-button:focus-visible { outline: 2px solid #ffdc8c; outline-offset: 3px; border-radius: 10px; }
+.wood-menu .wood-flourish { display: block; bottom: 16%; width: 60%; height: auto; opacity: .65; stroke: #e3b55d; stroke-width: 4; }
+.wood-menu .wood-side-button {
+  --menu-emblem: clamp(108px, 19vh, 142px);
+  width: 27%; height: clamp(58px, 11.6vh, 82px); padding: 0; border: 0; overflow: visible;
+  background: linear-gradient(#3c3531 0%, #d5ccc0 3%, #8e8a82 8%, #d8cfc0 12%, #5b5853 19%, #3d3b38 30%, #373532 70%, #6f6c62 83%, #c2bcb0 88%, #5d5b54 95%, #292825 100%);
+  box-shadow: 0 -2px 2px #251c16, 0 3px 4px #241007, inset 0 0 0 1px #928574;
+  isolation: isolate;
+}
+.wood-menu .wood-side-button::before {
+  content: ''; position: absolute; inset: 12px 0; pointer-events: none; z-index: -1;
+  background: repeating-linear-gradient(0deg, #fff1 0, transparent 1px, transparent 4px), linear-gradient(90deg, #1c1b1900, #1c1b1950);
+  opacity: .4;
+}
+.wood-menu .wood-side-button.profile, .wood-menu .wood-side-button.rules { padding-right: calc(var(--menu-emblem) * .38); padding-left: 7px; }
+.wood-menu .wood-side-button.packs, .wood-menu .wood-side-button.collection { padding-left: calc(var(--menu-emblem) * .38); padding-right: 7px; }
+.wood-menu .wood-side-button.profile, .wood-menu .wood-side-button.packs { bottom: 24%; }
+.wood-menu .wood-side-button.rules, .wood-menu .wood-side-button.collection { bottom: 4.2%; }
+.wood-menu .wood-side-caption {
+  font: 800 clamp(25px, 3.2vw, 43px) / 1 var(--menu-serif); letter-spacing: -.025em; color: #fffdf5;
+  -webkit-text-stroke: 1px #161311; paint-order: stroke fill;
+  text-shadow: 0 3px 1px #0e0d0c, 2px 0 #151210, -2px 0 #151210;
+}
+.wood-menu .wood-side-button.packs .wood-side-caption { font: 800 clamp(22px, 2.7vw, 35px) / 1 var(--menu-serif); gap: 2px; }
+.wood-menu .wood-side-button.packs .wood-side-caption small { font: 700 12px / 1 'Roboto Condensed', sans-serif; letter-spacing: .5px; -webkit-text-stroke: 0; }
+.wood-menu .wood-side-button .wood-emblem {
+  position: absolute; top: 50%; left: auto; right: auto; transform: translateY(-50%);
+  width: var(--menu-emblem); height: var(--menu-emblem); border: 0; border-radius: 0;
+  background: url('/art/generated/menu-emblems.webp') 0 0 / 200% 200% no-repeat;
+  box-shadow: none; filter: drop-shadow(0 4px 3px #190d0bb3); pointer-events: none;
+}
+.wood-menu .profile .wood-emblem { right: calc(var(--menu-emblem) * -.47); background-position: 0 0; }
+.wood-menu .packs .wood-emblem { left: calc(var(--menu-emblem) * -.47); background-position: 100% 0; }
+.wood-menu .rules .wood-emblem { right: calc(var(--menu-emblem) * -.47); background-position: 0 100%; }
+.wood-menu .collection .wood-emblem { left: calc(var(--menu-emblem) * -.47); background-position: 100% 100%; }
+.wood-menu .wood-side-button:disabled { opacity: 1; }
+.wood-menu .wood-side-button:hover { filter: brightness(1.12); }
+.wood-menu .wood-side-button:disabled:hover { filter: none; }
+@media (max-width: 960px), (max-height: 600px) and (max-width: 1180px) {
+  .wood-menu .wood-medallion { width: min(94vw, 62dvh); height: auto; top: 42%; }
+  .wood-menu .wood-buttons { top: 33%; gap: 10px; }
+  .wood-menu .wood-side-button { --menu-emblem: 70px; width: 44%; height: 44px; }
+  .wood-menu .wood-side-button.profile, .wood-menu .wood-side-button.packs { bottom: 86px; }
+  .wood-menu .wood-side-button.rules, .wood-menu .wood-side-button.collection { bottom: 28px; }
+  .wood-menu .wood-side-caption { font-size: clamp(17px, 5vw, 28px); -webkit-text-stroke: .7px #161311; }
+  .wood-menu .wood-side-button.collection .wood-side-caption { font-size: clamp(15px, 4.7vw, 27px); }
+  .wood-menu .wood-side-button.packs .wood-side-caption { font-size: clamp(12px, 3.8vw, 23px); }
+  .wood-menu .wood-side-button.packs .wood-side-caption small { font-size: 9px; }
+}
+@media (max-width: 960px) and (orientation: landscape), (max-height: 600px) and (min-width: 601px) and (max-width: 1180px) {
+  .wood-menu .wood-medallion { width: 82dvh; top: 49%; }
+  .wood-menu .wood-side-button { --menu-emblem: 72px; width: 27%; height: 42px; }
+  .wood-menu .wood-side-button.profile, .wood-menu .wood-side-button.packs { bottom: 26%; }
+  .wood-menu .wood-side-button.rules, .wood-menu .wood-side-button.collection { bottom: 10%; }
+  .wood-menu .wood-side-caption, .wood-menu .wood-side-button.collection .wood-side-caption { font-size: clamp(17px, 3vw, 30px); }
+  .wood-menu .wood-side-button.packs .wood-side-caption { font-size: clamp(15px, 2.4vw, 24px); }
+}
+@media (prefers-reduced-motion: reduce) { .wood-menu .wood-main-button { transition: none; } }

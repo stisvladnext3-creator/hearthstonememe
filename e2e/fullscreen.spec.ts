@@ -27,7 +27,7 @@ for (const [width, height] of [[320, 568], [390, 844], [844, 390], [667, 375]]) 
   const rooms = page.getByRole('button', { name: 'Комнаты', exact: true }); await expect(rooms).toBeInViewport();
   expect(await rooms.evaluate(e => { const r = e.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!hit && e.contains(hit); })).toBe(true);
   await fits(page);
-  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click(); await fits(page);
+  await page.locator('.wood-side-button.collection').click(); await fits(page);
   for (const card of await page.locator('.album-card-grid .game-card').all()) { const r = await card.boundingBox(); expect(r!.width / r!.height).toBeCloseTo(1064 / 1478, 2); }
   await fits(page);
   const nextDeck = page.getByRole('button', { name: 'Следующая страница колоды' });
@@ -44,7 +44,7 @@ for (const [width, height] of [[320, 568], [390, 844], [844, 390], [667, 375]]) 
   await fits(page);
   for (const tab of ['Детали', 'Оформление', 'Картинка']) { await page.getByRole('tab', { name: tab, exact: true }).click(); await fits(page); }
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Из коллекции в меню' }).click();
-  await page.getByRole('button', { name: 'Как играть', exact: true }).click();
+  await page.locator('.wood-side-button.rules').click();
   for (const tab of ['Начало', 'Бой', 'Победа']) { await page.getByRole('tab', { name: tab, exact: true }).click(); await fits(page); }
   await page.getByRole('button', { name: 'Всё понятно' }).click(); await page.getByRole('button', { name: 'Статистика побед' }).click(); await fits(page);
   await page.getByRole('tab', { name: 'О проекте', exact: true }).click(); await fits(page); await page.keyboard.press('Escape');
@@ -101,7 +101,7 @@ test('the original thirty-second deadline expires automatically and starts only 
 test('Volunteer Boss remains inspectable but has no deck button and old decks migrate', async ({ page }) => {
   const g = createGame(); const oldDeck = [...g.player.hand.map(c => c.id), ...g.player.deck]; oldDeck[0] = 'volunteer';
   await page.addInitScript(deck => localStorage.setItem('memestone.v1.deck', JSON.stringify(deck)), oldDeck);
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click(); await page.getByRole('button', { name: 'Редактировать колоду Твои правила' }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click(); await page.getByRole('button', { name: 'Редактировать колоду Твои правила' }).click();
   await page.getByLabel('Поиск карт').fill('Волонтер-босс'); await expect(page.locator('[data-card-id="volunteer"]').locator('..').locator('.album-owned')).toHaveText('Награда за задачу');
   await expect(page.getByRole('button', { name: `Добавить ${CARD.volunteer.name}`, exact: true })).toHaveCount(0);
   await page.locator('.album-card-grid [data-card-id="volunteer"]').click(); await expect(page.locator('.detail-tags')).toContainText('Награда за задачу');
@@ -130,7 +130,7 @@ test('drawing multiple cards animates from the actual deck and respects reduced 
 
 for (const [width, height] of [[320, 568], [667, 375]]) test(`long rules, history and discovery fit the phone at ${width}x${height}`, async ({ page }) => {
   test.setTimeout(60000); await page.setViewportSize({ width, height }); await page.goto('/');
-  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.locator('.wood-side-button.collection').click();
   for (const id of ['vasiliy', 'briefing', 'dog-spell', 'volunteer', 'maratik', 'trachukcha', 'maxim', 'jaina', 'deathwing']) {
     await page.getByLabel('Поиск карт').fill(CARD[id].name); await page.locator(`.album-card-grid [data-card-id="${id}"]`).click();
     await fits(page); await page.getByRole('tab', { name: 'Детали', exact: true }).click(); await fits(page);

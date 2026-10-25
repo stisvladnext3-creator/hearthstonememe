@@ -21,6 +21,7 @@ import './storm.css';
 import './cat.css';
 import './class-card-colors.css';
 import './collection-album.css';
+import './menu.css';
 
 restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -10,7 +10,7 @@ async function fits(scope){
  await expect.poll(async()=>last=await scope.evaluate(el=>[...el.querySelectorAll('button,input:not([type=file]),select')].flatMap(node=>{const r=node.getBoundingClientRect();return !r.width||!r.height||r.left>=-.5&&r.top>=-.5&&r.right<=innerWidth+.5&&r.bottom<=innerHeight+.5?[]:[{name:node.getAttribute('aria-label')||node.textContent,rect:[r.x,r.y,r.width,r.height]}];})),{timeout:4000}).toEqual([]).catch(e=>{console.error('Layout:',last);throw e;});
 }
 try{
- await page.goto(process.env.CONNECTION_TEST_URL||'http://127.0.0.1:4173');await page.getByRole('button',{name:'Моя коллекция',exact:true}).click();await page.waitForLoadState('networkidle');
+ await page.goto(process.env.CONNECTION_TEST_URL||'http://127.0.0.1:4173');await page.locator('.wood-side-button.collection').click();await page.waitForLoadState('networkidle');
  for(const size of sizes){
   await page.setViewportSize(size);await page.mouse.move(0,0);await fits(page.locator('.collection-v2'));await expect(page.locator('.album-deck-sidebar')).toBeVisible();await expect(page.locator('.album-main')).toBeVisible();
   await expect(page.locator('.album-card-grid .game-card')).toHaveCount(8);

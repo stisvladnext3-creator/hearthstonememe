@@ -29,7 +29,7 @@ test('home, illustrated card details, rules and keyboard dialog dismissal', asyn
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Memestone', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.locator('.wood-side-button.collection').click();
   await page.getByLabel('Поиск карт').fill('Галинка');
   await page.getByRole('button', { name: 'Галинка, 10 маны', exact: true }).click();
   const detail = page.getByRole('dialog', { name: 'Галинка' });
@@ -42,7 +42,7 @@ test('home, illustrated card details, rules and keyboard dialog dismissal', asyn
   expect(errors).toEqual([]);
 });
 test('collection searches, categories and mana filters work together', async ({ page }) => {
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   await expect(page.locator('.card-grid .game-card')).toHaveCount(8);
   await page.getByLabel('Тип и редкость карт').selectOption('custom');
   await expect(page.locator('.card-grid .game-card')).toHaveCount(8);
@@ -71,7 +71,7 @@ test('a new solo match puts its quest first and activates it only after playing'
 });
 test('deck editor saves an actual changed 30-card deck and survives reload', async ({ page }) => {
   const expectedBolts = STARTER_DECK.filter(id => id === 'bolt').length + 1;
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   await page.getByRole('button', { name: 'Редактировать колоду Твои правила' }).click();
   await page.getByRole('button', { name: 'Убрать Завсегдатай', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Сохранить колоду' })).toBeEnabled();
@@ -143,7 +143,7 @@ test('mobile navigation, collection and full battlefield do not overflow viewpor
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.locator('.wood-side-button.collection').click();
   await expect(page.locator('.card-grid .game-card')).toHaveCount(4);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByLabel('Поиск карт').fill('Галинка');
@@ -163,7 +163,7 @@ test('mobile navigation, collection and full battlefield do not overflow viewpor
 
 test('original image replaces the full card, persists after reload, and can be removed', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.locator('.wood-side-button.collection').click();
   await page.getByLabel('Поиск карт').fill('Галинка');
   await page.getByRole('button', { name: 'Галинка, 10 маны', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Галинка' });
@@ -171,7 +171,7 @@ test('original image replaces the full card, persists after reload, and can be r
   await dialog.getByLabel('Загрузить оригинал Галинка').setInputFiles('public/art/card-frame.png');
   await expect(dialog.getByAltText('Оригинальная карта Галинка')).toBeVisible();
   await page.reload();
-  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.locator('.wood-side-button.collection').click();
   await page.getByLabel('Поиск карт').fill('Галинка');
   await page.getByRole('button', { name: 'Галинка, 10 маны', exact: true }).click();
   await expect(dialog.getByAltText('Оригинальная карта Галинка')).toBeVisible();
@@ -243,7 +243,7 @@ test('discounted Джайна displays its real cost and replaces the hero power
 });
 
 test('the album pages through every card exactly once and resets its page after filtering', async ({ page }) => {
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   const names: string[] = [];
   for (let n = 1; n <= Math.ceil(CARDS.length / 8); n++) {
     await expect(page.getByRole('status').filter({ hasText: /Страница/ })).toContainText(`Страница ${n}`);
@@ -349,7 +349,7 @@ test('an unavailable power explains the hand cap when held and consumes nothing'
 
 test('all three new cards show bundled internet art and source attribution', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   for (const id of ['dragonslayer', 'dog-spell', 'vasiliy']) {
     const c = CARD[id]; await page.getByLabel('Поиск карт').fill(c.name);
     await page.getByRole('button', { name: `${c.name}, ${c.cost} маны`, exact: true }).click();
@@ -478,7 +478,7 @@ for (const ready of [true, false]) {
 
 test('Masik is in the collection with a portrait prepared from the supplied kitten photo', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   await page.getByLabel('Поиск карт').fill('Масик');
   await page.getByRole('button', { name: 'Масик, уничтожитель миров, 7 маны', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: CARD.masik.name, exact: true });
@@ -673,7 +673,7 @@ test('Maxim chooses an ally, creates a reusable echo, and temporary copies disap
 
 test('both Jainas have their newly generated portraits, correct stats and complete rules', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   for (const [id, attack, health] of [['jaina-rusher', '5', '1'], ['jaina-volunteer', '2', '1']]) {
     await page.getByLabel('Поиск карт').fill(CARD[id].name); await page.locator('.card-grid .game-card').first().click();
     const detail = page.getByRole('dialog', { name: CARD[id].name, exact: true });
@@ -724,7 +724,7 @@ test('old saved history changes the RDS spelling without discarding the battle',
 });
 
 test('every album page has illustrations and no missing-photo placeholders', async ({ page }) => {
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   for (let n = 0; n < Math.ceil(CARDS.length / 8); n++) {
     await expect(page.locator('.card-grid .awaiting-original')).toHaveCount(0);
     if (n < Math.ceil(CARDS.length / 8) - 1) await page.getByRole('button', { name: 'Следующая страница' }).click();
@@ -762,7 +762,7 @@ test('the forge field is selectable, persists and has a portrait background', as
 
 for (const width of [1440, 390]) test(`every card fits its full name and effect inside the frame and has the right rarity crystal at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 }); await page.goto('/');
-  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.locator('.wood-side-button.collection').click();
   await page.evaluate(() => document.fonts.ready);
   const colors = { common: '#e6edf0', rare: '#2585ec', epic: '#bd40ed', legendary: '#ffac21' };
   const visited = new Set<string>();
@@ -831,7 +831,7 @@ for (const width of [1440, 390]) for (const appearance of ['signature', 'diamond
   await page.setViewportSize({ width, height: 1000 });
   const legends = CARDS.filter(c => c.rarity === 'legendary');
   await page.addInitScript(choices => localStorage.setItem('memestone.v1.card-appearances', JSON.stringify(choices)), Object.fromEntries(legends.map(c => [c.id, appearance])));
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   await page.getByLabel('Тип и редкость карт').selectOption('legendary');
   await page.evaluate(() => document.fonts.ready);
   const visited = new Set<string>();
@@ -866,14 +866,14 @@ for (const width of [1440, 390]) for (const appearance of ['signature', 'diamond
 });
 
 test('legendary appearance is selected per card, persists, can be reset and follows the card into a hand', async ({ page }) => {
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   await page.getByLabel('Поиск карт').fill('Масик'); await page.locator('.album-card-grid .game-card').click();
   await page.getByRole('tab', { name: 'Оформление', exact: true }).click();
   await page.getByRole('button', { name: 'Алмазное', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Алмазное', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.detail-card-area .game-card')).toHaveClass(/model-diamond/);
   await page.keyboard.press('Escape'); await expect(page.locator('.album-card-grid .game-card')).toHaveClass(/model-diamond/);
-  await page.reload(); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.reload(); await page.locator('.wood-side-button.collection').click();
   await page.getByLabel('Поиск карт').fill('Масик'); await expect(page.locator('.album-card-grid .game-card')).toHaveClass(/model-diamond/);
   await page.getByLabel('Поиск карт').fill('Василий'); await page.locator('.album-card-grid .game-card').click();
   await page.getByRole('tab', { name: 'Оформление', exact: true }).click();
@@ -897,7 +897,7 @@ test('legendary appearance is selected per card, persists, can be reset and foll
 });
 
 test('new instigator and both Slimes have generated art and inspectable rules', async ({ page }) => {
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto('/'); await page.locator('.wood-side-button.collection').click();
   for (const name of ['Джайна-зачинщик', 'Слизь']) {
     await page.getByLabel('Поиск карт').fill(name);
     for (const card of await page.locator('.album-card-grid .game-card').all()) {

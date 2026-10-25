@@ -7,7 +7,7 @@ page.setDefaultTimeout(12_000);
 page.on('pageerror', error => errors.push(error.message));
 const origin = process.env.CONNECTION_TEST_URL || 'http://127.0.0.1:4173';
 async function collection() {
-  await page.getByRole('button', { name: 'Моя коллекция', exact: true }).first().click();
+  await page.locator('.wood-side-button.collection').first().click();
 }
 async function editor() { await page.getByRole('button', { name: 'Редактор карт', exact: true }).click(); }
 async function tab(name) { await page.getByRole('tab', { name, exact: true }).click(); }

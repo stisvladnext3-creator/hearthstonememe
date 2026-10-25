@@ -18,7 +18,7 @@ async function uniformMage(){
 try{
  await page.goto(process.env.CONNECTION_TEST_URL||'http://127.0.0.1:4173');await page.getByRole('button',{name:'Выбрать колоду для нового боя',exact:true}).click();const picker=page.getByRole('dialog',{name:'Выбор колоды',exact:true});
  for(const viewport of [{width:1100,height:706},{width:390,height:844},{width:844,height:390}]){await page.setViewportSize(viewport);await uniformMage();await page.screenshot({path:`/tmp/card-update-mage-${viewport.width}.png`});}
- await page.setViewportSize({width:1100,height:706});await page.keyboard.press('Escape');await page.getByRole('button',{name:'Моя коллекция',exact:true}).click();const search=page.getByLabel('Поиск карт',{exact:true});
+ await page.setViewportSize({width:1100,height:706});await page.keyboard.press('Escape');await page.locator('.wood-side-button.collection').click();const search=page.getByLabel('Поиск карт',{exact:true});
  await search.fill('Палитра');await expect(page.locator('.album-card-grid .game-card')).toHaveCount(5);await page.waitForLoadState('networkidle');await page.screenshot({path:'/tmp/card-update-palettes.png'});
  for(const cl of Object.keys(classNames))await expect(page.locator(`.album-card-grid [data-card-class="${cl}"]`)).toHaveCount(1);
  for(const [name,cl] of [['Маршал Марс','cat'],['Генерал Михалыч','cat'],['Искра хаоса','mage'],['Гениальный план','mage'],['Армия бумажек','warlock']]){
@@ -45,7 +45,7 @@ try{
  await expect(page.locator('.player-board .board-unit.stealth')).toHaveCount(1);await page.locator('.player-board .board-unit').click();await expect(page.locator('.enemy-board .board-unit.stealth')).not.toHaveClass(/targetable/);
  await page.locator('.enemy-board .board-unit.taunt').click();await expect(page.locator('.player-board .board-unit.stealth')).toHaveCount(0);await expect(page.locator('.enemy-board .unit-health')).toHaveText(['1','1','4']);await expect(page.locator('.enemy-board .board-unit.stealth')).toHaveCount(1);
 
- await page.reload();await page.getByRole('button',{name:'Моя коллекция',exact:true}).click();await page.getByRole('button',{name:'Редактор карт',exact:true}).click();await page.getByRole('button',{name:'Создать карту',exact:true}).click();await page.getByRole('tab',{name:'Ключевые слова',exact:true}).click();await page.getByLabel('Маскировка',{exact:true}).check();await page.getByLabel('Громоздкий',{exact:true}).check();
+ await page.reload();await page.locator('.wood-side-button.collection').click();await page.getByRole('button',{name:'Редактор карт',exact:true}).click();await page.getByRole('button',{name:'Создать карту',exact:true}).click();await page.getByRole('tab',{name:'Ключевые слова',exact:true}).click();await page.getByLabel('Маскировка',{exact:true}).check();await page.getByLabel('Громоздкий',{exact:true}).check();
  for(const viewport of [{width:1100,height:706},{width:390,height:844},{width:568,height:320}]){
   await page.setViewportSize(viewport);let overflow;
   await expect.poll(async()=>overflow=await page.locator('.card-editor').evaluate(el=>[...el.querySelectorAll('button,input:not([type=file]),select')].flatMap(n=>{const r=n.getBoundingClientRect();return !r.width||!r.height||r.left>=-.5&&r.top>=-.5&&r.right<=innerWidth+.5&&r.bottom<=innerHeight+.5?[]:[n.getAttribute('aria-label')||n.textContent];}))).toEqual([]).catch(e=>{console.error('Editor overflow:',overflow);throw e;});

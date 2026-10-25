@@ -14,7 +14,7 @@ async function fits(scope) {
 }
 async function freezeVortex(path) { const fx = page.locator('[data-fx="storm-vortex"]'); await expect(fx).toHaveCount(1); await fx.evaluate(el => el.getAnimations({ subtree: true }).forEach(a => { a.pause(); a.currentTime = 380; })); await page.screenshot({ path, animations: 'allow' }); }
 try {
-  await page.goto(process.env.CONNECTION_TEST_URL || 'http://127.0.0.1:4173'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
+  await page.goto(process.env.CONNECTION_TEST_URL || 'http://127.0.0.1:4173'); await page.locator('.wood-side-button.collection').click();
   await page.waitForLoadState('networkidle'); await fits(page.locator('.collection-v2')); await page.screenshot({ path: '/tmp/storm-album-desktop.png' });
   for (const size of sizes) { await page.setViewportSize(size); await fits(page.locator('.collection-v2')); await expect(page.getByRole('button', { name: 'Редактор карт', exact: true })).toBeInViewport(); }
   await page.setViewportSize({ width: 390, height: 844 }); await page.getByRole('button', { name: 'Редактор карт', exact: true }).click();

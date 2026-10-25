@@ -11,7 +11,7 @@ export default function DeckPile({ player, side }: { player: Player; side: Side 
     return () => document.removeEventListener('pointerdown', outside);
   }, [open]);
   const name = side === 'player' ? 'Ваша колода' : 'Колода противника';
-  return <div ref={root} className={`deck-pile ${side} ${player.deck.length ? '' : 'empty'}`} data-combat-anchor={`${side}:deck`}
+  return <div ref={root} className={`deck-pile ${side} ${player.deck.length ? '' : 'empty'} ${open ? 'info-open' : ''}`} data-combat-anchor={`${side}:deck`}
     onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)} onKeyDown={e => { if (e.key === 'Escape') setOpen(false); }}>
     <button type="button" className="deck-pile-button" aria-label={`${name}: ${player.deck.length} карт`} aria-expanded={open} aria-describedby={open ? `deck-info-${side}` : undefined}
       onFocus={() => setOpen(true)} onBlur={() => setOpen(false)} onClick={() => setOpen(true)}>

@@ -302,6 +302,7 @@ test('concession reaches both result screens and rematch waits for both players'
   const { host, guest, hostContext, guestContext } = await participants(browser);
   try {
     const code = await create(host); await join(guest, code); await start(host, guest);
+    await guest.getByRole('button', { name: 'Настройки', exact: true }).click();
     await guest.getByRole('button', { name: 'Сдаться', exact: true }).click();
     await guest.getByRole('dialog', { name: 'Сдаться', exact: true }).getByRole('button', { name: 'Сдаться', exact: true }).click();
     await expect(host.getByRole('heading', { name: 'Твоя взяла!', exact: true })).toBeVisible(); await expect(guest.getByRole('heading', { name: 'Ещё по одной?', exact: true })).toBeVisible();

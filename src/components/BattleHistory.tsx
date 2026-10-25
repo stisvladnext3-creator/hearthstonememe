@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { phoneScreen, useViewport } from '../useViewport';
 import { ArrowRight, BookOpen, Flame, Layers3, RefreshCw, Skull, Sparkles, Swords, WandSparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CARD } from '../game/cards';
@@ -7,6 +7,7 @@ import type { HistoryEntry, HistoryEntity, HistoryKind } from '../game/history';
 import type { Inspect } from '../inspection';
 import { useLongPress } from '../useLongPress';
 import { Art } from './Card';
+import FullscreenButton from './FullscreenButton';
 
 const KINDS: Record<HistoryKind, { text: string; icon: React.ReactNode }> = {
   play: { text: 'Розыгрыш', icon: <Layers3 /> }, attack: { text: 'Атака', icon: <Swords /> },
@@ -30,8 +31,12 @@ function Entity({ entity, inspect, note, small = false }: { entity: HistoryEntit
 export default function BattleHistory({ entries, inspect, close, opponent = 'Борис' }: { entries: HistoryEntry[]; inspect: Inspect; close: () => void; opponent?: string }) {
   const size = useViewport(), pageSize = phoneScreen(size) ? (size.height < 700 ? 1 : 2) : 5;
   const [page, setPage] = useState(1);
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => { if (event.key === 'Escape') close(); };
+    document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key);
+  }, [close]);
   const pages = Math.max(1, Math.ceil(entries.length / pageSize)), current = Math.min(page, pages);
-  return <aside className="battle-log illustrated-history" aria-label="История сражения"><div className="history-header"><div><span>ХРОНИКИ ТРАКТИРА</span><h3>История сражения</h3></div><button className="icon-button" aria-label="Закрыть журнал" onClick={close}><X size={20} /></button></div>
+  return <aside className="battle-log illustrated-history" aria-label="История сражения"><FullscreenButton /><div className="history-header"><div><span>ХРОНИКИ ТРАКТИРА</span><h3>История сражения</h3></div><button className="icon-button" aria-label="Закрыть журнал" onClick={close}><X size={20} /></button></div>
     <ol>{[...entries].reverse().slice((current - 1) * pageSize, current * pageSize).map(entry => {
       const kind = KINDS[entry.kind ?? (entry.side === 'system' ? 'turn' : 'effect')];
       return <li key={entry.id} className={`history-entry ${entry.side} history-${entry.kind ?? 'legacy'}`}>

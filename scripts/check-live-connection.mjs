@@ -183,6 +183,7 @@ async function flow(listed) {
       console.log('Room code: guest reconnected to the same match after reload');
     }
     if (withDecks) {
+      await host.page.getByRole('button', { name: 'Настройки', exact: true }).click();
       await host.page.getByRole('button', { name: 'Сдаться', exact: true }).click();
       await host.page.getByRole('dialog', { name: 'Сдаться', exact: true }).getByRole('button', { name: 'Сдаться', exact: true }).click();
       for (const [participant, nextClass] of [[host, listed ? 'warlock' : 'warrior'], [guest, listed ? 'warrior' : 'warlock']]) {

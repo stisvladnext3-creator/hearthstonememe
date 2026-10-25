@@ -37,7 +37,8 @@ try {
   await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   await expect(page.locator('.own-hero-row .hero-armor')).toHaveText('2');
   await expect(power).toHaveAttribute('aria-disabled', 'true');
-  await page.getByRole('button', { name: 'Главное меню', exact: true }).click();
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.getByRole('button', { name: 'Выйти в главное меню', exact: true }).click();
   await page.getByRole('button', { name: 'Выбрать колоду для нового боя', exact: true }).click();
   await picker.locator('.deck-slot.mage').first().click();
   await picker.getByRole('button', { name: 'Играть', exact: true }).click();

@@ -26,6 +26,7 @@ import './options.css';
 import './mana.css';
 import './classic-theme.css';
 import './readable-ui.css';
+import './battle-interface.css';
 
 restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(

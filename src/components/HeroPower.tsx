@@ -12,7 +12,6 @@ export default function HeroPower({ game, side, inspect, unavailableReason, sele
   const power = CARD[powerCardId(activePower(game, side))];
   const cost = powerCost(activePower(game, side), game, side);
   const enemy = side === 'bot';
-  const status = player.powerSilenceTurns ? `Немота: ${player.powerSilenceTurns}` : player.powerUsed ? 'Использована' : unavailableReason && !enemy ? 'Недоступна' : 'Сила героя';
   const note = player.powerSilenceTurns ? `Сила героя отключена немотой. Осталось своих ходов: ${player.powerSilenceTurns}.` : player.powerUsed ? 'Сила героя уже использована в этом ходу.' : unavailableReason;
   const open = () => inspect(power, { zone: 'power', owner: side, note, cost });
   const gesture = useLongPress(open);
@@ -21,6 +20,5 @@ export default function HeroPower({ game, side, inspect, unavailableReason, sele
     title={`${power.name}: ${power.text}${note ? ` ${note}` : ''}`}
     aria-label={`${enemy ? 'Сила героя противника' : 'Сила героя'} ${power.name}, ${cost} маны`}>
     <span className="power-orb" data-combat-anchor={`${side}:power`}><Art index={power.art} cardId={power.id} /><span>{cost}</span></span>
-    <strong>{power.name}</strong><small>{status}</small>
   </button>;
 }

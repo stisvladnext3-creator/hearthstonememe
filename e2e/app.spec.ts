@@ -515,12 +515,12 @@ test('hero silence persists after reload, lasts two own turns, and restores the 
   await page.getByRole('button', { name: /Ваш герой: 30 здоровья, атаковать/ }).click();
   const power = page.getByRole('button', { name: 'Сила героя Искра, 2 маны', exact: true });
   await expect(power).toHaveAttribute('aria-disabled', 'true');
-  await expect(page.locator('.own-hero-row .hero-label')).toContainText('ещё 2 хода');
+  await expect(power).toHaveAttribute('title', /Осталось своих ходов: 2/);
   await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   await expect(power).toHaveAttribute('aria-disabled', 'true');
   await page.getByRole('button', { name: 'Завершить', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled({ timeout: 12000 });
-  await expect(page.locator('.own-hero-row .hero-label')).toContainText('ещё 1 ход');
+  await expect(power).toHaveAttribute('title', /Осталось своих ходов: 1/);
   await expect(power).toHaveAttribute('aria-disabled', 'true');
   await page.getByRole('button', { name: 'Завершить', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled({ timeout: 12000 });
@@ -565,7 +565,7 @@ for (const [width, height] of [[1440, 900], [1366, 768], [390, 844], [320, 568],
     await seed(page, g);
     const layout = await page.evaluate(() => {
       const inside = (e: Element) => { const r = e.getBoundingClientRect(); return r.left >= -1 && r.top >= -1 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1; };
-      const controls = [...document.querySelectorAll('.battle-topbar button,.hero-power,.hero-portrait,.end-turn,.battle-board .board-unit')];
+      const controls = [...document.querySelectorAll('.battle-settings,.history-rail,.hero-power,.hero-portrait,.end-turn,.battle-board .board-unit')];
       const hand = [...document.querySelectorAll('.player-hand .game-card')].map(e => {
         const r = e.getBoundingClientRect();
         for (let x = r.left + 4; x < r.right - 4; x += 4) for (let y = r.top + 8; y < r.bottom - 8; y += 8) {
@@ -578,10 +578,10 @@ for (const [width, height] of [[1440, 900], [1366, 768], [390, 844], [320, 568],
         controls: controls.every(inside), hand, ownHealthVisible: !!document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('.hero-portrait') };
     });
     expect(layout).toEqual({ noScroll: true, controls: true, hand: Array(10).fill(true), ownHealthVisible: true });
-    await page.getByRole('button', { name: 'Выбор игрового поля', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Выбор игрового поля' })).toBeVisible();
+    await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Настройки', exact: true })).toBeVisible();
     await page.getByRole('radio', { name: /Стол в трактире/ }).check();
-    await page.getByRole('button', { name: 'Вернуться в бой' }).click();
+    await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
     await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'tavern');
   });
 }
@@ -589,16 +589,16 @@ for (const [width, height] of [[1440, 900], [1366, 768], [390, 844], [320, 568],
 test('field choice persists, changes the image, and never resets the current match', async ({ page }) => {
   const g = fixture(); unit(g, 'dragon');
   await seed(page, g);
-  await page.getByRole('button', { name: 'Выбор игрового поля' }).click();
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   await page.getByRole('radio', { name: /Стол в трактире/ }).check();
-  await page.getByRole('button', { name: 'Вернуться в бой' }).click();
+  await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   expect(await page.locator('.battle-arena').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('battlefield.png');
   await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'tavern');
   await expect(page.locator('.player-board .board-unit')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Выбор игрового поля' }).click();
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   await page.getByRole('radio', { name: /Фиолетовая цитадель/ }).check();
-  await page.getByRole('button', { name: 'Вернуться в бой' }).click();
+  await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   expect(await page.locator('.battle-arena').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('knights-board.png');
   const image = await page.request.get('/art/knights-board.png'); expect(image.status()).toBe(200);
 });
@@ -607,7 +607,7 @@ test('opponent power exposes the current ability, cost, used status and silence'
   const g = fixture(); g.bot.power = 'oy'; g.bot.powerUsed = true; g.bot.powerSilenceTurns = 2;
   await seed(page, g);
   const power = page.getByRole('button', { name: 'Сила героя противника Ой, 6 маны' });
-  await expect(power).toContainText('Немота: 2'); await power.click();
+  await expect(power).toHaveClass(/silenced-power/); await power.click();
   const dialog = page.getByRole('dialog', { name: 'Ой', exact: true });
   await expect(dialog.locator('.effect-description')).toContainText('Смертокрыла');
   await page.getByRole('tab', { name: 'Детали', exact: true }).click();
@@ -751,8 +751,8 @@ test('the forge field is selectable, persists and has a portrait background', as
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Играть', exact: true }).click();
   await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Выбор игрового поля', exact: true }).click();
-  await page.getByRole('radio', { name: /Огненная кузница/ }).check(); await page.getByRole('button', { name: 'Вернуться в бой', exact: true }).click();
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.getByRole('radio', { name: /Огненная кузница/ }).check(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   await expect(page.locator('.battle-arena')).toHaveAttribute('data-board', 'forge');
   expect(await page.locator('.battle-arena').evaluate(e => getComputedStyle(e).backgroundImage)).toContain('forge-board-portrait.png');
   await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();

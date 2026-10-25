@@ -2,6 +2,7 @@ import { phoneScreen, useViewport } from '../useViewport';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, Copy, DoorOpen, Globe, Layers3, Link, LoaderCircle, Play, RefreshCw, Swords, Users, Wifi, WifiOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import Battle from './Battle';
+import type { BattleSettingsActions } from './SettingsDialog';
 import Modal from './Modal';
 import { PeerRoom, inviteLink, savedRoom } from '../online/room';
 import { cleanName, EMPTY_ROOM, normalizeCode, type RoomState } from '../online/protocol';
@@ -13,9 +14,9 @@ import { HERO_CLASSES } from '../game/classes';
 import { readyDeck, type SavedDeck } from '../decks';
 import type { Game } from '../game/engine';
 
-export default function Online({ active, board, animations, overlayOpen, inspect, settings, help, chooseBoard, home, battleChanged, selectedDeck, chooseDeck, recordStats }: {
+export default function Online({ active, board, animations, overlayOpen, inspect, settings, home, battleChanged, selectedDeck, chooseDeck, recordStats }: {
   active: boolean; board: BattlegroundId; animations: boolean; overlayOpen: boolean; inspect: Inspect;
-  settings: () => void; help: () => void; chooseBoard: () => void; home: () => void; battleChanged: (value: boolean) => void;
+  settings: (actions: BattleSettingsActions) => void; home: () => void; battleChanged: (value: boolean) => void;
   selectedDeck: SavedDeck | null; chooseDeck: (done?: (deck: SavedDeck) => void, label?: string) => void;
   recordStats: (game: Game) => void;
 }) {
@@ -75,8 +76,8 @@ export default function Online({ active, board, animations, overlayOpen, inspect
   };
   if (!active) return null;
   if (inBattle) return <Battle game={room.game!} board={board} animations={animations} overlayOpen={overlayOpen}
-    dispatch={action => controller.current?.action(action)} inspect={inspect} settings={settings} help={help} chooseBoard={chooseBoard}
-    back={() => setShowLobby(true)} rematch={() => chooseDeck(deck => controller.current?.rematch(deck.cards, deck.heroClass), 'Играть ещё')}
+    dispatch={action => controller.current?.action(action)} inspect={inspect} settings={settings}
+    back={() => setShowLobby(true)} menu={() => { setShowLobby(true); home(); }} rematch={() => chooseDeck(deck => controller.current?.rematch(deck.cards, deck.heroClass), 'Играть ещё')}
     multiplayer={{ code: room.code, opponent: room.opponent, connected: room.connected,
       blocked: !room.connected ? 'Ждём соединения с соперником…' : room.pending ? 'Ожидаем подтверждения хода…' : '',
       notice: room.error, rematchSelf: room.rematchSelf, rematchOpponent: room.rematchOpponent }} />;

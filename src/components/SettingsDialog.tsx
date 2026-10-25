@@ -4,9 +4,11 @@ import Modal from './Modal';
 import BoardPicker from './BoardPicker';
 
 export type Settings = { sound: boolean; volume: number; motion: boolean; board: BattlegroundId };
-export default function SettingsDialog({ value, change, close, help, about, previewSound }: {
+export type BattleSettingsActions = { leave: () => void; concede: () => void; finished: boolean; online: boolean };
+export default function SettingsDialog({ value, change, close, help, about, previewSound, battle }: {
   value: Settings; change: (settings: Settings) => void; close: () => void;
   help: () => void; about: () => void; previewSound: () => void;
+  battle?: BattleSettingsActions;
 }) {
   const [fullscreen, setFullscreen] = useState(!!document.fullscreenElement);
   const [screenError, setScreenError] = useState('');
@@ -22,7 +24,7 @@ export default function SettingsDialog({ value, change, close, help, about, prev
       else await document.documentElement.requestFullscreen();
     } catch { setScreenError('Не удалось включить полный экран.'); }
   };
-  return <Modal title="Настройки" close={close} className="settings-modal hearth-options">
+  return <Modal title="Настройки" close={close} className={`settings-modal hearth-options ${battle ? 'battle-options' : ''}`}>
     <header className="options-title"><h2>Настройки</h2></header>
     <div className="options-paper"><div className="options-grid">
       <section className="options-section options-graphics" aria-labelledby="options-graphics"><h3 id="options-graphics">Графика</h3>
@@ -39,9 +41,13 @@ export default function SettingsDialog({ value, change, close, help, about, prev
       <section className="options-section options-boards" aria-labelledby="options-boards"><h3 id="options-boards">Игровое поле</h3><BoardPicker value={value.board} change={board => change({ ...value, board })} /></section>
       <section className="options-section options-extra" aria-labelledby="options-extra"><h3 id="options-extra">Дополнительно</h3>
         <button className="options-action" onClick={help}>Правила игры</button><button className="options-action" onClick={about}>Об игре</button>
-        <p>Колода, оформление и бой сохраняются в этом браузере.</p>
+        <p>{battle?.online ? 'В главном меню сетевая партия продолжается. Комната остаётся доступна.' : 'Колода, оформление и бой сохраняются в этом браузере.'}</p>
       </section>
     </div></div>
-    <button className="options-action options-done" onClick={close}>Сохранено</button>
+    {battle ? <footer className="battle-options-actions">
+      <button className="options-action" onClick={() => { close(); battle.leave(); }}>Выйти в главное меню</button>
+      <button className="options-action battle-concede" disabled={battle.finished} onClick={() => { close(); battle.concede(); }}>Сдаться</button>
+      <button className="options-action options-done" onClick={close}>Продолжить бой</button>
+    </footer> : <button className="options-action options-done" onClick={close}>Сохранено</button>}
   </Modal>;
 }

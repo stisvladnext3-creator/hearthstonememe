@@ -58,7 +58,8 @@ try {
   await page.reload(); await page.getByRole('button', { name: 'Продолжить бой', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Герой противника: 25 здоровья', exact: true })).toBeVisible();
   console.log('Editor: added the new card to a legal deck, drew it, dealt five damage and restored the saved match');
-  await page.getByRole('button', { name: 'Главное меню', exact: true }).click();
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+  await page.getByRole('button', { name: 'Выйти в главное меню', exact: true }).click();
   await collection(); await editor();
   await page.getByRole('button', { name: 'Пример РДШ', exact: true }).click();
   await expect.poll(async () => page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.custom-cards')).length)).toBe(7);

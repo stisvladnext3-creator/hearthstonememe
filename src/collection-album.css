@@ -26,6 +26,7 @@
 .collection-v2 .album-card-grid:empty { display: none; }.collection-v2 .empty-state { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; gap: 8px; }.collection-v2 .empty-state h3 { font-size: 23px; margin: 0; }.collection-v2 .empty-state p { font-size: 13px; margin: 0; }
 .card-class-label.storm { color: #bddbff; border-color: #4876af; background: #102b55; }
 .collection-v2 .deck-pagination { display:flex; align-items:center; justify-content:center; gap:12px; height:26px; min-height:26px; font-size:12px; }.collection-v2 .deck-pagination button { width:28px; height:25px; }
+.app .collection-v2 .editing-deck .deck-delete { color: #fff0db; background: linear-gradient(#8c4336,#672d26); border: 1px solid #c48460; border-radius: 4px; box-shadow: inset 0 1px #ffdcc433, 0 1px 3px #170c08; }
 
 /* Fit both dimensions together; a width cap must never stretch a card vertically. */
 .collection-v2 .card-grid.album-card-grid {

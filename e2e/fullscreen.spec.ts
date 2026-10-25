@@ -58,7 +58,8 @@ for (const [width, height] of [[320, 568], [390, 844], [844, 390], [667, 375]]) 
   await confirm.click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0); await fits(page);
   await expect(page.locator('.deck-pile')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Выбор игрового поля' }).click(); await fits(page); await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click(); await fits(page); await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   await page.getByRole('button', { name: 'Сдаться', exact: true }).click(); await fits(page);
   await page.getByRole('dialog', { name: 'Сдаться', exact: true }).getByRole('button', { name: 'Сдаться', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Результат боя' })).toBeVisible(); await fits(page);

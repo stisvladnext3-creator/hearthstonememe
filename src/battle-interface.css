@@ -1,0 +1,98 @@
+/* Battle controls sit on the illustrated board instead of a navigation bar. */
+.battle-arena .battle-settings {
+  position: absolute; top: 12px; right: 15px; z-index: 60;
+  width: 38px; height: 38px; padding: 0; display: grid; place-items: center;
+  border: 2px solid #bba477; border-radius: 6px;
+  color: #f5e5bb; background: linear-gradient(#554b39,#302e25);
+  box-shadow: inset 0 1px #fff4, 0 2px 5px #160f0a99;
+}
+.battle-settings:hover, .history-rail:hover { filter: brightness(1.12); }
+.battle-settings:focus-visible, .history-rail:focus-visible { outline: 2px solid #fff1bd; outline-offset: 3px; }
+.battle-arena .history-rail {
+  position: absolute; z-index: 15; left: 7.8%; top: 26%; width: clamp(30px,4cqw,49px); height: 36%;
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: min(2cqh,12px);
+  padding: 9px 3px; border: 2px solid #ac9671; border-radius: 13px;
+  background: linear-gradient(90deg,#39352e,#655c48 35%,#494437 75%,#312f27);
+  box-shadow: inset 0 0 0 2px #25231d, inset 0 0 9px #e4cd9a30, 0 3px 6px #170e0790;
+  color: #f4e0a7;
+}
+.history-rail-book { width: min(23px,3.5cqw); height: min(23px,5cqh); flex-shrink: 0; }
+.history-rail-events { display: flex; flex-direction: column; gap: min(1.6cqh,9px); }
+.history-rail-event {
+  position: relative; display: grid; place-items: center; width: clamp(22px,3cqw,36px); height: min(5.5cqh,40px);
+  border: 1px solid #d4bd87; border-radius: 50%; overflow: hidden; background: #292a24;
+  box-shadow: 0 1px 3px #17100b; color: #edcf91;
+}
+.history-rail-event.bot { border-color: #d48669; }
+.history-rail-event.player { border-color: #a8c7ae; }
+.history-rail-event .portrait-art { width: 100%; height: 100%; border-radius: inherit; }
+.battle-arena .battle-board { left: 14%; right: 14%; gap: clamp(3px,.9cqw,14px); --unit-width: min(8.5cqw,12cqh,86px); }
+.battle-arena .illustrated-history { left: 0; right: auto; top: 0; bottom: 0; border-left: 0; border-right: 3px ridge #b7975e; z-index: 90; }
+.illustrated-history .history-header { flex-shrink: 0; }
+.illustrated-history .history-entry { background: #f1dfba; box-shadow: 0 2px 4px #46301c30; }
+.illustrated-history .history-entry.system { background: #dbc69d; }
+.illustrated-history .history-entry-heading, .illustrated-history .history-entry-heading > span:last-child { color: #634727; }
+.illustrated-history .history-entry.history-transform { background: #e2cfe3 !important; }
+.illustrated-history .history-damage > span:first-child { background: #e0bd88; color: #4a2f16; }
+.illustrated-history .history-caster { color: #59432d; }
+.illustrated-history .history-tip { margin-top: 7px; }
+.illustrated-history .fullscreen-button { display: none; }
+.mobile-hero-name { display: none; }
+
+/* An open pile must paint above the entire hand, including focused card faces. */
+.battle-arena .deck-pile { z-index: 30; }
+.battle-arena .deck-pile.info-open { z-index: 70; }
+.deck-pile-tooltip {
+  border: 3px ridge #c6aa70; border-radius: 7px; padding: 12px 15px;
+  background: linear-gradient(135deg,#382c20,#211d17); box-shadow: inset 0 0 0 1px #725a38, 0 5px 17px #100b07b0;
+  color: #fff0cf; font-family: var(--readable-font); text-shadow: none;
+}
+.deck-pile-tooltip::after {
+  content: ''; position: absolute; right: -8px; top: calc(50% - 6px); width: 10px; height: 10px;
+  transform: rotate(45deg); background: #292219; border-top: 2px solid #b99d65; border-right: 2px solid #b99d65;
+}
+.deck-pile-tooltip > b { font: 700 16px/1.3 var(--readable-font); margin-bottom: 8px; }
+.deck-pile-tooltip > span { font: 400 14px/1.7 var(--readable-font); gap: 20px; }
+.deck-pile-tooltip > span > strong { color: #ffe0a0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.deck-pile-tooltip > em { font-style: normal; }
+.battle-options-actions { display: grid; grid-template-columns: 1.25fr .65fr 1fr; flex-shrink: 0; gap: 8px; width: 100%; }
+.hearth-options .battle-options-actions .options-action { width: 100%; margin: 0; min-height: 39px; }
+.hearth-options .battle-concede { background: linear-gradient(#744538,#5b332a); border-color: #a37355; color: #fff1d8; }
+
+@media (max-width: 960px), (max-height: 600px) and (max-width: 1180px) {
+  .battle-arena .battle-settings { top: 7px; right: 49px; width: 32px; height: 32px; }
+  .battle-arena .own-hero-row .hero-label { display: none; }
+  .battle-arena .mobile-hero-name {
+    display: block; position: absolute; left: 2.5%; bottom: 1.5%; z-index: 16;
+    width: 29%; color: #fff0cf; font: 700 13px/1.2 var(--readable-font);
+    text-shadow: 0 1px 3px #160c04, 0 0 6px #160c04; overflow-wrap: anywhere; pointer-events: none;
+  }
+  .battle-arena .quest-progress.player { bottom: 8%; left: 2%; max-width: 27%; height: auto; min-height: 22px; background: #2c241cf0; border: 1px solid #ae905c; border-radius: 4px; }
+  .battle-arena .illustrated-history { position: fixed; inset: 0; border: 3px ridge #b7975e; width: 100%; max-width: none; height: var(--app-height,100dvh); padding: 14px; }
+  .illustrated-history .fullscreen-button { display: grid; position: absolute; top: 9px; right: 55px; }
+  .app:has(.illustrated-history) > .global-fullscreen { display: none; }
+  .illustrated-history .history-header { padding-right: 88px; }
+  .illustrated-history .history-header > .icon-button { position: absolute; top: 9px; right: 14px; width: 32px; height: 32px; }
+  .deck-pile-tooltip { min-width: 158px; padding: 10px 12px; }
+  .deck-pile-tooltip > b { font-size: 14px; }
+  .deck-pile-tooltip > span { font-size: 13px; }
+  .battle-options-actions { gap: 6px; }
+  .hearth-options .battle-options-actions .options-action { min-height: 35px; }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  .battle-arena .board-unit .unit-attack, .battle-arena .board-unit .unit-health {
+    width: 17px; height: 17px; font-size: 14px; bottom: -3px;
+  }
+  .battle-arena .board-unit .unit-attack { left: -2px; }
+  .battle-arena .board-unit .unit-health { right: -2px; }
+  .battle-arena .unit-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .battle-options-actions { grid-template-columns: 1.5fr 1fr; }
+  .battle-options-actions .options-done { grid-column: 1 / -1; }
+}
+@media (max-height: 600px) and (orientation: landscape) {
+  .battle-arena .battle-board { --unit-width: min(8cqw,17cqh,68px); }
+  .battle-arena .history-rail { top: 26%; height: 39%; }
+  .battle-arena .mobile-hero-name { width: 19%; font-size: 12px; bottom: 2%; }
+  .battle-arena .quest-progress.player { bottom: 16%; max-width: 18%; }
+  .hearth-options .battle-options-actions .options-action { min-height: 29px; }
+}

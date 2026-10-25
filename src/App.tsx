@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Menu, Settings, Sparkles, X } from 'lucide-react';
-import { CARDS, type CardDef } from './game/cards';
+import { ArrowUpRight, Sparkles, X } from 'lucide-react';
+import type { CardDef } from './game/cards';
 import { act, chooseBotAction, createGame, expireMulligan, type Action } from './game/engine';
 import { loadGame, loadStats, read, write, recordMatchStats } from './storage';
-import { Art } from './components/Card';
 import Collection from './components/Collection';
 import Battle from './components/Battle';
-import Modal from './components/Modal';
 import WoodMenu from './components/WoodMenu';
-import BoardPicker from './components/BoardPicker';
 import Online from './components/Online';
 import { battleground } from './battlegrounds';
 import { useViewport } from './useViewport';
@@ -16,7 +13,7 @@ import type { InspectionInfo, Inspect } from './inspection';
 import AboutDialog from './components/AboutDialog';
 import CardDetails from './components/CardDetails';
 import HelpDialog from './components/HelpDialog';
-import SettingsDialog, { type Settings as GameSettings } from './components/SettingsDialog';
+import SettingsDialog, { type Settings as GameSettings, type BattleSettingsActions } from './components/SettingsDialog';
 import CardWorkshop from './components/CardWorkshop';
 import FullscreenButton from './components/FullscreenButton';
 import DeckPicker from './components/DeckPicker';
@@ -38,13 +35,13 @@ export default function App() {
   const [cardRevision, setCardRevision] = useState(0);
   const [game, setGame] = useState(loadGame);
   const [stats, setStats] = useState(loadStats);
-  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'fields' | 'decks' | null>(null);
+  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'decks' | null>(null);
   const [deckPickerLabel, setDeckPickerLabel] = useState('Играть');
   const deckRequest = useRef<((deck: SavedDeck) => void) | null>(null);
   const [inspected, setInspected] = useState<CardDef | null>(null);
   const [inspectInfo, setInspectInfo] = useState<InspectionInfo | undefined>(undefined);
   const [toast, setToast] = useState('');
-  const [mobileNav, setMobileNav] = useState(false);
+  const [battleSettings, setBattleSettings] = useState<BattleSettingsActions | undefined>();
   const [settings, setSettings] = useState<GameSettings>(() => { const s = read<Partial<GameSettings> | null>('settings', null); return { sound: s?.sound === true, volume: typeof s?.volume === 'number' && Number.isFinite(s.volume) ? Math.max(0, Math.min(100, s.volume)) : 100, motion: s?.motion !== false, board: battleground(s?.board).id }; });
   const audio = useRef<AudioContext | null>(null);
   const botBudget = useRef({ turn: '', actions: 0 });
@@ -94,7 +91,7 @@ export default function App() {
     const timer = setInterval(() => setGame(current => current ? expireMulligan(current) : current), 250);
     return () => clearInterval(timer);
   }, [game?.mulligan?.deadline]);
-  const navigate = (next: Page) => { sound(); setPage(next); setMobileNav(false); window.scrollTo({ top: 0 }); };
+  const navigate = (next: Page) => { sound(); setPage(next); window.scrollTo({ top: 0 }); };
   const newMatch = (chosen: SavedDeck) => { setGame(createGame(chosen.cards, Date.now(), undefined, Date.now() + 30_000, { player: chosen.heroClass })); navigate('battle'); };
   const chooseDeck = (done?: (chosen: SavedDeck) => void, label = 'Выбрать колоду') => { deckRequest.current = done ?? null; setDeckPickerLabel(label); setModal('decks'); };
   const start = () => { if (!game || game.winner) chooseDeck(newMatch, 'Играть'); else navigate('battle'); };
@@ -120,26 +117,23 @@ export default function App() {
   const deleteDeck = (id: string) => setDeckBook(book => { const decks = book.decks.filter(d => d.id !== id); return { ...book, decks, selectedId: book.selectedId === id ? decks[0]?.id ?? null : book.selectedId }; });
   const inspect: Inspect = useCallback((c: CardDef, info?: InspectionInfo) => { setInspected(c); setInspectInfo(info); }, []);
   const closeModal = useCallback(() => setModal(null), []);
+  const openSettings = (actions?: BattleSettingsActions) => { setBattleSettings(actions); setModal('settings'); };
   const closeCard = useCallback(() => { setInspected(null); setInspectInfo(undefined); }, []);
   return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : page === 'collection' ? 'collection-home' : page === 'editor' ? 'editor-home parchment-view' : 'parchment-view'}`}>
-    <FullscreenButton global notify={notify} />{page !== 'editor' && <header className="site-header"><div className="header-inner"><button className="logo-button" onClick={() => navigate('home')} aria-label="Memestone — главная"><Logo /></button>
-      <nav className={mobileNav ? 'open' : ''} aria-label="Главная навигация"><button className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>Главная</button><button className={page === 'collection' ? 'active' : ''} onClick={() => navigate('collection')}>Коллекция<span className="nav-count">{CARDS.length}</span></button><button onClick={() => { setModal('help'); setMobileNav(false); }}>Как играть <ArrowUpRight size={13} /></button>{game && !game.winner && <button className={page === 'battle' ? 'active' : ''} onClick={() => navigate('battle')}>Текущий бой<span className="live-dot" /></button>}</nav>
-      <div className="header-actions"><span className="alpha-tag">ALPHA 0.18.0</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
-    </div></header>}
+    <FullscreenButton global notify={notify} />
     <main className="main-container">
-      {page === 'home' && <WoodMenu deckName={selectedDeck?.name ?? 'Нет колоды'} chooseDeck={() => chooseDeck(newMatch, 'Играть')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => { navigate('collection'); }} help={() => setModal('help')} settings={() => setModal('settings')} profile={() => setModal('about')} wins={stats.wins} />}
+      {page === 'home' && <WoodMenu deckName={selectedDeck?.name ?? 'Нет колоды'} chooseDeck={() => chooseDeck(newMatch, 'Играть')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => { navigate('collection'); }} help={() => setModal('help')} settings={() => openSettings()} profile={() => setModal('about')} wins={stats.wins} />}
       {page === 'collection' && <Collection deckInfo={selectedDeck} decks={deckBook.decks} selectDeck={selectDeck} createDeck={addDeck} deleteDeck={deleteDeck} saveDeck={saveDeck} inspect={inspect} back={() => navigate('home')} notify={notify} editCards={() => navigate('editor')} revision={cardRevision} />}
       {page === 'editor' && <CardWorkshop back={() => navigate('collection')} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deckBook.decks.flatMap(d => d.cards)} />}
-      {page === 'battle' && game && <Battle settings={() => setModal('settings')} board={settings.board} chooseBoard={() => setModal('fields')} overlayOpen={!!modal || !!inspected} animations={settings.motion} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} help={() => setModal('help')} />}
-      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={() => setModal('settings')} help={() => setModal('help')} chooseBoard={() => setModal('fields')} home={() => navigate('home')} battleChanged={setOnlineBattle} recordStats={updateStats} />
+      {page === 'battle' && game && <Battle settings={openSettings} board={settings.board} overlayOpen={!!modal || !!inspected} animations={settings.motion} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} />}
+      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={openSettings} home={() => navigate('home')} battleChanged={setOnlineBattle} recordStats={updateStats} />
     </main>
     {page !== 'editor' && <footer className="site-footer"><div><Logo small /><span>Создано для своих.</span></div><p>Независимый фан-проект. Не связан с Blizzard Entertainment.</p><button className="text-button" onClick={() => setModal('about')}>О проекте <ArrowUpRight size={13} /></button></footer>}
     {toast && <div className="toast" role="status"><Sparkles size={18} /><span>{toast}</span><button className="icon-button" aria-label="Скрыть сообщение" onClick={() => setToast('')}><X size={15} /></button></div>}
     {inspected && <CardDetails card={inspected} info={inspectInfo} close={closeCard} notify={notify} />}
     {modal === 'help' && <HelpDialog close={closeModal} />}
-    {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} help={() => setModal('help')} about={() => setModal('about')} previewSound={sound} />}
+    {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} help={() => setModal('help')} about={() => setModal('about')} previewSound={sound} battle={battleSettings} />}
     {modal === 'decks' && <DeckPicker decks={deckBook.decks} selectedId={deckBook.selectedId} select={selectDeck} close={() => { deckRequest.current = null; closeModal(); }} actionLabel={deckPickerLabel} confirm={chosen => { if (!readyDeck(chosen)) return; const done = deckRequest.current; deckRequest.current = null; closeModal(); done?.(chosen); }} manage={() => { deckRequest.current = null; closeModal(); navigate('collection'); }} />}
-    {modal === 'fields' && <Modal title="Выбор игрового поля" close={closeModal} className="fields-modal"><span className="eyebrow">ТВОЯ АРЕНА</span><h2>Выбери место для боя</h2><BoardPicker value={settings.board} change={board => setSettings({ ...settings, board })} /><button className="button primary" onClick={closeModal}>Вернуться в бой <Check size={16} /></button></Modal>}
     {modal === 'about' && <AboutDialog stats={stats} deckSize={deck.length} close={closeModal} help={() => { closeModal(); setModal('help'); }} />}
   </div>;
 }

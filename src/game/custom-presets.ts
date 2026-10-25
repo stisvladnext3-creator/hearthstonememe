@@ -21,7 +21,7 @@ export function copyCardTemplate(source: CardDef): CardDef {
     delete c.effect; delete c.editor.legacyText;
     c.editor.quest = { event: 'summon', goal: 8, rewardId: 'volunteer', filter: { side: 'friendly', tag: 'РДШ' } };
   }
-  if (source.kind === 'power' && !source.editor) {
+  if (source.kind === 'power' && !source.editor && source.effect !== 'clawFury') {
     delete c.effect; delete c.editor.legacyText;
     c.editor.rules = source.effect === 'lifeTap' ? [rule({ operation: 'damage', target: 'ownHero', amount: 2 }), rule({ operation: 'draw', target: 'ownHero', count: 1 })] : [source.id === 'storm-power' ? rule({ operation: 'summon', target: 'ownHero', cardId: 'storm-elemental' })
       : source.id === 'spark-power' ? rule({ operation: 'damage', target: 'selectedCharacter', amount: 1 })

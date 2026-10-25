@@ -7,6 +7,10 @@ function generatedAtlas(file: 'a' | 'b', column: number, row: number): SharedArt
   return { path: `art/generated/characters-${file}.png`, format: 'portrait', position: `${column * 100 / 3}% ${row * 100}%`, size: '400% 200%' };
 }
 export const ORIGINAL_ART: Record<string, SharedArtwork> = {
+  'marshal-mars': { path: 'art/generated/marshal-mars.webp', format: 'portrait', position: 'center 35%' },
+  'general-mikhalych': { path: 'art/generated/general-mikhalych.webp', format: 'portrait', position: 'center 30%' },
+  'general-cat': { path: 'art/generated/general-cat.webp', format: 'portrait', position: 'center 30%' },
+  'claw-fury': { path: 'art/generated/claw-fury.webp', format: 'portrait' },
   'storm-herald': { path: 'art/generated/storm-herald.webp', format: 'portrait', position: 'center 30%' },
   'storm-power': { path: 'art/generated/storm-power.webp', format: 'portrait' },
   'storm-elemental': { path: 'art/generated/storm-power.webp', format: 'portrait' },

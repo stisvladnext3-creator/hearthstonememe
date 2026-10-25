@@ -18,6 +18,7 @@ import './hero-classes.css';
 import './hero-effects.css';
 import './decks.css';
 import './storm.css';
+import './cat.css';
 import './collection-album.css';
 
 restoreCustomCards();

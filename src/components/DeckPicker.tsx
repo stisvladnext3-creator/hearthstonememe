@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Check, ChevronLeft, ChevronRight, Layers3, Plus, Shield, Skull, Sparkles, Swords, Wind } from 'lucide-react';
+import { BookOpen, Cat, Check, ChevronLeft, ChevronRight, Layers3, Plus, Shield, Skull, Sparkles, Swords, Wind } from 'lucide-react';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 import { powerCardId } from '../game/presentation';
 import { DECK_LIMIT, readyDeck, type SavedDeck } from '../decks';
@@ -8,7 +8,7 @@ import { Art } from './Card';
 import Modal from './Modal';
 
 export function ClassSymbol({ heroClass }: { heroClass: HeroClass }) {
-  return heroClass === 'warrior' ? <Shield /> : heroClass === 'warlock' ? <Skull /> : heroClass === 'storm' ? <Wind /> : <Sparkles />;
+  return heroClass === 'warrior' ? <Shield /> : heroClass === 'warlock' ? <Skull /> : heroClass === 'storm' ? <Wind /> : heroClass === 'cat' ? <Cat /> : <Sparkles />;
 }
 export default function DeckPicker({ decks, selectedId, select, confirm, close, manage, actionLabel = 'Играть' }: {
   decks: SavedDeck[]; selectedId: string | null; select: (id: string) => void; confirm: (deck: SavedDeck) => void;

@@ -1,5 +1,5 @@
 import { CARD, STARTER_DECK, deckError, migrateRewardDeck } from './game/cards';
-import { refreshAuras, type Game, type Minion, type Player } from './game/engine';
+import { clawFuryPool, refreshAuras, type Game, type Minion, type Player } from './game/engine';
 import { HEROES } from './game/presentation';
 import { knownPower } from './game/presentation';
 import { registerCardPack, validContinuation, validCustomCounts } from './game/custom-cards';
@@ -68,9 +68,9 @@ export function loadGame(): Game | null {
       && typeof g.mulligan!.ready[side] === 'boolean' && Array.isArray(selected) && selected.length <= 3
       && new Set(selected).size === selected.length && selected.every(n => g[side].hand.some(c => c.uid === n));
   }))) return null;
-  if (g.discovery && (g.discovery.side !== g.active || !cardId(g.discovery.sourceId) || (!g.discovery.custom && CARD[g.discovery.sourceId].effect !== 'discoverBlast')
+  if (g.discovery && (g.discovery.side !== g.active || !cardId(g.discovery.sourceId) || (!g.discovery.custom && !['discoverBlast', 'clawFury'].includes(CARD[g.discovery.sourceId].effect ?? ''))
     || !Array.isArray(g.discovery.options) || g.discovery.options.length < 1 || g.discovery.options.length > 3
-    || new Set(g.discovery.options).size !== g.discovery.options.length || !g.discovery.options.every(id => cardId(id) && g[g.active].deck.includes(id))
+    || new Set(g.discovery.options).size !== g.discovery.options.length || !g.discovery.options.every(id => cardId(id) && (CARD[g.discovery!.sourceId].effect === 'clawFury' ? clawFuryPool(g).some(c => c.id === id) : g[g.active].deck.includes(id)))
     || (g.discovery.custom ? !validContinuation(g.discovery.sourceId, g.discovery.custom) : g.discovery.target !== 'hero' && !finite(g.discovery.target)))) return null;
   if (g.briefing && (!g.briefing.remainingTurns || !['player', 'bot'].every(side => {
     const n = g.briefing!.remainingTurns[side as 'player' | 'bot'];

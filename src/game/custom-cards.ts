@@ -29,7 +29,7 @@ export function validateCardPack(raw: unknown): CardDef[] {
       if (['addCard', 'shuffle'].includes(r.operation) && !['minion', 'spell', 'hero'].includes(ref?.kind ?? '')) throw new Error('В руку и колоду добавляются существа, заклинания и герои.');
       if (r.operation === 'discover' && e.rules.filter(rule => rule.operation === 'discover').length > 1) throw new Error('Оставь одну раскопку на карте.');
     }
-    if (c.kind === 'power' && c.effect) throw new Error('Для силы героя используй правила редактора.');
+    if (c.kind === 'power' && c.effect && c.effect !== 'clawFury') throw new Error('Для силы героя используй правила редактора.');
     const selected = e.rules.filter(r => r.trigger === 'play' && r.target.startsWith('selected'));
     if (selected.length > 1 && selected.some(r => r.target !== selected[0].target)) throw new Error('Все правила выбора цели должны использовать один тип цели.');
     const existing = CARD[c.id];

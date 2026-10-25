@@ -16,7 +16,7 @@ export default function HeroPower({ game, side, inspect, unavailableReason, sele
   const note = player.powerSilenceTurns ? `Сила героя отключена немотой. Осталось своих ходов: ${player.powerSilenceTurns}.` : player.powerUsed ? 'Сила героя уже использована в этом ходу.' : unavailableReason;
   const open = () => inspect(power, { zone: 'power', owner: side, note, cost });
   const gesture = useLongPress(open);
-  return <button className={`hero-power ${power.id === 'storm-power' ? 'storm-power' : ''} ${enemy ? 'enemy-power' : 'own-power'} ${selected ? 'selected' : ''} ${player.powerSilenceTurns ? 'silenced-power' : ''} ${player.powerUsed ? 'used-power' : ''}`}
+  return <button className={`hero-power ${power.id === 'storm-power' ? 'storm-power' : power.effect === 'clawFury' ? 'cat-power' : ''} ${enemy ? 'enemy-power' : 'own-power'} ${selected ? 'selected' : ''} ${player.powerSilenceTurns ? 'silenced-power' : ''} ${player.powerUsed ? 'used-power' : ''}`}
     aria-disabled={enemy ? undefined : !!unavailableReason} {...gesture} onClick={enemy ? open : onClick}
     title={`${power.name}: ${power.text}${note ? ` ${note}` : ''}`}
     aria-label={`${enemy ? 'Сила героя противника' : 'Сила героя'} ${power.name}, ${cost} маны`}>

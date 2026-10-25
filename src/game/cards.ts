@@ -1,7 +1,7 @@
 import type { EditorData } from './custom-schema';
 import { belongsToClass, HERO_CLASSES, type HeroClass } from './classes';
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
-export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'lifeTap' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
+export type Effect = 'clawFury' | 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'lifeTap' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
 export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
@@ -12,6 +12,9 @@ export interface CardDef {
 }
 
 export const CARDS: CardDef[] = [
+  { id: 'marshal-mars', name: 'Маршал Марс', cost: 3, kind: 'minion', attack: 3, health: 4, text: 'Натиск.', flavor: 'Может атаковать существ сразу после выхода. Для атаки героя нужно дождаться следующего своего хода.', rarity: 'rare', art: 9, rush: true, tribe: 'Мяу', frame: 'simple' },
+  { id: 'general-mikhalych', name: 'Генерал Михалыч', cost: 5, kind: 'minion', attack: 3, health: 9, text: 'Провокация.', flavor: 'Защищает остальных персонажей: пока он на столе, противник обязан атаковать существ с провокацией.', rarity: 'common', art: 9, taunt: true, tribe: 'Мяу', frame: 'simple' },
+  { id: 'claw-fury', heroClass: 'cat', name: 'Ярость когтей', cost: 3, kind: 'power', text: 'Раскопайте карту за 3, 5 или 7 маны. Ваш герой получает урон, равный её стоимости.', flavor: 'Предлагается по одной случайной общей карте или карте вашего класса каждой стоимости. Копия выбранной карты добавляется в руку, затем ваш герой получает 3, 5 или 7 урона. Броня поглощает урон; при полной руке копия сгорает. Раз за ход.', rarity: 'common', art: 9, effect: 'clawFury' },
   { id: 'galinka', name: 'Галинка', cost: 10, kind: 'minion', attack: 0, health: 1, text: 'Провокация. Боевой клич: призывает Пушкина 15/15 с провокацией.', flavor: 'За каждой великой женщиной стоит Пушкин 15/15.', rarity: 'legendary', art: 0, custom: true, taunt: true, effect: 'galinka', tribe: 'Сверхчеловек' },
   { id: 'goodgame', name: 'Хорошая игра.', cost: 0, kind: 'minion', attack: 99, health: 99, text: 'Боевой клич: уничтожает вашего персонажа.', flavor: 'Боевой клич срабатывает только при розыгрыше из руки. Если существо появилось через призыв или превращение, герой не уничтожается.', rarity: 'common', art: 1, custom: true, effect: 'concede', tribe: 'Я сдаюсь.' },
   { id: 'ruslan', name: 'Русланчик', cost: 4, kind: 'minion', attack: 10, health: 10, text: 'Не может атаковать. Он всегда прав.', flavor: '«Тихий час» снимает запрет на атаку. После призыва всё ещё нужно дождаться своего следующего хода.', rarity: 'common', art: 2, custom: true, cannotAttack: true, tribe: 'Сверхчеловек' },

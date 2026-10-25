@@ -28,7 +28,7 @@ try {
   for (const size of sizes) { await page.setViewportSize(size); await fits(creator); }
   await page.setViewportSize({ width: 390, height: 844 }); await creator.getByRole('button', { name: 'Создать колоду', exact: true }).click();
   const created = (await book()).decks.find(d => d.name === 'Тёмный договор'); expect(created.heroClass).toBe('warlock'); expect(created.cards.length).toBe(30);
-  await page.getByRole('tab', { name: /^Колода ·/ }).click();
+
   for (const size of sizes) { await page.setViewportSize(size); await fits(page.locator('.collection-page')); }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByLabel('Название колоды', { exact: true }).fill('Договор чернокнижника');
@@ -38,13 +38,13 @@ try {
   await expect(picker.locator('.deck-slot.chosen')).toContainText('29/30'); await expect(picker.locator('.deck-play-button')).toBeDisabled();
   await picker.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
   await page.getByRole('button', { name: 'Редактировать колоду Договор чернокнижника', exact: true }).click();
-  await page.getByRole('tab', { name: /^Колода ·/ }).click();
+
   await page.getByRole('button', { name: 'Стартовая колода', exact: true }).click();
   await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
   await page.getByRole('button', { name: 'Создать колоду', exact: true }).click();
   await creator.getByLabel('Название новой колоды', { exact: true }).fill('Черновик мага');
   await creator.getByRole('checkbox').uncheck(); await creator.getByRole('button', { name: 'Создать колоду', exact: true }).click();
-  await page.getByRole('tab', { name: /^Колода ·/ }).click();
+
   await expect(page.locator('.deck-edit-class')).toContainText('Маг');
   const draft = (await book()).decks.find(d => d.name === 'Черновик мага'); expect(draft.cards).toEqual([]);
   await page.getByRole('button', { name: 'Удалить колоду', exact: true }).click();

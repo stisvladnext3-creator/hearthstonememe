@@ -25,18 +25,99 @@
 .collection-v2 .editing-deck { display: flex; flex-direction: column; gap: 6px; }.collection-v2 .editing-deck .deck-mana-curve { display: none; }.collection-v2 .editing-deck .deck-list { flex: 1; min-height: 0; overflow: hidden; }.collection-v2 .editing-deck .deck-row { min-height: 23px; height: 23px; padding: 1px 3px; }.collection-v2 .deck-row-name { font-size: 12px; }.collection-v2 .deck-row .mini-mana { width: 20px; height: 20px; font-size: 14px; }.collection-v2 .editing-deck .deck-rule { font-size: 11px; line-height: 1.15; margin: 0; }.collection-v2 .editing-deck .deck-editor-actions { display: flex; flex-direction: column; gap: 4px; }.collection-v2 .editing-deck .deck-editor-actions > button { min-height: 28px; height: 28px; font-size: 12px; padding: 3px; margin: 0; }.collection-v2 .deck-edit-heading > .text-button { font-size: 13px; }
 .collection-v2 .album-card-grid:empty { display: none; }.collection-v2 .empty-state { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; gap: 8px; }.collection-v2 .empty-state h3 { font-size: 23px; margin: 0; }.collection-v2 .empty-state p { font-size: 13px; margin: 0; }
 .card-class-label.storm { color: #bddbff; border-color: #4876af; background: #102b55; }
-@media(max-width:960px), (max-height:600px) and (max-width:1180px) {
-  .collection-v2.collection-page.collection-album { padding: 4px; gap: 3px; }.collection-v2 > .collection-panel-tabs { display: flex; height: 28px; min-height: 28px; flex-shrink: 0; gap: 4px; }.collection-v2 > .collection-panel-tabs button { min-height: 28px; height: 28px; font-size: 12px; padding: 2px 5px; }.collection-v2 > .collection-panel-tabs button:last-child { flex: 0 0 68px; }
-  .collection-v2 .album-layout { display: flex; flex: 1; gap: 0; min-height: 0; }.collection-v2 .album-main { width: 100%; flex: 1; }.collection-v2.phone-panel-cards .album-deck-sidebar,.collection-v2.phone-panel-deck .album-main { display: none; }
-  .collection-v2 .class-book-tabs { padding: 0 5px; height: 35px; min-height: 35px; gap: 3px; }.collection-v2 .class-book-tabs .book-tab { flex: 1 1 0; width: auto; max-width: 48px; height: 33px; border-width: 3px; padding: 2px; }.collection-v2 .class-book-tabs .book-tab.active { height: 36px; }.collection-v2 .class-book-tabs .workshop-brush { margin-left: auto; }.collection-v2 .class-book-tabs .book-tab > svg { width: 19px; height: 19px; }.collection-v2 .class-book-tab > svg { margin-top: 6px; }
-  .collection-v2 .book-paper { padding: 4px 5px 2px; border-width: 5px; }.collection-v2 .book-heading { height: 25px; flex-basis: 25px; margin: 0; gap: 5px; }.collection-v2 .book-heading h1 { font-size: 18px; padding: 0; }.collection-v2 .book-heading > span { font-size: 24px; }
-  .collection-v2 .card-grid.album-card-grid { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(2,minmax(0,1fr)); gap: 4px 9px; padding: 3px 0; }.collection-v2 .album-card-grid .game-card.classic-card { height: calc(100% - 18px); }.collection-v2 .album-owned { min-height: 18px; height: 18px; line-height: 18px; font-size: 11px; }.collection-v2 .album-card-grid .collection-card-wrap:has(.add-card) .game-card { height: calc(100% - 41px); }.collection-v2 .collection-card-wrap .add-card { font-size: 11px; }
-  .collection-v2 .book-pagination { min-height: 22px; height: 22px; font-size: 12px; }.collection-v2 .book-pagination button { height: 21px; }
-  .collection-v2 .book-controls { grid-template-columns: 92px minmax(0,1fr); grid-template-rows: 29px 29px; min-height: 65px; height: 65px; gap: 3px 7px; margin: 3px 0 0; padding: 3px; border-width: 3px; }.collection-v2 .album-type-filter { height: 27px; font-size: 11px; grid-column: 1; grid-row: 2; }.collection-v2 .mana-filters { grid-column: 1/-1; grid-row: 1; gap: 3px; }.collection-v2 .mana-filters > button { height: 27px; width: 27px; font-size: 15px; }.collection-v2 .search-box { grid-column: 2; grid-row: 2; height: 27px; border-width: 2px; }.collection-v2 .search-box input { font-size: 13px; }
-  .collection-v2 .album-deck-sidebar { flex: 1; height: 100%; padding: 7px; border-width: 6px; border-radius: 5px; }.collection-v2 .deck-library-list .album-deck-banner { height: 60px; max-height: 75px; min-height: 40px; flex: 1; }.collection-v2 .deck-library-sidebar h2 { font-size: 20px; }.collection-v2 .deck-library-list { gap: 6px; }.collection-v2 .editing-deck .deck-list { flex: 1; }.collection-v2 .editing-deck .deck-row { height: 29px; min-height: 29px; }.collection-v2 .deck-row-name { font-size: 13px; }.collection-v2 .editing-deck .deck-editor-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; }.collection-v2 .editing-deck .deck-editor-actions > button { height: 34px; min-height: 34px; font-size: 11px; }
-}
-@media(max-height:600px) and (min-width:601px) and (max-width:1180px), (max-width:960px) and (orientation:landscape) {
-  .collection-v2 .class-book-tabs { height: 29px; min-height: 29px; }.collection-v2 .class-book-tabs .book-tab { height: 27px; max-width: 52px; }.collection-v2 .class-book-tabs .book-tab.active { height: 30px; }.collection-v2 .class-book-tab > svg { margin-top: 1px; }.collection-v2 .book-heading { height: 21px; flex-basis: 21px; }.collection-v2 .book-heading h1 { font-size: 16px; }.collection-v2 .card-grid.album-card-grid { grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: minmax(0,1fr); }.collection-v2 .book-controls { grid-template-columns: 100px minmax(220px,1.4fr) minmax(100px,1fr); grid-template-rows: 28px; height: 37px; min-height: 37px; gap: 5px; }.collection-v2 .album-type-filter { grid-column: 1; grid-row: 1; }.collection-v2 .mana-filters { grid-column: 2; grid-row: 1; }.collection-v2 .search-box { grid-column: 3; grid-row: 1; }.collection-v2 .mana-filters > button { width: 24px; min-width: 18px; font-size: 14px; }
-  .collection-v2 .album-deck-sidebar.editing-deck { display: grid; grid-template-columns: minmax(0,1fr) minmax(160px,.8fr); grid-template-rows: 24px 35px 27px minmax(0,1fr) 27px; gap: 5px 12px; }.collection-v2 .editing-deck .deck-list { grid-column: 1; grid-row: 3/5; }.collection-v2 .editing-deck .deck-editor-actions { display: flex; flex-direction: column; grid-column: 2; grid-row: 4; }.collection-v2 .editing-deck .deck-editor-actions > button { height: 28px; min-height: 28px; }.collection-v2 .editing-deck .album-back { grid-column: 2; grid-row: 5; }
-}
 .collection-v2 .deck-pagination { display:flex; align-items:center; justify-content:center; gap:12px; height:26px; min-height:26px; font-size:12px; }.collection-v2 .deck-pagination button { width:28px; height:25px; }
+
+/* Fit both dimensions together; a width cap must never stretch a card vertically. */
+.collection-v2 .card-grid.album-card-grid {
+  container-type: size;
+  grid-template-columns: repeat(4,max-content);
+  grid-template-rows: repeat(2,max-content);
+  gap: 6px;
+  justify-content: center;
+  align-content: center;
+  --album-card-extra: 22px;
+}
+.collection-v2.collection-building .card-grid.album-card-grid { --album-card-extra: 45px; }
+.collection-v2 .album-card-grid .collection-card-wrap {
+  width: min(calc((100cqw - 18px) / 4),calc((100cqh - 6px - var(--album-card-extra) * 2) * .359946));
+  height: auto; min-width: 0; max-height: 100%; padding: 0;
+}
+.collection-v2 .album-card-grid .collection-card-wrap .game-card.classic-card {
+  width: 100%; height: auto; max-width: none; max-height: none;
+  aspect-ratio: 1064 / 1478; flex: 0 0 auto;
+}
+.collection-v2 .album-card-grid .collection-card-wrap:has(.add-card) .game-card { height: auto; }
+/* The same book, eight cards and deck column remain visible on phones. */
+@media(max-width:960px), (max-height:600px) and (max-width:1180px) {
+  .collection-v2.collection-page.collection-album { padding: 3px; }
+  .collection-v2 .album-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(90px,25%); gap:5px; }
+  .collection-v2 .album-main,.collection-v2 .album-deck-sidebar { display:flex; min-width:0; }
+  .collection-v2 .class-book-tabs { height:30px; min-height:30px; gap:3px; padding:0 4px; }
+  .collection-v2 .class-book-tabs .book-tab { flex:0 1 36px; width:36px; height:28px; border-width:2px; padding:2px; }
+  .collection-v2 .class-book-tabs .book-tab.active { height:31px; }
+  .collection-v2 .class-book-tabs .book-tab > svg { width:18px; height:18px; }
+  .collection-v2 .class-book-tab > svg { margin-top:4px; }
+  .collection-v2 .book-paper { padding:4px 5px 2px; border-width:4px; }
+  .collection-v2 .book-heading { height:25px; flex-basis:25px; margin:0; gap:4px; }
+  .collection-v2 .book-heading h1 { font-size:clamp(12px,2.2vw,20px); padding:0; }
+  .collection-v2 .book-heading > span { font-size:24px; }
+  .collection-v2 .card-grid.album-card-grid { grid-template-columns:repeat(4,max-content); grid-template-rows:repeat(2,max-content); gap:4px; --album-card-extra:18px; padding:0; }
+  .collection-v2.collection-building .card-grid.album-card-grid { --album-card-extra:39px; }
+  .collection-v2 .album-card-grid .collection-card-wrap { width:min(calc((100cqw - 12px) / 4),calc((100cqh - 4px - var(--album-card-extra) * 2) * .359946)); }
+  .collection-v2 .album-owned { height:18px; min-height:18px; line-height:18px; font-size:clamp(7px,1.6vw,12px); padding:0 3px; max-width:100%; overflow:hidden; white-space:nowrap; }
+  .collection-v2 .collection-card-wrap .add-card { height:21px; min-height:21px; font-size:clamp(6px,1.4vw,11px); gap:1px; padding:1px 2px; max-width:100%; }
+  .collection-v2 .collection-card-wrap .add-card > svg { display:none; }
+  .collection-v2 .book-pagination { height:23px; min-height:23px; font-size:clamp(9px,1.7vw,13px); gap:5px; }
+  .collection-v2 .book-pagination button { width:26px; height:22px; }
+  .collection-v2 .book-controls { grid-template-columns:minmax(60px,.7fr) minmax(0,1fr); grid-template-rows:27px 27px; height:62px; min-height:62px; gap:2px 4px; margin-top:3px; padding:2px; border-width:2px; }
+  .collection-v2 .mana-filters { grid-column:1/-1; grid-row:1; gap:1px; }
+  .collection-v2 .mana-filters > button { width:25px; min-width:0; height:25px; font-size:clamp(10px,2vw,15px); }
+  .collection-v2 .mana-filters > button > svg { width:14px; height:14px; }
+  .collection-v2 .album-type-filter { grid-column:1; grid-row:2; height:25px; border-width:2px; font-size:clamp(9px,1.8vw,12px); padding:1px; }
+  .collection-v2 .search-box { grid-column:2; grid-row:2; height:25px; padding:2px 3px; border-width:2px; gap:2px; }
+  .collection-v2 .search-box input { font-size:clamp(9px,1.8vw,13px); }
+  .collection-v2 .search-box > svg { width:12px; }
+  .collection-v2 .album-deck-sidebar { padding:5px 4px; border-width:4px; gap:5px; }
+  .collection-v2 .deck-library-sidebar h2 { font-size:clamp(11px,2.2vw,19px); padding:4px 0; border-width:2px; margin:0; }
+  .collection-v2 .deck-library-list { padding:3px 2px; gap:5px; border-width:2px; }
+  .collection-v2 .deck-library-list .album-deck-banner { flex:0 1 65px; min-height:36px; height:65px; padding:4px; border-width:2px; }
+  .collection-v2 .deck-library-list .album-deck-banner strong { font-size:clamp(9px,1.8vw,15px); }
+  .collection-v2 .deck-library-list .album-deck-banner small { font-size:clamp(7px,1.3vw,10px); }
+  .collection-v2 .deck-library-list .album-deck-banner > svg { display:none; }
+  .collection-v2 .deck-library-pagination { height:23px; min-height:23px; gap:4px; font-size:11px; }
+  .collection-v2 .deck-library-pagination > button { padding:1px; }
+  .collection-v2 .create-deck-button { white-space:normal; height:32px; min-height:32px; font-size:clamp(9px,1.7vw,13px); gap:2px; padding:2px; }
+  .collection-v2 .create-deck-button > svg { display:none; }
+  .collection-v2 .album-back { height:29px; min-height:29px; padding:2px; border-width:2px; gap:2px; font-size:clamp(10px,1.8vw,14px); }
+  .collection-v2 .album-back > svg { width:13px; }
+  .collection-v2 .deck-edit-heading { gap:2px; }
+  .collection-v2 .deck-edit-heading > .text-button { font-size:clamp(8px,1.7vw,12px); gap:1px; padding:0; }
+  .collection-v2 .deck-edit-heading svg { width:12px; }
+  .collection-v2 .deck-name-editor { font-size:9px; gap:2px; }
+  .collection-v2 .deck-name-editor input { font-size:11px; height:26px; padding:2px; }
+  .collection-v2 .deck-edit-class { gap:2px; font-size:clamp(8px,1.6vw,12px); flex-wrap:wrap; }
+  .collection-v2 .deck-edit-class > svg { width:13px; height:13px; }
+  .collection-v2 .editing-deck .deck-list { display:flex; flex-direction:column; overflow:hidden; }
+  .collection-v2 .editing-deck .deck-row { height:21px; min-height:21px; gap:1px; padding:0; }
+  .collection-v2 .deck-row-name { font-size:clamp(7px,1.5vw,12px); }
+  .collection-v2 .deck-row .mini-mana { width:14px; min-width:14px; height:18px; font-size:11px; }
+  .collection-v2 .deck-quantity { font-size:8px; }
+  .collection-v2 .deck-row .icon-button { width:15px; height:18px; padding:0; }
+  .collection-v2 .deck-row .icon-button svg { width:11px; }
+  .collection-v2 .deck-rule { font-size:clamp(7px,1.4vw,11px); }
+  .collection-v2 .editing-deck .deck-editor-actions { display:flex; flex-direction:column; gap:3px; }
+  .collection-v2 .editing-deck .deck-editor-actions > button { height:27px; min-height:27px; font-size:clamp(7px,1.5vw,11px); white-space:normal; padding:1px; gap:1px; }
+  .collection-v2 .deck-editor-actions > button > svg { display:none; }
+  .collection-v2 .deck-pagination { gap:2px; font-size:9px; height:22px; min-height:22px; }
+  .collection-v2 .deck-pagination button { width:18px; height:21px; padding:0; }
+}
+@media(max-width:450px) {
+  .collection-v2 .album-layout { grid-template-columns:minmax(0,1fr) minmax(79px,26%); gap:3px; }
+  .collection-v2 .class-book-tabs { gap:1px; padding:0 2px; height:25px; min-height:25px; }
+  .collection-v2 .class-book-tabs .book-tab { height:23px; width:24px; flex-basis:24px; padding:1px; }
+  .collection-v2 .class-book-tabs .book-tab.active { height:26px; }
+  .collection-v2 .class-book-tabs .book-tab > svg { width:13px; height:13px; }
+  .collection-v2 .class-book-tab > svg { margin-top:3px; }
+  .collection-v2 .book-paper { padding:3px 2px 1px; border-width:3px; }
+  .collection-v2 .book-heading > span { display:none; }
+}

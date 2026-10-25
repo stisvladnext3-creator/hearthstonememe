@@ -5,7 +5,7 @@ import { packForCards, registerCardPack } from './custom-cards';
 import { createCustomEngine, customDiscount, customPool, customSelectedTargets, silenceMinion, type CustomContinuation, type CustomCounts } from './custom-engine';
 import type { CardDef } from './cards';
 import { matchesCard } from './custom-schema';
-import { HERO_CLASSES, type HeroClass } from './classes';
+import { belongsToClass, HERO_CLASSES, type HeroClass } from './classes';
 
 export type Side = 'player' | 'bot';
 export interface HandCard { uid: number; id: string; expiresTurn?: number }
@@ -60,6 +60,7 @@ export const powerCost = (power: Player['power'], g?: Game, side = g?.active ?? 
 export const activePower = (g: Game, side: Side): Player['power'] => g.briefing ? 'briefing' : g[side].power;
 export const boardLimit = (g: Game) => g.briefing ? 1 : 7;
 export const cardCost = (g: Game, id: string, side = g.active) => Math.max(0, CARD[id].cost - (CARD[id].effect === 'jaina' ? g.rashDeaths : 0) - customDiscount(g, id, side));
+export const clawFuryPool = (g: Game) => customPool(g).filter(c => [3, 5, 7].includes(c.cost) && belongsToClass(c, 'cat'));
 export function powerProblem(g: Game, side: Side): string | undefined {
   const p = g[side];
   const power = activePower(g, side);
@@ -353,12 +354,17 @@ export function act(input: Game, side: Side, action: Action): Result {
   if (action.type === 'discover') {
     const discovery = g.discovery;
     if (!discovery || discovery.side !== side || !discovery.options.includes(action.cardId)) return fail('Выберите одну из предложенных карт раскопки.');
-    actor = cardEntity(discovery.sourceId, side);
+    actor = CARD[discovery.sourceId].kind === 'power' ? powerEntity(p, side, discovery.sourceId) : cardEntity(discovery.sourceId, side);
     delete g.discovery;
     const fullHand = p.hand.length >= 10;
     addToHand(g, side, action.cardId);
     record(`Раскопка: ${CARD[action.cardId].name} — ${fullHand ? 'копия сгорает: рука полна' : 'копия добавлена в руку'}. Колода не меняется.`, { kind: 'discover', target: cardEntity(action.cardId, side) });
-    if ((!discovery.custom || discovery.custom.afterLegacy) && (discovery.target === 'hero' || [...p.board, ...enemy.board].some(m => m.uid === discovery.target))) {
+    if (CARD[discovery.sourceId].effect === 'clawFury') {
+      const damage = CARD[action.cardId].cost;
+      hit('own-hero', damage);
+      record(`Ярость когтей: раскопана карта за ${damage} маны — ${damage} урона вашему герою.`, { target: heroEntity(p, side), amount: damage });
+    }
+    if (CARD[discovery.sourceId].effect === 'discoverBlast' && (!discovery.custom || discovery.custom.afterLegacy) && (discovery.target === 'hero' || [...p.board, ...enemy.board].some(m => m.uid === discovery.target))) {
       const target = targetEntity(discovery.target);
       emit(g, { kind: 'spell', side, source: 'hero', cardId: discovery.sourceId, target: anchorFor(discovery.target) });
       hit(discovery.target, 4);
@@ -567,6 +573,15 @@ export function act(input: Game, side: Side, action: Action): Result {
       record('Сила героя «Жизнеотвод»: 2 урона вашему герою, добор одной карты.', { kind: 'power', target: heroEntity(p, side), amount: 2 });
       draw(g, side);
     }
+    if (CARD[powerId].effect === 'clawFury') {
+      const pool = clawFuryPool(g);
+      const options = [3, 5, 7].flatMap(price => {
+        const cards = pool.filter(c => c.cost === price);
+        return cards.length ? [cards[Math.floor(random(g) * cards.length)].id] : [];
+      });
+      g.discovery = { side, sourceId: powerId, options, target: 'hero' };
+      record('Ярость когтей: выберите карту за 3, 5 или 7 маны. Ваш герой получит урон, равный её стоимости.', { kind: 'power' });
+    }
     if (power === 'oy') { addToHand(g, side, 'deathwing'); record('Ой! Смертокрыл добавлен в руку.', { kind: 'power', target: cardEntity('deathwing', side) }); }
     if (power === 'rds') { summon(g, side, 'rash', 'hero', 'rds-power'); record('Сила РДШ призывает РДШ 2/5.', { kind: 'power', target: cardEntity('rash', side) }); }
     if (power === 'storm') {
@@ -574,7 +589,10 @@ export function act(input: Game, side: Side, action: Action): Result {
       record('Зов бури призывает элементаля бури 2/1.', { kind: 'power', target: elemental ? cardEntity('storm-elemental', side, elemental) : undefined });
     }
     if (power === 'briefing') { const id = p.deck[0]; draw(g, side); record('Сила героя «Взять карту»: добор одной карты.', { kind: 'power', target: id ? cardEntity(id, side) : undefined }); }
-    if (CARD[powerId].editor) custom.play(g, side, powerId, undefined, action.target);
+    if (CARD[powerId].editor) {
+      if (g.discovery?.sourceId === powerId) g.discovery.custom = { rules: CARD[powerId].editor!.rules.filter(r => r.trigger === 'play'), afterLegacy: true };
+      else custom.play(g, side, powerId, undefined, action.target);
+    }
     if (power === 'fool') {
       const pool = customPool(g).filter(c => c.kind === 'minion' && c.effect !== 'concede');
       enemy.board = enemy.board.map(m => {
@@ -642,6 +660,7 @@ export function chooseBotAction(g: Game): Action {
   if (g.discovery?.side === 'bot') {
     const score = (id: string) => {
       const c = CARD[id];
+      if (CARD[g.discovery!.sourceId].effect === 'clawFury' && c.cost >= p.health + p.armor) return -10000 - c.cost;
       if (c.effect === 'concede') return -1000;
       return Math.min(cardCost(g, id), 10) + (c.attack ?? 0) + (c.health ?? 0) / 2
         + (c.effect === 'dragonslayer' || c.effect === 'discoverBlast' ? 5 : 0)
@@ -690,6 +709,7 @@ export function chooseBotAction(g: Game): Action {
   }
   if (!powerProblem(g, 'bot')) {
     if (activePower(g, 'bot') === 'lifeTap' && (p.health + p.armor <= 2 + (!p.deck.length ? p.fatigue + 1 : 0) || p.hand.length >= 10)) return { type: 'end' };
+    if (CARD[powerCardId(activePower(g, 'bot'))].effect === 'clawFury' && (p.health + p.armor <= 3 || p.hand.length >= 10)) return { type: 'end' };
     const weak = g.player.board.find(m => m.health === 1);
     if (CARD[powerCardId(activePower(g, 'bot'))].editor) return { type: 'power', target: abilityTargets(g).find(t => t === 'hero') ?? abilityTargets(g)[0] };
     return { type: 'power', target: weak?.uid ?? 'hero' };

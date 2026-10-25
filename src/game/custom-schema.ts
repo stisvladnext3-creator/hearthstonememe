@@ -22,7 +22,7 @@ export interface EditorData {
   discount?: { event: 'summon' | 'death' | 'play'; amount: number; filter: CardFilter };
   quest?: { event: 'summon' | 'death' | 'play'; goal: number; rewardId: string; filter: CardFilter };
 }
-const EFFECTS: Effect[] = ['galinka', 'concede', 'casino', 'trachukcha', 'legendaryHand', 'deathwing', 'maratik', 'bolt', 'heal', 'draw', 'silence', 'armor', 'oy', 'jaina', 'rds', 'devolve', 'purgeZhanna', 'volunteer', 'dragonslayer', 'discoverBlast', 'masik', 'paperArmy', 'briefing', 'rashQuest', 'echoMaxim', 'briefingDraw', 'jainaVolunteer'];
+const EFFECTS: Effect[] = ['clawFury', 'galinka', 'concede', 'casino', 'trachukcha', 'legendaryHand', 'deathwing', 'maratik', 'bolt', 'heal', 'draw', 'silence', 'armor', 'oy', 'jaina', 'rds', 'devolve', 'purgeZhanna', 'volunteer', 'dragonslayer', 'discoverBlast', 'masik', 'paperArmy', 'briefing', 'rashQuest', 'echoMaxim', 'briefingDraw', 'jainaVolunteer'];
 export const CUSTOM_LIMIT = 60, PACK_LIMIT = 2_000_000, JSON_IMPORT_LIMIT = 2_000_000;
 const object = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
 const integer = (v: unknown, low: number, high: number) => Number.isSafeInteger(v) && Number(v) >= low && Number(v) <= high;

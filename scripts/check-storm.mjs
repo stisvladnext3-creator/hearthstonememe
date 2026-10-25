@@ -33,17 +33,17 @@ try {
   await page.getByRole('tab', { name: 'Карты класса Предвестник бури', exact: true }).click(); await expect(page.locator('.album-card-grid .game-card')).toHaveCount(1);
   await page.getByRole('tab', { name: 'Общие карты', exact: true }).click(); await expect(page.locator('.album-card-grid .game-card')).toHaveCount(0);
   await page.getByRole('tab', { name: 'Классовые карты', exact: true }).click(); await expect(page.locator('.album-card-grid .game-card')).toHaveCount(1);
-  await page.getByRole('tab', { name: /^Мои колоды/ }).click(); await page.getByRole('button', { name: 'Создать колоду', exact: true }).click();
+  await page.getByRole('button', { name: 'Создать колоду', exact: true }).click();
   const creator = page.getByRole('dialog', { name: 'Создание колоды', exact: true }); await creator.getByLabel('Название новой колоды', { exact: true }).fill('Проверка мага'); await creator.getByRole('checkbox').uncheck();
   for (const size of sizes) { await page.setViewportSize(size); await fits(creator); }
   await page.setViewportSize({ width: 390, height: 844 }); await creator.getByRole('button', { name: 'Создать колоду', exact: true }).click();
   await page.getByRole('button', { name: 'Добавить Штормовой ученик', exact: true }).isDisabled().then(x => expect(x).toBe(true));
-  await page.getByRole('tab', { name: /^Колода ·/ }).click(); await page.getByRole('button', { name: 'К списку колод', exact: true }).click();
+  await page.getByRole('button', { name: 'К списку колод', exact: true }).click();
   await page.getByRole('button', { name: 'Создать колоду', exact: true }).click(); await creator.getByRole('button', { name: 'Предвестник бури', exact: true }).click();
   await creator.getByLabel('Название новой колоды', { exact: true }).fill('Моя буря'); await creator.getByRole('button', { name: 'Создать колоду', exact: true }).click();
-  await page.getByRole('tab', { name: /^Колода ·/ }).click(); await page.locator('.deck-row .icon-button').first().click(); await page.getByRole('tab', { name: 'Карты', exact: true }).click();
+  await page.locator('.deck-row .icon-button').first().click();
   await page.getByRole('button', { name: 'Добавить Штормовой ученик', exact: true }).click();
-  await page.getByRole('tab', { name: /^Колода ·/ }).click(); await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
+  await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
   await page.getByRole('button', { name: 'Назад', exact: true }).click(); await page.getByRole('button', { name: 'Выбрать колоду для нового боя', exact: true }).click();
   const picker = page.getByRole('dialog', { name: 'Выбор колоды', exact: true }); await expect(picker.locator('.deck-slot.chosen')).toContainText('Моя буря');
   for (const size of sizes) { await page.setViewportSize(size); await fits(picker); }

@@ -28,19 +28,19 @@ for (const [width, height] of [[320, 568], [390, 844], [844, 390], [667, 375]]) 
   expect(await rooms.evaluate(e => { const r = e.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return !!hit && e.contains(hit); })).toBe(true);
   await fits(page);
   await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click(); await fits(page);
-  for (const card of await page.locator('.album-card-grid .game-card').all()) { const r = await card.boundingBox(); expect(r!.height).toBeGreaterThan(75); }
-  await page.getByRole('tab', { name: /Мои колоды|Колода ·/ }).click(); await fits(page);
+  for (const card of await page.locator('.album-card-grid .game-card').all()) { const r = await card.boundingBox(); expect(r!.width / r!.height).toBeCloseTo(1064 / 1478, 2); }
+  await fits(page);
   const nextDeck = page.getByRole('button', { name: 'Следующая страница колоды' });
   if (await nextDeck.count()) { await nextDeck.click(); await fits(page); }
   await page.getByRole('button', { name: 'Редактировать колоду Твои правила' }).click(); await fits(page);
-  await page.getByRole('tab', { name: /Мои колоды|Колода ·/ }).click(); await fits(page);
+  await fits(page);
   await page.getByRole('button', { name: 'Стартовая колода', exact: true }).click(); await fits(page);
   await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
   await page.getByRole('button', { name: 'Скрыть сообщение' }).click();
   await page.getByRole('button', { name: 'Настройки', exact: true }).click(); await fits(page);
   await page.getByRole('tab', { name: 'Игровое поле', exact: true }).click(); await fits(page);
   await page.getByRole('radio', { name: /Огненная кузница/ }).check(); await page.keyboard.press('Escape');
-  await page.getByRole('tab', { name: 'Карты', exact: true }).click(); await page.getByLabel('Поиск карт').fill('Масик'); await page.locator('.album-card-grid .game-card').click();
+  await page.getByLabel('Поиск карт').fill('Масик'); await page.locator('.album-card-grid .game-card').click();
   await fits(page);
   for (const tab of ['Детали', 'Оформление', 'Картинка']) { await page.getByRole('tab', { name: tab, exact: true }).click(); await fits(page); }
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Из коллекции в меню' }).click();

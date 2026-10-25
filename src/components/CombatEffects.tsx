@@ -54,6 +54,11 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
           orb?.classList.add('combat-wind');
           timers.current.push(window.setTimeout(() => orb?.classList.remove('combat-wind'), 1000));
         }
+        if (event.kind === 'power' && event.cardId && CARD[event.cardId]?.effect === 'clawFury') {
+          const orb = document.querySelector<HTMLElement>(`[data-combat-anchor="${sourceKey}"]`);
+          orb?.classList.add('combat-venom');
+          timers.current.push(window.setTimeout(() => orb?.classList.remove('combat-venom'), 1000));
+        }
         if (['damage', 'power', 'transform'].includes(event.kind)) {
           const el = document.querySelector<HTMLElement>(`[data-combat-anchor="${targetKey}"]`);
           const cls = event.kind === 'damage' ? 'combat-hit' : event.kind === 'power' && event.cardId === 'armor-power' ? 'combat-armor' : event.kind === 'power' && event.cardId === 'spark-power' ? 'combat-arcane' : 'combat-magic';
@@ -81,6 +86,10 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
     const width = e.kind === 'summon' ? to.width : from.width;
     const height = e.kind === 'summon' ? to.height : from.height;
     const style = { '--fx-dx': `${dx}px`, '--fx-dy': `${dy}px`, left: from.x + (from.width - width) / 2, top: from.y + (from.height - height) / 2, width, height } as CSSProperties;
+    if (e.kind === 'power' && e.cardId && CARD[e.cardId]?.effect === 'clawFury') return <div key={e.id} data-fx="cat-venom" className="fx-cat-venom" style={{ left: from.x + from.width / 2, top: from.y + from.height / 2 }}>
+      <svg viewBox="0 0 120 180"><g className="venom-wisps"><path d="M37 165C1 128 67 113 34 84S60 33 45 8" /><path d="M63 165C101 125 37 112 70 76S44 36 72 1" /><path d="M84 167C59 147 112 125 87 99S107 51 94 22" /></g><g className="venom-drops">{[0, 1, 2, 3, 4, 5].map(n => <circle key={n} cx={23 + n * 14} cy={145 - n % 3 * 19} r={n % 2 ? 3 : 5} style={{ animationDelay: `${n * 65}ms` }} />)}</g></svg>
+      <span className="venom-claws">╱╱╱</span>
+    </div>;
     if (e.kind === 'power' && e.cardId === 'storm-power') return <div key={e.id} data-fx="storm-vortex" className="fx-storm-vortex" style={{ left: from.x + from.width / 2, top: from.y + from.height / 2 }}>
       <svg viewBox="0 0 160 160"><circle className="wind-halo" cx="80" cy="80" r="58" /><g className="wind-spiral"><path d="M80 80C53 85 46 60 62 48C92 25 126 60 111 89C89 133 31 113 25 78C17 30 68 2 110 26" /><path d="M80 80C107 75 114 100 98 112C68 135 34 100 49 71C71 27 129 47 135 82C143 130 92 158 50 134" /><path d="M80 80C62 53 95 42 108 60C125 85 103 114 78 105C40 90 42 38 78 25" /></g><g className="wind-sparks">{[0, 72, 144, 216, 288].map(angle => <path key={angle} transform={`rotate(${angle} 80 80)`} d="m80 12-5 17 10-4-6 15" />)}</g></svg>
     </div>;

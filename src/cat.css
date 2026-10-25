@@ -1,0 +1,35 @@
+.hero-class-choice.cat,.deck-slot.cat { background:radial-gradient(ellipse at top,#446d3c,#10291f 85%); border-color:#77a569; }
+.deck-hero-preview.cat { background:radial-gradient(ellipse at center,#375c37,#112a22 80%); border-color:#7ca75e; }
+.deck-library-list .album-deck-banner.cat { border-color:#759b52; background:#193d28; }
+.deck-slot.cat .deck-slot-class { color:#d3f5bc; }.deck-slot.cat.chosen { border-color:#a9e47b; }
+.card-class-label.cat { color:#ddffcc; border-color:#7eb35f; background:#213c29; }
+.cat-power .power-orb { border-color:#8bc166; background:#122d1c; }
+.hero-panel.hero-general-cat .hero-label { width:min(28cqw,175px); }.hero-panel.hero-general-cat .hero-label strong { font-size:clamp(11px,1.8cqh,18px); white-space:normal; line-height:1.12; }
+.fx-cat-venom { position:absolute; width:125px; height:180px; transform:translate(-50%,-90%); filter:drop-shadow(0 0 8px #58f02d) drop-shadow(0 0 18px #66fa4488); pointer-events:none; }
+.fx-cat-venom > svg { width:100%; height:100%; overflow:visible; }
+.combat-effects:has(.fx-cat-venom) { z-index:110; }
+.venom-wisps { fill:none; stroke:#98ff52; stroke-width:10; stroke-linecap:round; animation:venom-rise 950ms ease-out both; }
+.venom-wisps > path:nth-child(2) { stroke:#33bc39; stroke-width:17; }.venom-wisps > path:nth-child(3) { stroke:#d6ff92; stroke-width:5; }
+.venom-drops > circle { fill:#c4ff7b; animation:venom-droplet 650ms ease-out both; }
+.venom-claws { position:absolute; left:34%; bottom:0; color:#e6ffb6; font:bold 43px Georgia,serif; letter-spacing:-7px; animation:venom-slash 800ms both; }
+.hero-power .power-orb.combat-venom { opacity:1; animation:venom-orb 950ms both; }
+@keyframes venom-rise { 0% { opacity:0; transform:translateY(55px) scaleY(.3); } 25% { opacity:1; } 65% { opacity:.85; } 100% { opacity:0; transform:translateY(-60px) scaleY(1.2); } }
+@keyframes venom-droplet { 0% { opacity:0; transform:translateY(12px); } 20% { opacity:1; } 100% { opacity:0; transform:translateY(-135px); } }
+@keyframes venom-slash { 0% { opacity:0; transform:translate(-20px,15px) scale(.6); } 25% { opacity:1; } 100% { opacity:0; transform:translate(20px,-20px) scale(1.15); } }
+@keyframes venom-orb { 0%,100% { filter:none; } 35% { filter:brightness(1.7) drop-shadow(0 0 14px #7bf246); } }
+.new-deck-modal .hero-class-choices { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.new-deck-modal .hero-class-choice { padding:10px 4px; gap:6px; }
+.new-deck-modal .hero-class-choice > strong { font-size:clamp(12px,2vw,19px); }
+.new-deck-modal .class-portrait { width:min(100%,100px); }
+@media(max-width:600px) and (orientation:portrait) {
+  .new-deck-modal .hero-class-choices { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .new-deck-modal .class-portrait { height:65px; width:53px; }
+  .new-deck-modal .hero-class-choice { gap:3px; padding:5px 3px; }
+  .new-deck-modal .class-power-name { font-size:11px; }.new-deck-modal .class-power-cost { font-size:9px; }
+}
+@media(max-height:600px) and (orientation:landscape) {
+  .new-deck-modal .hero-class-choice { display:flex; flex-direction:column; text-align:center; gap:3px; padding:4px; }
+  .new-deck-modal .class-portrait { width:43px; height:48px; }
+  .new-deck-modal .hero-class-choice > strong { font-size:11px; }.new-deck-modal .class-power-name { font-size:10px; }.new-deck-modal .class-power-cost { font-size:8px; }
+  .fx-cat-venom { width:95px; height:140px; }
+}

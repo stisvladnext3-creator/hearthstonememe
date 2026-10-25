@@ -5,6 +5,7 @@ import { packForCards, registerCardPack } from './custom-cards';
 import { createCustomEngine, customDiscount, customPool, customSelectedTargets, silenceMinion, type CustomContinuation, type CustomCounts } from './custom-engine';
 import type { CardDef } from './cards';
 import { matchesCard } from './custom-schema';
+import { HERO_CLASSES, type HeroClass } from './classes';
 
 export type Side = 'player' | 'bot';
 export interface HandCard { uid: number; id: string; expiresTurn?: number }
@@ -219,13 +220,14 @@ function summon(g: Game, side: Side, id: string, source?: number | 'hero', creat
   }
   return m;
 }
-function emptyPlayer(hero: string): Player {
+function emptyPlayer(hero: string, power = 'spark'): Player {
   return { health: 30, armor: 0, mana: 0, maxMana: 0, hand: [], deck: [], board: [],
-    fatigue: 0, hero, power: 'spark', powerUsed: false, powerSilenceTurns: 0 };
+    fatigue: 0, hero, power, powerUsed: false, powerSilenceTurns: 0 };
 }
 const custom = createCustomEngine({ random, log, emit, damageHero, destroy, summon, draw, addToHand, boardLimit });
-export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck = BOT_DECK, mulliganDeadline?: number): Game {
-  const g: Game = { id: String(seed), rashDeaths: 0, events: [], player: emptyPlayer('mage'), bot: emptyPlayer('boris'), active: 'player', turn: 1,
+export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck = BOT_DECK, mulliganDeadline?: number, classes: { player?: HeroClass; bot?: HeroClass } = {}): Game {
+  const playerClass = HERO_CLASSES[classes.player ?? 'mage'], botClass = classes.bot ? HERO_CLASSES[classes.bot] : undefined;
+  const g: Game = { id: String(seed), rashDeaths: 0, events: [], player: emptyPlayer(playerClass.hero, playerClass.power), bot: emptyPlayer(botClass?.hero ?? 'boris', botClass?.power ?? 'spark'), active: 'player', turn: 1,
     winner: null, nextUid: 1, rng: seed, log: [], nextLog: 1, customCards: packForCards([...deck, ...opponentDeck]) };
   g.player.deck = shuffled(g, deckError(deck) ? STARTER_DECK : deck);
   g.bot.deck = shuffled(g, deckError(opponentDeck) ? BOT_DECK : opponentDeck);
@@ -557,6 +559,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     actor = powerEntity(p, side, power); actingHero = heroEntity(p, side);
     emit(g, { kind: 'power', side, source: 'hero', target: power === 'spark' ? anchorFor(action.target!) : { side, uid: 'hero' }, cardId: powerId });
     if (power === 'spark') { const target = targetEntity(action.target!); hit(action.target!, 1); record(`Сила героя «Искра» → ${target.name}: 1 урон.`, { kind: 'power', target, amount: 1 }); }
+    if (power === 'armor') { p.armor += 2; record('Сила героя «Поднять щит!»: +2 брони.', { kind: 'power', target: heroEntity(p, side), amount: 2 }); }
     if (power === 'oy') { addToHand(g, side, 'deathwing'); record('Ой! Смертокрыл добавлен в руку.', { kind: 'power', target: cardEntity('deathwing', side) }); }
     if (power === 'rds') { summon(g, side, 'rash', 'hero', 'rds-power'); record('Сила РДШ призывает РДШ 2/5.', { kind: 'power', target: cardEntity('rash', side) }); }
     if (power === 'briefing') { const id = p.deck[0]; draw(g, side); record('Сила героя «Взять карту»: добор одной карты.', { kind: 'power', target: id ? cardEntity(id, side) : undefined }); }

@@ -18,6 +18,8 @@ import CardDetails from './components/CardDetails';
 import HelpDialog from './components/HelpDialog';
 import SettingsDialog from './components/SettingsDialog';
 import CardWorkshop from './components/CardWorkshop';
+import HeroClassPicker from './components/HeroClassPicker';
+import { validHeroClass, type HeroClass } from './game/classes';
 
 type Page = 'home' | 'collection' | 'battle' | 'rooms' | 'editor';
 type Settings = { sound: boolean; motion: boolean; board: BattlegroundId };
@@ -33,7 +35,9 @@ export default function App() {
   const [cardRevision, setCardRevision] = useState(0);
   const [game, setGame] = useState(loadGame);
   const [stats, setStats] = useState(loadStats);
-  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'fields' | null>(null);
+  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'fields' | 'class' | null>(null);
+  const [heroClass, setHeroClass] = useState<HeroClass>(() => { const value = read<unknown>('hero-class', 'mage'); return validHeroClass(value) ? value : 'mage'; });
+  const [classPickerMode, setClassPickerMode] = useState<'start' | 'select'>('start');
   const [inspected, setInspected] = useState<CardDef | null>(null);
   const [inspectInfo, setInspectInfo] = useState<InspectionInfo | undefined>(undefined);
   const [toast, setToast] = useState('');
@@ -58,6 +62,7 @@ export default function App() {
   }, [settings.sound]);
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(''), 4000); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { write('settings', settings); document.documentElement.classList.toggle('reduce-motion', !settings.motion); }, [settings]);
+  useEffect(() => { write('hero-class', heroClass); }, [heroClass]);
   useEffect(() => {
     if (!game) return;
     write('game', game.winner ? null : game);
@@ -85,8 +90,9 @@ export default function App() {
     return () => clearInterval(timer);
   }, [game?.mulligan?.deadline]);
   const navigate = (next: Page) => { sound(); setPage(next); setMobileNav(false); window.scrollTo({ top: 0 }); };
-  const newMatch = () => createGame(deck, Date.now(), undefined, Date.now() + 30_000);
-  const start = () => { if (!game || game.winner) setGame(newMatch()); navigate('battle'); };
+  const newMatch = () => createGame(deck, Date.now(), undefined, Date.now() + 30_000, { player: heroClass });
+  const chooseClass = (mode: 'start' | 'select') => { setClassPickerMode(mode); setModal('class'); };
+  const start = () => { if (!game || game.winner) chooseClass('start'); else navigate('battle'); };
   const rematch = () => { setGame(newMatch()); sound(); };
   const dispatch = (action: Action) => {
     if (!game) return;
@@ -107,20 +113,21 @@ export default function App() {
   return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : 'parchment-view'}`}>
     <header className="site-header"><div className="header-inner"><button className="logo-button" onClick={() => navigate('home')} aria-label="Memestone — главная"><Logo /></button>
       <nav className={mobileNav ? 'open' : ''} aria-label="Главная навигация"><button className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>Главная</button><button className={page === 'collection' ? 'active' : ''} onClick={() => navigate('collection')}>Коллекция<span className="nav-count">{CARDS.length}</span></button><button onClick={() => { setModal('help'); setMobileNav(false); }}>Как играть <ArrowUpRight size={13} /></button>{game && !game.winner && <button className={page === 'battle' ? 'active' : ''} onClick={() => navigate('battle')}>Текущий бой<span className="live-dot" /></button>}</nav>
-      <div className="header-actions"><span className="alpha-tag">ALPHA 0.11.0</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings2 size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
+      <div className="header-actions"><span className="alpha-tag">ALPHA 0.12.0</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings2 size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
     </div></header>
     <main className="main-container">
-      {page === 'home' && <WoodMenu rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => navigate('collection')} help={() => setModal('help')} settings={() => setModal('settings')} profile={() => setModal('about')} wins={stats.wins} />}
+      {page === 'home' && <WoodMenu heroClass={heroClass} chooseClass={() => chooseClass('start')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => navigate('collection')} help={() => setModal('help')} settings={() => setModal('settings')} profile={() => setModal('about')} wins={stats.wins} />}
       {page === 'collection' && <Collection deck={deck} saveDeck={saveDeck} inspect={inspect} back={() => navigate('home')} notify={notify} editCards={() => navigate('editor')} revision={cardRevision} />}
       {page === 'editor' && <CardWorkshop back={() => navigate('collection')} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deck} />}
       {page === 'battle' && game && <Battle settings={() => setModal('settings')} board={settings.board} chooseBoard={() => setModal('fields')} overlayOpen={!!modal || !!inspected} animations={settings.motion} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} help={() => setModal('help')} />}
-      <Online active={page === 'rooms'} deck={deck} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={() => setModal('settings')} help={() => setModal('help')} chooseBoard={() => setModal('fields')} home={() => navigate('home')} battleChanged={setOnlineBattle} />
+      <Online heroClass={heroClass} chooseClass={() => chooseClass('select')} active={page === 'rooms'} deck={deck} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={() => setModal('settings')} help={() => setModal('help')} chooseBoard={() => setModal('fields')} home={() => navigate('home')} battleChanged={setOnlineBattle} />
     </main>
     <footer className="site-footer"><div><Logo small /><span>Создано для своих.</span></div><p>Независимый фан-проект. Не связан с Blizzard Entertainment.</p><button className="text-button" onClick={() => setModal('about')}>О проекте <ArrowUpRight size={13} /></button></footer>
     {toast && <div className="toast" role="status"><Sparkles size={18} /><span>{toast}</span><button className="icon-button" aria-label="Скрыть сообщение" onClick={() => setToast('')}><X size={15} /></button></div>}
     {inspected && <CardDetails card={inspected} info={inspectInfo} close={closeCard} notify={notify} />}
     {modal === 'help' && <HelpDialog close={closeModal} />}
     {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} />}
+    {modal === 'class' && <HeroClassPicker value={heroClass} change={setHeroClass} close={closeModal} start={classPickerMode === 'start'} replace={!!game && !game.winner} confirm={() => { closeModal(); if (classPickerMode === 'start') { setGame(newMatch()); navigate('battle'); } }} />}
     {modal === 'fields' && <Modal title="Выбор игрового поля" close={closeModal} className="fields-modal"><span className="eyebrow">ТВОЯ АРЕНА</span><h2>Выбери место для боя</h2><BoardPicker value={settings.board} change={board => setSettings({ ...settings, board })} /><button className="button primary" onClick={closeModal}>Вернуться в бой <Check size={16} /></button></Modal>}
     {modal === 'about' && <AboutDialog stats={stats} deckSize={deck.length} close={closeModal} help={() => { closeModal(); setModal('help'); }} />}
   </div>;

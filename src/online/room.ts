@@ -2,9 +2,10 @@ import { migrateRewardDeck } from '../game/cards';
 import { packForCards, registerCardPack } from '../game/custom-cards';
 import type { Peer, DataConnection } from 'peerjs';
 import { act, expireMulligan, type Action, type Game } from '../game/engine';
-import { cleanName, createRoomGame, EMPTY_ROOM, normalizeCode, ROOM_PREFIX, ROOM_PROTOCOL, roomCode, roomGameView, validAction, validCode, validDeck, validRoomView, type ClientMessage, type HostMessage, type Member, type RoomState } from './protocol';
+import { acceptsActionRevision, cleanName, createRoomGame, EMPTY_ROOM, normalizeCode, ROOM_PREFIX, ROOM_PROTOCOL, roomCode, roomGameView, validAction, validCode, validDeck, validRoomView, type ClientMessage, type HostMessage, type Member, type RoomState } from './protocol';
 import { peerRuntime, readMessage } from './transport';
 import { DIRECTORY_ID, RoomAdvertisement } from './directory';
+import { validHeroClass, type HeroClass } from '../game/classes';
 
 interface SavedRoom { role: 'host' | 'guest'; code: string; self: Member; guest?: Member; game?: Game; revision: number; listed?: boolean }
 const SAVE_KEY = 'memestone.room.v1';
@@ -15,6 +16,7 @@ export function savedRoom(): SavedRoom | null {
     if (s?.self && Array.isArray(s.self.deck)) s.self.deck = migrateRewardDeck(s.self.deck);
     if (s?.guest && Array.isArray(s.guest.deck)) s.guest.deck = migrateRewardDeck(s.guest.deck);
     if (!s || !['host', 'guest'].includes(s.role) || !validCode(s.code) || !validDeck(s.self?.deck) || typeof s.self.name !== 'string' || typeof s.self.token !== 'string') return null;
+    if (s.self.heroClass !== undefined && !validHeroClass(s.self.heroClass) || s.guest?.heroClass !== undefined && !validHeroClass(s.guest.heroClass)) return null;
     if (s.guest && (!validDeck(s.guest.deck) || typeof s.guest.name !== 'string' || typeof s.guest.token !== 'string')) return null;
     if (s.game && (!validRoomView(roomGameView(s.game, 'player')) || ![s.game.rng, s.game.nextUid, s.game.nextLog].every(Number.isSafeInteger))) return null;
     return s;
@@ -66,14 +68,15 @@ export class PeerRoom {
     if (!this.self || !this.state.role) return;
     try { sessionStorage.setItem(SAVE_KEY, JSON.stringify({ role: this.state.role, code: this.state.code, self: this.self, guest: this.guest, game: this.canonical, revision: this.state.revision, listed: this.state.listed } satisfies SavedRoom)); } catch { /* An open room can still play without storage. */ }
   }
-  async open(role: 'host' | 'guest', name: string, deck: string[], code?: string, resume?: SavedRoom, listed = true) {
+  async open(role: 'host' | 'guest', name: string, deck: string[], code?: string, resume?: SavedRoom, listed = true, heroClass: HeroClass = 'mage') {
+    if (!validHeroClass(heroClass)) { this.update({ phase: 'error', error: 'Выбери доступный класс героя.' }); return; }
     if (!validDeck(deck)) { this.update({ phase: 'error', error: 'Собери корректную колоду из 30 карт.' }); return; }
     const normalized = role === 'host' ? resume?.code ?? roomCode() : normalizeCode(code ?? '');
     if (!validCode(normalized)) { this.update({ phase: 'error', error: 'Код комнаты состоит из 6 букв и цифр.' }); return; }
-    try { this.self = resume?.self ?? { name: cleanName(name), deck: [...deck], token: crypto.randomUUID(), cards: packForCards(deck) }; }
+    try { this.self = resume?.self ?? { name: cleanName(name), deck: [...deck], token: crypto.randomUUID(), cards: packForCards(deck), heroClass }; }
     catch (error) { this.update({ phase: 'error', error: String((error as Error).message) }); return; }
     this.guest = resume?.guest; this.canonical = role === 'host' ? resume?.game : undefined;
-    this.update({ ...EMPTY_ROOM, phase: 'connecting', role, code: normalized, name: this.self.name, revision: resume?.revision ?? 0, listed: role === 'host' && (resume?.listed ?? listed) });
+    this.update({ ...EMPTY_ROOM, phase: 'connecting', role, code: normalized, name: this.self.name, revision: resume?.revision ?? 0, listed: role === 'host' && (resume?.listed ?? listed), heroClass: this.self.heroClass ?? 'mage', opponentClass: this.guest ? this.guest.heroClass ?? 'mage' : null });
     try {
       const { Peer, options } = await peerRuntime(); if (this.disposed) return;
       const peerOptions = { ...options, token: this.self.token };
@@ -133,17 +136,18 @@ export class PeerRoom {
         if (data.type !== 'hello') return;
         const reject = (message: string) => { this.send({ type: 'reject', message }, connection); clearTimeout(timeout); setTimeout(() => connection.close(), 100); };
         if (data.protocol !== ROOM_PROTOCOL || connection.serialization !== 'binary') { reject('Версии игры не совпадают. Обоим игрокам нужно обновить страницу.'); return; }
+        if (data.heroClass !== undefined && !validHeroClass(data.heroClass)) { reject('Неизвестный класс героя. Обнови страницу и выбери класс заново.'); return; }
         try { registerCardPack(data.cards ?? []); packForCards([...this.self!.deck, ...(Array.isArray(data.deck) ? data.deck : [])]); }
         catch { reject('Не удалось загрузить набор своих карт. Проверь ссылки и размер набора в редакторе.'); return; }
         if (!validDeck(data.deck) || typeof data.name !== 'string' || typeof data.token !== 'string' || data.token.length > 100 || data.token.length < 16) { reject('Некорректные данные игрока или колода.'); return; }
         if (this.guest && data.token !== this.guest.token) { reject('Комната уже занята двумя игроками.'); return; }
         admitted = true; clearTimeout(timeout);
         const previous = this.connection;
-        this.connection = connection; this.guest ??= { name: cleanName(data.name), deck: [...data.deck], token: data.token, cards: packForCards(data.deck) };
+        this.connection = connection; this.guest ??= { name: cleanName(data.name), deck: [...data.deck], token: data.token, cards: packForCards(data.deck), heroClass: data.heroClass ?? 'mage' };
         if (previous !== connection) previous?.close();
         this.watchConnection(connection);
         this.everConnected = true;
-        this.update({ connected: true, error: '', opponent: this.guest.name }); this.publish();
+        this.update({ connected: true, error: '', opponent: this.guest.name, opponentClass: this.guest.heroClass ?? 'mage' }); this.publish();
         return;
       }
       if (connection !== this.connection) return;
@@ -152,7 +156,7 @@ export class PeerRoom {
         this.advanceOpening();
         if (this.recentRequests.has(data.requestId)) { this.publish(); return; }
         this.recentRequests.add(data.requestId); if (this.recentRequests.size > 200) this.recentRequests.delete(this.recentRequests.values().next().value!);
-        if (!validAction(data.action) || !this.canonical || data.revision !== this.state.revision) {
+        if (!validAction(data.action) || !this.canonical || !acceptsActionRevision(this.canonical, this.state.revision, data.revision, data.action)) {
           this.send({ type: 'reject', message: 'Состояние партии обновилось. Повтори действие.', requestId: data.requestId }); this.publish(); return;
         }
         const result = act(this.canonical, 'bot', data.action);
@@ -179,11 +183,12 @@ export class PeerRoom {
       this.update({ error: String(data.message).slice(0, 300), pending: false, phase: this.state.game ? 'playing' : 'error' }); return;
     }
     if (data.type !== 'snapshot' || data.protocol !== ROOM_PROTOCOL || data.code !== this.state.code || !Number.isSafeInteger(data.revision) || data.revision < this.state.revision) return;
+    if (data.heroClass !== undefined && !validHeroClass(data.heroClass) || data.opponentClass !== undefined && !validHeroClass(data.opponentClass)) return;
     if (typeof data.name !== 'string' || typeof data.opponent !== 'string' || typeof data.rematchSelf !== 'boolean' || typeof data.rematchOpponent !== 'boolean' || data.game !== null && !validRoomView(data.game)) return;
     this.everConnected = true; clearTimeout(this.connectTimer); clearTimeout(this.actionTimer);
     const retry = this.outbound && !this.outbound.retried && data.revision === this.outbound.revision ? this.outbound : undefined;
     this.outbound = undefined;
-    this.update({ phase: data.game ? 'playing' : 'waiting', name: cleanName(data.name), opponent: cleanName(data.opponent), connected: true, game: data.game, revision: data.revision, pending: false, error: '', rematchSelf: data.rematchSelf, rematchOpponent: data.rematchOpponent });
+    this.update({ phase: data.game ? 'playing' : 'waiting', name: cleanName(data.name), opponent: cleanName(data.opponent), connected: true, game: data.game, revision: data.revision, pending: false, error: '', rematchSelf: data.rematchSelf, rematchOpponent: data.rematchOpponent, heroClass: data.heroClass ?? this.self?.heroClass ?? 'mage', opponentClass: data.opponentClass ?? 'mage' });
     this.save();
     // A reconnect snapshot tells us whether an unacknowledged move reached the
     // host. Replay it only if the revision did not advance, with the same ID.
@@ -216,13 +221,13 @@ export class PeerRoom {
   private publish() {
     if (!this.self) return;
     this.update({ phase: this.canonical ? 'playing' : 'waiting', game: this.canonical ? roomGameView(this.canonical, 'player') : null, rematchSelf: this.hostRematch, rematchOpponent: this.guestRematch });
-    if (this.guest) this.send({ type: 'snapshot', protocol: ROOM_PROTOCOL, code: this.state.code, name: this.guest.name, opponent: this.self.name, game: this.canonical ? roomGameView(this.canonical, 'bot') : null, revision: this.state.revision, rematchSelf: this.guestRematch, rematchOpponent: this.hostRematch });
+    if (this.guest) this.send({ type: 'snapshot', protocol: ROOM_PROTOCOL, code: this.state.code, name: this.guest.name, opponent: this.self.name, game: this.canonical ? roomGameView(this.canonical, 'bot') : null, revision: this.state.revision, rematchSelf: this.guestRematch, rematchOpponent: this.hostRematch, heroClass: this.guest.heroClass ?? 'mage', opponentClass: this.self.heroClass ?? 'mage' });
     this.save();
   }
   start() {
     if (this.state.role !== 'host' || !this.guest || !this.state.connected || this.canonical && !this.canonical.winner) return;
     const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-    this.canonical = createRoomGame(this.self!.deck, this.guest.deck, this.self!.name, this.guest.name, seed, crypto.randomUUID(), Date.now() + 30_000);
+    this.canonical = createRoomGame(this.self!.deck, this.guest.deck, this.self!.name, this.guest.name, seed, crypto.randomUUID(), Date.now() + 30_000, { host: this.self!.heroClass ?? 'mage', guest: this.guest.heroClass ?? 'mage' });
     this.hostRematch = this.guestRematch = false; this.state.revision++; this.recentRequests.clear(); this.publish();
   }
   action(action: Action) {

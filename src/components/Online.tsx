@@ -1,6 +1,6 @@
 import { phoneScreen, useViewport } from '../useViewport';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Copy, DoorOpen, Globe, Link, LoaderCircle, Play, RefreshCw, Swords, Users, Wifi, WifiOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Check, Copy, DoorOpen, Globe, Link, LoaderCircle, Play, RefreshCw, Shield, Swords, Users, Wifi, WifiOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import Battle from './Battle';
 import Modal from './Modal';
 import { PeerRoom, inviteLink, savedRoom } from '../online/room';
@@ -9,10 +9,12 @@ import { EMPTY_DIRECTORY, RoomDirectory, type DirectoryState } from '../online/d
 import type { Inspect } from '../inspection';
 import type { BattlegroundId } from '../battlegrounds';
 import { read, write } from '../storage';
+import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
-export default function Online({ active, deck, board, animations, overlayOpen, inspect, settings, help, chooseBoard, home, battleChanged }: {
+export default function Online({ active, deck, board, animations, overlayOpen, inspect, settings, help, chooseBoard, home, battleChanged, heroClass, chooseClass }: {
   active: boolean; deck: string[]; board: BattlegroundId; animations: boolean; overlayOpen: boolean; inspect: Inspect;
   settings: () => void; help: () => void; chooseBoard: () => void; home: () => void; battleChanged: (value: boolean) => void;
+  heroClass: HeroClass; chooseClass: () => void;
 }) {
   const viewport = useViewport();
   const [roomCapacity, setRoomCapacity] = useState(3);
@@ -54,7 +56,7 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
     controller.current = next; write('online-name', cleanName(name));
     const saved = restore ? savedRoom() : undefined;
     if (destination) setCode(destination);
-    void next.open(saved?.role ?? role, name, deck, saved?.code ?? destination ?? code, saved ?? undefined, listed);
+    void next.open(saved?.role ?? role, name, deck, saved?.code ?? destination ?? code, saved ?? undefined, listed, heroClass);
   };
   const leave = () => {
     controller.current?.close(true); controller.current = null; setRoom({ ...EMPTY_ROOM });
@@ -78,7 +80,7 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
     <div className="rooms-heading"><span className="eyebrow"><Users size={17} /> СВОЯ КОМПАНИЯ</span><h1>Игровые комнаты</h1><p>Выбери открытую комнату, создай свою или зайди по коду.</p></div>
     {room.error && <div className="room-error" role="alert"><WifiOff size={18} />{room.error}</div>}
     {!entered && <div className="room-entry-panel">
-      <label className="room-name-label">Твоё имя<input aria-label="Имя игрока" maxLength={20} value={name} onChange={e => setName(e.target.value)} disabled={connecting} /></label>
+      <div className="room-player-setup"><label className="room-name-label">Твоё имя<input aria-label="Имя игрока" maxLength={20} value={name} onChange={e => setName(e.target.value)} disabled={connecting} /></label><button className="room-class-button" aria-label="Выбрать класс" onClick={chooseClass} disabled={connecting}><Shield size={16} />{HERO_CLASSES[heroClass].name}</button></div>
       <p className="room-deck-note">В бой пойдёт твоя сохранённая колода: {deck.length} карт. Её можно изменить в коллекции.</p>
       <section className="public-rooms" aria-label="Список открытых комнат">
         <div className="public-rooms-heading"><h2><Globe size={21} />Открытые комнаты <span>{directory.rooms.length}</span></h2><button className="icon-button" aria-label="Обновить список комнат" onClick={() => directoryController.current?.refresh()}><RefreshCw size={18} className={directory.status === 'connecting' ? 'spinning' : ''} /></button></div>
@@ -98,8 +100,8 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
       <div className="room-code-heading"><span>КОД КОМНАТЫ</span><strong>{room.code}</strong><button className="icon-button" aria-label="Скопировать код комнаты" onClick={() => void copy(room.code, 'Код скопирован')}><Copy size={20} /></button></div>
       <div className="room-sharing"><button className="button secondary" onClick={() => void copy(inviteLink(room.code), 'Ссылка скопирована')}><Link size={17} />Пригласить по ссылке</button><span role="status">{copied}</span></div>
       {room.role === 'host' && !room.game && <label className="room-public-option room-public-toggle"><input type="checkbox" checked={room.listed} onChange={e => controller.current?.setListed(e.target.checked)} />Показывать в списке, пока есть свободное место</label>}
-      <div className="room-members"><div><span className="room-member-symbol"><Users size={24} /></span><strong>{room.name}</strong><small>{room.role === 'host' ? 'Создатель комнаты' : 'Ты'}</small><span><Check size={14} />Готов</span></div>
-        <div className={room.connected ? '' : 'waiting-member'}><span className="room-member-symbol">{room.connected ? <Users size={24} /> : <LoaderCircle size={24} />}</span><strong>{room.opponent || 'Ждём друга'}</strong><small>{room.connected ? 'В комнате' : room.opponent ? 'Переподключается' : 'Передай код или ссылку'}</small><span>{room.connected ? <><Wifi size={14} />На связи</> : 'Ожидание'}</span></div></div>
+      <div className="room-members"><div><span className="room-member-symbol"><Users size={24} /></span><strong>{room.name}</strong><small>{room.role === 'host' ? 'Создатель комнаты' : 'Ты'} · {HERO_CLASSES[room.heroClass].name}</small><span><Check size={14} />Готов</span></div>
+        <div className={room.connected ? '' : 'waiting-member'}><span className="room-member-symbol">{room.connected ? <Users size={24} /> : <LoaderCircle size={24} />}</span><strong>{room.opponent || 'Ждём друга'}</strong><small>{room.opponent && room.opponentClass ? HERO_CLASSES[room.opponentClass].name + (room.connected ? ' · В комнате' : ' · Переподключается') : 'Передай код или ссылку'}</small><span>{room.connected ? <><Wifi size={14} />На связи</> : 'Ожидание'}</span></div></div>
       {room.game ? <button className="button primary room-start" onClick={() => setShowLobby(false)}><Play size={18} />Вернуться в бой</button>
         : room.role === 'host' ? <button className="button primary room-start" disabled={!room.connected} onClick={() => controller.current?.start()}><Swords size={18} />Начать бой</button>
         : <p className="room-connecting" role="status">{room.connected ? 'Создатель комнаты начинает партию.' : 'Соединяемся с создателем…'}</p>}

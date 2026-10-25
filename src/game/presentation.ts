@@ -2,12 +2,13 @@ import { CARD, type CardDef } from './cards';
 
 export const HEROES: Record<string, { name: string; art: number; title: string }> = {
   mage: { name: 'Лира', art: 10, title: 'Хранительница мемов' },
+  warrior: { name: 'Воин', art: 9, title: 'Мастер защиты' },
   boris: { name: 'Борис', art: 9, title: 'Трактирщик' },
   trachukcha: { name: 'Трачукча', art: 4, title: 'Думает о вечном' },
   maratik: { name: 'Маратик', art: 7, title: 'Повелитель «Ой»' },
   jaina: { name: 'Джайна-ассасин', art: 10, title: 'Сила РДШ' },
 };
-export const POWER_CARDS = { spark: 'spark-power', fool: 'fool-power', oy: 'oy', rds: 'rds-power', briefing: 'briefing-power' } as const;
+export const POWER_CARDS = { spark: 'spark-power', armor: 'armor-power', fool: 'fool-power', oy: 'oy', rds: 'rds-power', briefing: 'briefing-power' } as const;
 export const powerCardId = (power: string): string => Object.hasOwn(POWER_CARDS, power) ? POWER_CARDS[power as keyof typeof POWER_CARDS] : power;
 export const powerKey = (id: string): string => Object.entries(POWER_CARDS).find(([, value]) => value === id)?.[0] ?? id;
 export const knownPower = (power: unknown): power is string => typeof power === 'string' && CARD[powerCardId(power)]?.kind === 'power';

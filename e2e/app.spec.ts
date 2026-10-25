@@ -55,7 +55,7 @@ test('collection searches, categories and mana filters work together', async ({ 
   await expect(page.locator('.card-grid .game-card')).toHaveCount(8);
 });
 test('a new solo match puts its quest first and activates it only after playing', async ({ page }) => {
-  await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click();
   const hand = page.locator('.player-hand .game-card');
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible();
   await expect(hand).toHaveCount(3);
@@ -80,7 +80,7 @@ test('deck editor saves an actual changed 30-card deck and survives reload', asy
   await page.getByRole('button', { name: 'Сохранить колоду' }).click();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.deck')!).filter((id: string) => id === 'bolt').length)).toBe(expectedBolts);
   await page.reload();
-  await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click();
   expect(await page.evaluate(() => { const g = JSON.parse(localStorage.getItem('memestone.v1.game')!); return [...g.player.deck, ...g.player.hand.map((c: { id: string }) => c.id)].filter(id => id === 'bolt').length; })).toBe(expectedBolts);
 });
 test('targeted spell bypasses taunt, minion attack obeys taunt and damage is rendered', async ({ page }) => {
@@ -100,7 +100,7 @@ test('targeted spell bypasses taunt, minion attack obeys taunt and damage is ren
 });
 test('bot takes its turn, game persists and resumes after reload', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click();
   await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Завершить', exact: true }).click();
@@ -135,7 +135,7 @@ test('settings persist and corrupted local data falls back safely', async ({ pag
   await page.reload(); await page.locator('.wood-topbar').getByRole('button', { name: 'Настройки', exact: true }).click();
   await expect(page.getByRole('checkbox', { name: /Анимации/ })).not.toBeChecked();
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click();
   await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
   await expect(page.getByRole('button', { name: 'Завершить', exact: true })).toBeEnabled();
 });
@@ -748,7 +748,7 @@ test('hand cards show complete descriptions, enlarge on hover, and shrink while 
 });
 
 test('the forge field is selectable, persists and has a portrait background', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click();
   await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Выбор игрового поля', exact: true }).click();

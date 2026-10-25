@@ -3,8 +3,9 @@ import { registerCardPack, validContinuation, validCustomCounts } from '../game/
 import { createGame, other, type Action, type Game, type Side } from '../game/engine';
 import type { HistoryEntity } from '../game/history';
 import { HEROES, knownPower } from '../game/presentation';
+import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
-export const ROOM_PROTOCOL = 4;
+export const ROOM_PROTOCOL = 5;
 export const ROOM_PREFIX = 'memestone-v08-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
@@ -34,7 +35,13 @@ export function validAction(value: unknown): value is Action {
     default: return false;
   }
 }
-export function createRoomGame(hostDeck: string[], guestDeck: string[], hostName: string, guestName: string, seed: number, id: string, mulliganDeadline?: number) {
+export function acceptsActionRevision(game: Game | undefined, current: number, revision: unknown, action: Action): boolean {
+  if (!Number.isSafeInteger(revision) || Number(revision) < 0) return false;
+  // Opening choices belong to separate hands and commute with the other
+  // player's choices. Their UIDs stay fixed until both players confirm.
+  return revision === current || action.type === 'mulligan' && !!game?.mulligan && Number(revision) < current;
+}
+export function createRoomGame(hostDeck: string[], guestDeck: string[], hostName: string, guestName: string, seed: number, id: string, mulliganDeadline?: number, classes: { host: HeroClass; guest: HeroClass } = { host: 'mage', guest: 'mage' }) {
   const guestFirst = (seed & 1) === 1;
   const g = createGame(guestFirst ? guestDeck : hostDeck, seed, guestFirst ? hostDeck : guestDeck, mulliganDeadline);
   if (guestFirst) {
@@ -44,7 +51,9 @@ export function createRoomGame(hostDeck: string[], guestDeck: string[], hostName
     for (const event of g.events) { event.side = other(event.side); if (event.target) event.target.side = other(event.target.side); }
   }
   g.id = id; g.player.name = cleanName(hostName); g.bot.name = cleanName(guestName);
-  g.player.hero = 'mage'; g.bot.hero = 'mage';
+  for (const [side, heroClass] of [['player', classes.host], ['bot', classes.guest]] as const) {
+    g[side].hero = HERO_CLASSES[heroClass].hero; g[side].power = HERO_CLASSES[heroClass].power;
+  }
   g.log = [{ id: 1, kind: 'turn', side: 'system', turn: 1, text: `${g[g.active].name} ходит первым.` }]; g.nextLog = 2;
   return g;
 }
@@ -134,20 +143,21 @@ export function validRoomView(value: unknown): value is Game {
       && [e.actor, e.target, e.hero, e.result].every(entity));
 }
 
-export interface Member { name: string; deck: string[]; token: string; cards?: CardDef[] }
+export interface Member { name: string; deck: string[]; token: string; cards?: CardDef[]; heroClass?: HeroClass }
 export interface RoomState {
   phase: 'idle' | 'connecting' | 'waiting' | 'playing' | 'error';
   role: 'host' | 'guest' | null; code: string; name: string; opponent: string;
   connected: boolean; game: Game | null; revision: number; pending: boolean;
   rematchSelf: boolean; rematchOpponent: boolean; error: string;
   listed: boolean;
+  heroClass: HeroClass; opponentClass: HeroClass | null;
 }
-export const EMPTY_ROOM: RoomState = { phase: 'idle', role: null, code: '', name: '', opponent: '', connected: false, game: null, revision: 0, pending: false, rematchSelf: false, rematchOpponent: false, error: '', listed: false };
+export const EMPTY_ROOM: RoomState = { phase: 'idle', role: null, code: '', name: '', opponent: '', connected: false, game: null, revision: 0, pending: false, rematchSelf: false, rematchOpponent: false, error: '', listed: false, heroClass: 'mage', opponentClass: null };
 export type ClientMessage =
-  | { type: 'hello'; protocol: number; name: string; deck: string[]; token: string; cards?: CardDef[] }
+  | { type: 'hello'; protocol: number; name: string; deck: string[]; token: string; cards?: CardDef[]; heroClass?: HeroClass }
   | { type: 'action'; action: Action; revision: number; requestId: string }
   | { type: 'rematch' }
   | { type: 'leave' };
 export type HostMessage =
-  | { type: 'snapshot'; protocol: number; code: string; name: string; opponent: string; game: Game | null; revision: number; rematchSelf: boolean; rematchOpponent: boolean }
+  | { type: 'snapshot'; protocol: number; code: string; name: string; opponent: string; game: Game | null; revision: number; rematchSelf: boolean; rematchOpponent: boolean; heroClass?: HeroClass; opponentClass?: HeroClass }
   | { type: 'reject'; message: string; requestId?: string };

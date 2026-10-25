@@ -19,7 +19,7 @@ export default function HeroClassPicker({ value, change, confirm, close, name, c
     })}</div>
     <p className="new-deck-power-description"><strong>{HERO_CLASSES[value].powerName}.</strong> {HERO_CLASSES[value].description}</p>
     <label className="starter-deck-option"><input type="checkbox" checked={starter} onChange={e => changeStarter(e.target.checked)} />Начать со стартовой колоды из 30 карт</label>
-    <p className="class-picker-note">Класс закрепляется за колодой. Карты общей коллекции доступны всем классам.</p>
+    <p className="class-picker-note">Класс закрепляется за колодой. Общие карты доступны всем, классовые — своему классу.</p>
     <button className="button primary window-done" disabled={!name.trim()} onClick={confirm}><Check size={17} />Создать колоду</button>
   </Modal>;
 }

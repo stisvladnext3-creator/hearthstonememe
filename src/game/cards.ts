@@ -1,11 +1,12 @@
 import type { EditorData } from './custom-schema';
+import { belongsToClass, HERO_CLASSES, type HeroClass } from './classes';
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
 export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'lifeTap' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
 export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
-  art: number; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean; reward?: boolean;
+  art: number; heroClass?: HeroClass; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean; reward?: boolean;
   effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage';
   editor?: EditorData;
 }
@@ -20,9 +21,11 @@ export const CARDS: CardDef[] = [
   { id: 'deathwing', name: 'Смертокрыл', cost: 5, kind: 'minion', attack: 1, health: 1, text: 'Боевой клич: уничтожает всех других существ. Вы сбрасываете все карты. В конце вашего хода это существо распыляется.', flavor: 'Пришёл. Увидел. Всё испортил. Ушёл.', rarity: 'legendary', art: 6, custom: true, effect: 'deathwing', tribe: 'Дракон' },
   { id: 'maratik', name: 'Маратик', cost: 10, kind: 'hero', armor: 20, text: 'Даёт 20 брони. Боевой клич: заменяет вашу силу героя на «Ой».', flavor: '«Ой» за 6 маны добавляет в руку Смертокрыла 1/1. Кажется, сейчас что-то произойдёт.', rarity: 'legendary', art: 7, custom: true, effect: 'maratik' },
   { id: 'oy', name: 'Ой', cost: 6, kind: 'power', text: 'Вы кладёте в руку Смертокрыла 1/1.', flavor: 'Сила героя Маратика. Одно маленькое слово. Очень большие последствия.', rarity: 'rare', art: 6, custom: true, effect: 'oy' },
-  { id: 'spark-power', name: 'Искра', cost: 2, kind: 'power', text: 'Наносит 1 урон выбранному персонажу. Один раз за ход.', flavor: 'Фиолетовая магическая стрела. Можно выбрать любого героя или существо, включая своих. «Искра хаоса» — отдельное заклинание, которое наносит 3 урона.', rarity: 'common', art: 10 },
-  { id: 'armor-power', name: 'Поднять щит!', cost: 2, kind: 'power', text: 'Даёт вашему герою 2 брони. Один раз за ход.', flavor: 'Сила героя воина. Броня складывается и поглощает урон перед здоровьем.', rarity: 'common', art: 9, effect: 'armor' },
-  { id: 'life-tap', name: 'Жизнеотвод', cost: 2, kind: 'power', text: 'Наносит вашему герою 2 урона. Вы берёте карту. Один раз за ход.', flavor: 'Сила героя чернокнижника. Броня поглощает урон. Если колода пуста, добор вызывает усталость; при полной руке карта сгорает.', rarity: 'common', art: 4, effect: 'lifeTap' },
+  { id: 'spark-power', heroClass: 'mage', name: 'Искра', cost: 2, kind: 'power', text: 'Наносит 1 урон выбранному персонажу. Один раз за ход.', flavor: 'Фиолетовая магическая стрела. Можно выбрать любого героя или существо, включая своих. «Искра хаоса» — отдельное заклинание, которое наносит 3 урона.', rarity: 'common', art: 10 },
+  { id: 'armor-power', heroClass: 'warrior', name: 'Поднять щит!', cost: 2, kind: 'power', text: 'Даёт вашему герою 2 брони. Один раз за ход.', flavor: 'Сила героя воина. Броня складывается и поглощает урон перед здоровьем.', rarity: 'common', art: 9, effect: 'armor' },
+  { id: 'life-tap', heroClass: 'warlock', name: 'Жизнеотвод', cost: 2, kind: 'power', text: 'Наносит вашему герою 2 урона. Вы берёте карту. Один раз за ход.', flavor: 'Сила героя чернокнижника. Броня поглощает урон. Если колода пуста, добор вызывает усталость; при полной руке карта сгорает.', rarity: 'common', art: 4, effect: 'lifeTap' },
+  { id: 'storm-power', name: 'Зов бури', cost: 2, kind: 'power', text: 'Призывает элементаля бури 2/1. Один раз за ход.', flavor: 'Сила героя Предвестника бури. Элементаль готовится к атаке до следующего своего хода.', rarity: 'common', art: 8, heroClass: 'storm' },
+  { id: 'storm-elemental', name: 'Элементаль бури', cost: 1, kind: 'token', attack: 2, health: 1, text: 'Призван силой героя «Зов бури».', flavor: 'Маленькая буря. Большие неприятности.', rarity: 'common', art: 8, heroClass: 'storm', tribe: 'Элементаль' },
   { id: 'jaina', name: 'Джайна-ассасин', cost: 12, kind: 'hero', armor: 10, text: 'Стоит на 1 ману меньше за каждое РДШ, погибшее в матче. Боевой клич: ваша сила героя меняется на «Сила РДШ».', flavor: 'Погибшие РДШ обоих игроков снижают стоимость, но не ниже нуля. Новая сила за 4 маны призывает РДШ 2/5.', rarity: 'legendary', art: 10, custom: true, effect: 'jaina' },
   { id: 'rds-power', name: 'Сила РДШ', cost: 4, kind: 'power', text: 'Призывает РДШ 2/5.', flavor: 'Сила героя Джайны-ассасина. Новому РДШ нужен ход, чтобы подготовиться к атаке.', rarity: 'rare', art: 10, custom: true, effect: 'rds' },
   { id: 'fool-power', name: 'Дибильнутый!', cost: 3, kind: 'power', text: 'Превращает врагов в существ на 5 маны дешевле. Исключена «Хорошая игра.».', flavor: 'Если нужной стоимости нет, выбирается ближайшая меньшая или самое дешёвое доступное существо. Превращение не запускает боевые кличи и предсмертные хрипы.', rarity: 'epic', art: 4, custom: true, effect: 'devolve' },
@@ -84,9 +87,10 @@ export function migrateRewardDeck(ids: string[]): string[] {
   }
   return result;
 }
-export function deckError(ids: string[]): string | undefined {
+export function deckError(ids: string[], heroClass?: HeroClass): string | undefined {
   if (ids.length !== 30) return 'В колоде должно быть ровно 30 карт.';
   if (ids.some(id => !Object.hasOwn(CARD, id) || !['minion', 'spell', 'hero'].includes(CARD[id].kind) || CARD[id].reward)) return 'В колоде есть недоступная карта.';
+  if (heroClass && ids.some(id => !belongsToClass(CARD[id], heroClass))) return `Для колоды «${HERO_CLASSES[heroClass].name}» доступны только общие карты и карты этого класса.`;
   if (ids.some(id => ids.filter(x => x === id).length > deckCopyLimit(CARD[id])))
     return 'Максимум: 3 обычных, 3 редких, 2 эпических и 1 легендарная копия карты.';
 }

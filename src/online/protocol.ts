@@ -5,7 +5,7 @@ import type { HistoryEntity } from '../game/history';
 import { HEROES, knownPower } from '../game/presentation';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
-export const ROOM_PROTOCOL = 6;
+export const ROOM_PROTOCOL = 7;
 export const ROOM_PREFIX = 'memestone-v08-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
@@ -16,8 +16,8 @@ const knownHero = (id: unknown): id is string => typeof id === 'string' && (Obje
 export function roomCode() {
   return Array.from(crypto.getRandomValues(new Uint8Array(6)), n => ROOM_ALPHABET[n % ROOM_ALPHABET.length]).join('');
 }
-export function validDeck(deck: unknown): deck is string[] {
-  return Array.isArray(deck) && deck.length === 30 && deck.every(knownCard) && !deckError(deck);
+export function validDeck(deck: unknown, heroClass?: HeroClass): deck is string[] {
+  return Array.isArray(deck) && deck.length === 30 && deck.every(knownCard) && !deckError(deck, heroClass);
 }
 export function validAction(value: unknown): value is Action {
   if (!value || typeof value !== 'object') return false;
@@ -43,7 +43,7 @@ export function acceptsActionRevision(game: Game | undefined, current: number, r
 }
 export function createRoomGame(hostDeck: string[], guestDeck: string[], hostName: string, guestName: string, seed: number, id: string, mulliganDeadline?: number, classes: { host: HeroClass; guest: HeroClass } = { host: 'mage', guest: 'mage' }) {
   const guestFirst = (seed & 1) === 1;
-  const g = createGame(guestFirst ? guestDeck : hostDeck, seed, guestFirst ? hostDeck : guestDeck, mulliganDeadline);
+  const g = createGame(guestFirst ? guestDeck : hostDeck, seed, guestFirst ? hostDeck : guestDeck, mulliganDeadline, { player: guestFirst ? classes.guest : classes.host, bot: guestFirst ? classes.host : classes.guest });
   if (guestFirst) {
     [g.player, g.bot] = [g.bot, g.player]; g.active = 'bot';
     // Initial draws belong to the swapped seats too. Keep both animation
@@ -157,7 +157,9 @@ export type ClientMessage =
   | { type: 'hello'; protocol: number; name: string; deck: string[]; token: string; cards?: CardDef[]; heroClass?: HeroClass }
   | { type: 'action'; action: Action; revision: number; requestId: string }
   | { type: 'rematch'; deck?: string[]; cards?: CardDef[]; heroClass?: HeroClass }
+  | { type: 'cards-ready'; key: string }
   | { type: 'leave' };
 export type HostMessage =
-  | { type: 'snapshot'; protocol: number; code: string; name: string; opponent: string; game: Game | null; revision: number; rematchSelf: boolean; rematchOpponent: boolean; heroClass?: HeroClass; opponentClass?: HeroClass }
+  | { type: 'snapshot'; protocol: number; code: string; name: string; opponent: string; game: Game | null; revision: number; rematchSelf: boolean; rematchOpponent: boolean; heroClass?: HeroClass; opponentClass?: HeroClass; cardIds?: string[] }
+  | { type: 'cards'; protocol: number; code: string; key: string; cards: CardDef[] }
   | { type: 'reject'; message: string; requestId?: string };

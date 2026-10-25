@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, ChevronLeft, ChevronRight, Crown, Flame, Gem, Shield, Swords } from 'lucide-react';
 import { CARD, RARITY_NAMES, type CardDef } from '../game/cards';
+import { HERO_CLASSES } from '../game/classes';
 import type { InspectionInfo } from '../inspection';
 import Modal from './Modal';
 import WindowPages from './WindowPages';
@@ -34,7 +35,7 @@ export default function CardDetails({ card, info, close, notify }: { card: CardD
   const preview = <div className="detail-card-area"><Card card={card} cost={info?.cost} /></div>;
   return <Modal title={card.name} close={close} className={'card-detail-modal paged-modal' + (card.editor ? ' custom-card-detail' : '')}><WindowPages pages={[
     { id: 'card', label: 'Карта', content: <div className="card-overview">{preview}<div className="card-detail-copy"><h2>{card.name}</h2>
-      <div className="detail-tags"><span className={card.rarity}>{card.rarity === 'legendary' ? <Crown size={12} /> : <Gem size={12} />}{RARITY_NAMES[card.rarity]}</span><span>{card.reward ? 'Награда за задачу' : kindLabel(card.kind)}</span></div>
+      <div className="detail-tags"><span className={card.rarity}>{card.rarity === 'legendary' ? <Crown size={12} /> : <Gem size={12} />}{RARITY_NAMES[card.rarity]}</span><span>{card.reward ? 'Награда за задачу' : kindLabel(card.kind)}</span><span className={'card-class-label ' + (card.heroClass ?? 'neutral')}>{card.heroClass ? HERO_CLASSES[card.heroClass].name : 'Общая карта'}</span></div>
       <p className="effect-description"><CardRules text={card.editor && card.text.length > 260 ? card.text.slice(0, 210) + '… Полное описание — во вкладке «Правила».' : card.text} /></p><div className={`detail-stats ${m ? 'live-unit-stats' : ''}`}><div><span className="mana-mini">{info?.cost ?? card.cost}</span>МАНА</div>
         {card.attack !== undefined && <><div><Swords size={16} /><strong>{m?.attack ?? card.attack}</strong>АТАКА</div><div><Flame size={16} /><strong>{m ? `${m.health}/${m.maxHealth}` : card.health}</strong>ЗДОРОВЬЕ</div></>}
         {!!card.armor && <div><Shield size={16} /><strong>{card.armor}</strong>БРОНЯ</div>}</div><span className="owned-label"><Check size={15} />{card.reward ? 'Можно получить за выполнение задачи' : 'Есть в коллекции'}</span>

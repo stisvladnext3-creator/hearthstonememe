@@ -1,4 +1,5 @@
 import type { CardDef, Effect } from './cards';
+import { validHeroClass } from './classes';
 
 export const TRIGGERS = { play: 'Розыгрыш / боевой клич', death: 'Предсмертный хрип', summon: 'Когда призвано существо', died: 'Когда погибло существо', played: 'Когда разыграна карта', turnStart: 'В начале хода', turnEnd: 'В конце хода', aura: 'Аура' } as const;
 export const OPERATIONS = { damage: 'Нанести урон', heal: 'Восстановить здоровье', buff: 'Изменить атаку / здоровье', silence: 'Наложить немоту', destroy: 'Уничтожить', summon: 'Призвать карту', draw: 'Взять карты', addCard: 'Добавить карту в руку', shuffle: 'Замешать карту в колоду', discard: 'Сбросить карты', purgeDeck: 'Удалить карты из колоды', armor: 'Дать броню', mana: 'Восстановить ману', transform: 'Превратить в карту', devolve: 'Превратить в более дешёвое', discover: 'Раскопать копию из колоды', replacePower: 'Заменить силу героя', briefing: 'Держать в курсе' } as const;
@@ -22,7 +23,7 @@ export interface EditorData {
   quest?: { event: 'summon' | 'death' | 'play'; goal: number; rewardId: string; filter: CardFilter };
 }
 const EFFECTS: Effect[] = ['galinka', 'concede', 'casino', 'trachukcha', 'legendaryHand', 'deathwing', 'maratik', 'bolt', 'heal', 'draw', 'silence', 'armor', 'oy', 'jaina', 'rds', 'devolve', 'purgeZhanna', 'volunteer', 'dragonslayer', 'discoverBlast', 'masik', 'paperArmy', 'briefing', 'rashQuest', 'echoMaxim', 'briefingDraw', 'jainaVolunteer'];
-export const CUSTOM_LIMIT = 60, PACK_LIMIT = 600_000;
+export const CUSTOM_LIMIT = 60, PACK_LIMIT = 2_000_000, JSON_IMPORT_LIMIT = 2_000_000;
 const object = (v: unknown): v is Record<string, any> => !!v && typeof v === 'object' && !Array.isArray(v);
 const integer = (v: unknown, low: number, high: number) => Number.isSafeInteger(v) && Number(v) >= low && Number(v) <= high;
 const text = (v: unknown, max: number) => typeof v === 'string' && v.length <= max && !/[\u0000-\u001f\u007f]/.test(v);
@@ -38,6 +39,7 @@ export function normalizeCustomCard(raw: unknown): CardDef | null {
     || !['minion', 'spell', 'hero', 'power', 'token'].includes(raw.kind) || !integer(raw.cost, 0, 20)
     || !['common', 'rare', 'epic', 'legendary'].includes(raw.rarity) || !integer(raw.art, 0, 11)
     || !text(raw.text, 1800) || !text(raw.flavor, 400) || raw.tribe !== undefined && !text(raw.tribe, 32)
+    || raw.heroClass !== undefined && !validHeroClass(raw.heroClass)
     || raw.effect !== undefined && !EFFECTS.includes(raw.effect) || raw.deathrattle !== undefined && !['rds-guard', 'slime-token', 'randomEnemyDamage'].includes(raw.deathrattle)
     || raw.auraAttack !== undefined && !integer(raw.auraAttack, 0, 20)
     || !object(raw.editor) || raw.editor.version !== 1) return null;
@@ -79,6 +81,7 @@ export function normalizeCustomCard(raw: unknown): CardDef | null {
     editor.quest = { event: q.event, goal: q.goal, rewardId: q.rewardId, filter: f };
   }
   const card: CardDef = { id: raw.id, name: raw.name.trim(), cost: raw.cost, kind: raw.kind, text: raw.text, flavor: raw.flavor, rarity: raw.rarity, art: raw.art, custom: true, editor,
+    ...(raw.heroClass ? { heroClass: raw.heroClass } : {}),
     ...(creature ? { attack: raw.attack, health: raw.health } : {}), ...(raw.kind === 'hero' ? { armor: raw.armor } : {}), ...(raw.tribe ? { tribe: raw.tribe.trim() } : {}),
     ...(raw.effect ? { effect: raw.effect } : {}), ...(raw.deathrattle && creature ? { deathrattle: raw.deathrattle } : {}), ...(raw.auraAttack && creature ? { auraAttack: raw.auraAttack } : {}) };
   for (const key of [...Object.keys(KEYWORDS), 'reward', 'quest'] as const) {

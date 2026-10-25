@@ -46,7 +46,7 @@ try {
   await page.getByLabel('Поиск карт').fill('Проверочная молния');
   await page.getByRole('button', { name: 'Добавить Проверочная молния', exact: true }).click();
   await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
-  await page.getByRole('button', { name: 'В главное меню', exact: true }).click();
+  await page.getByRole('button', { name: 'Назад', exact: true }).click();
   await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Играть', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible();
   await expect(page.locator('.mulligan-choice [data-card-id="' + saved[0].id + '"]')).toHaveCount(1);
@@ -82,7 +82,7 @@ try {
   }
   await page.getByRole('button', { name: 'Мои карты', exact: true }).click();
   await page.getByRole('button', { name: 'Коллекция', exact: true }).click();
-  await page.getByRole('tab', { name: 'Мои карты', exact: true }).click();
+  await page.getByLabel('Тип и редкость карт').selectOption('created');
   await expect(page.locator('.album-card-grid .game-card')).toHaveCount(4);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
   await page.getByRole('button', { name: 'Проверочная молния, 0 маны', exact: true }).click();

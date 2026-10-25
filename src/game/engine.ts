@@ -72,6 +72,7 @@ export function powerProblem(g: Game, side: Side): string | undefined {
   if (p.mana < powerCost(power, g, side)) return `Для силы героя нужно ${powerCost(power, g, side)} маны.`;
   if (power === 'oy' && p.hand.length >= 10) return 'В руке нет места для Смертокрыла: уже 10 карт.';
   if (power === 'rds' && p.board.length >= boardLimit(g)) return `На поле нет места для РДШ: уже ${boardLimit(g)} существ.`;
+  if (power === 'storm' && p.board.length >= boardLimit(g)) return `На поле нет места для элементаля бури: уже ${boardLimit(g)} существ.`;
   if (power === 'fool' && g[other(side)].board.length === 0) return 'У противника нет существ для превращения.';
   const customTargets = customSelectedTargets(g, side, powerCardId(power));
   if (customTargets && !customTargets.length) return 'Для силы героя нет подходящей цели.';
@@ -229,8 +230,8 @@ export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck 
   const playerClass = HERO_CLASSES[classes.player ?? 'mage'], botClass = classes.bot ? HERO_CLASSES[classes.bot] : undefined;
   const g: Game = { id: String(seed), rashDeaths: 0, events: [], player: emptyPlayer(playerClass.hero, playerClass.power), bot: emptyPlayer(botClass?.hero ?? 'boris', botClass?.power ?? 'spark'), active: 'player', turn: 1,
     winner: null, nextUid: 1, rng: seed, log: [], nextLog: 1, customCards: packForCards([...deck, ...opponentDeck]) };
-  g.player.deck = shuffled(g, deckError(deck) ? STARTER_DECK : deck);
-  g.bot.deck = shuffled(g, deckError(opponentDeck) ? BOT_DECK : opponentDeck);
+  g.player.deck = shuffled(g, deckError(deck, classes.player ?? 'mage') ? STARTER_DECK : deck);
+  g.bot.deck = shuffled(g, deckError(opponentDeck, classes.bot ?? 'mage') ? BOT_DECK : opponentDeck);
   for (const side of ['player', 'bot'] as Side[]) {
     const p = g[side], openingSize = mulliganDeadline !== undefined ? 3 : side === 'player' ? 3 : 4;
     // Reserve quests before other guaranteed cards, then deal the random
@@ -568,6 +569,10 @@ export function act(input: Game, side: Side, action: Action): Result {
     }
     if (power === 'oy') { addToHand(g, side, 'deathwing'); record('Ой! Смертокрыл добавлен в руку.', { kind: 'power', target: cardEntity('deathwing', side) }); }
     if (power === 'rds') { summon(g, side, 'rash', 'hero', 'rds-power'); record('Сила РДШ призывает РДШ 2/5.', { kind: 'power', target: cardEntity('rash', side) }); }
+    if (power === 'storm') {
+      const elemental = summon(g, side, 'storm-elemental', 'hero', 'storm-power');
+      record('Зов бури призывает элементаля бури 2/1.', { kind: 'power', target: elemental ? cardEntity('storm-elemental', side, elemental) : undefined });
+    }
     if (power === 'briefing') { const id = p.deck[0]; draw(g, side); record('Сила героя «Взять карту»: добор одной карты.', { kind: 'power', target: id ? cardEntity(id, side) : undefined }); }
     if (CARD[powerId].editor) custom.play(g, side, powerId, undefined, action.target);
     if (power === 'fool') {

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Crown, Flame, Minus, Plus, RotateCcw, Search, Shield, Sparkles, Swords, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Crown, Flame, Layers3, Minus, Paintbrush, Plus, RotateCcw, Search, Shield, Sparkles, Swords, Trash2, X } from 'lucide-react';
 import { CARDS, CARD, STARTER_DECK, deckCopyLimit, deckError, type CardDef } from '../game/cards';
 import { Art, Card } from './Card';
 import { phoneScreen, useViewport } from '../useViewport';
 import { DECK_LIMIT, readyDeck, type SavedDeck } from '../decks';
-import { HERO_CLASSES, type HeroClass } from '../game/classes';
+import { belongsToClass, HERO_CLASSES, matchesClass, type HeroClass } from '../game/classes';
 import HeroClassPicker from './HeroClassPicker';
 import { ClassSymbol } from './DeckPicker';
 import Modal from './Modal';
@@ -27,6 +27,7 @@ export default function Collection({ deckInfo, decks, selectDeck, createDeck, de
   const deck = deckInfo?.cards ?? [];
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [classFilter, setClassFilter] = useState('all');
   const [cost, setCost] = useState<number | null>(null);
   const [building, setBuilding] = useState(false);
   const [draft, setDraft] = useState([...deck]);
@@ -38,19 +39,20 @@ export default function Collection({ deckInfo, decks, selectDeck, createDeck, de
   const size = useViewport(), phone = phoneScreen(size), pageSize = phone ? 4 : 8;
   const [panel, setPanel] = useState(initialPanel);
   const [deckPage, setDeckPage] = useState(1);
-  const deckPageSize = !phone ? 30 : size.width > size.height ? 3 : size.height < 650 ? building ? 4 : 6 : building ? 8 : 10;
-  useEffect(() => setPage(1), [query, filter, cost]);
+  const deckPageSize = !phone ? Math.max(4, Math.floor((size.height - 470) / 24)) : size.width > size.height ? 3 : size.height < 650 ? building ? 4 : 6 : building ? 8 : 10;
+  useEffect(() => setPage(1), [query, filter, cost, classFilter]);
   const filtered = useMemo(() => CARDS.filter(c => {
     const text = `${c.name} ${c.text} ${c.tribe ?? ''}`.toLowerCase();
     return text.includes(query.toLowerCase()) && (filter === 'all' || (filter === 'created' ? !!c.editor : filter === 'custom' ? c.custom : filter === 'legendary' ? c.rarity === 'legendary' : c.kind === filter))
-      && (cost === null || (cost === 7 ? c.cost >= 7 : c.cost === cost));
-  }).sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name, 'ru')), [query, filter, cost, revision]);
+      && matchesClass(c, classFilter) && (cost === null || (cost === 7 ? c.cost >= 7 : c.cost === cost));
+  }).sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name, 'ru')), [query, filter, cost, classFilter, revision]);
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const current = Math.min(page, pages);
   const visible = filtered.slice((current - 1) * pageSize, current * pageSize);
   const shownDeck = building ? draft : deck;
   const add = (c: CardDef) => {
     if (c.kind === 'power' || c.kind === 'token' || c.reward) { notify('Эта карта создаётся во время боя и не добавляется в колоду.'); return; }
+    if (deckInfo && !belongsToClass(c, deckInfo.heroClass)) { notify('Эта карта принадлежит другому классу.'); return; }
     if (draft.length >= 30) { notify('Колода полна. Сначала уберите карту кнопкой «−».'); return; }
     const limit = deckCopyLimit(c);
     if (draft.filter(id => id === c.id).length >= limit) { notify(`Для этой карты разрешено копий: ${limit}.`); return; }
@@ -60,20 +62,25 @@ export default function Collection({ deckInfo, decks, selectDeck, createDeck, de
   const deckPages = Math.max(1, Math.ceil(unique.length / deckPageSize)), shownDeckPage = Math.min(deckPage, deckPages);
   const updateDraft = (ids: string[]) => { setDraft(ids); saveDeck(ids, draftName); };
   const startEditing = (chosen: SavedDeck) => { selectDeck(chosen.id); setDraft([...chosen.cards]); setDraftName(chosen.name); setBuilding(true); setPanel('cards'); setDeckPage(1); };
-  const libraryPageSize = phone ? size.width > size.height ? 3 : size.height < 650 ? 4 : 6 : 6;
+  const libraryPageSize = phone ? size.width > size.height ? 3 : size.height < 650 ? 4 : 6 : size.height < 760 ? 6 : 8;
   const libraryPages = Math.max(1, Math.ceil(decks.length / libraryPageSize)), libraryCurrent = Math.min(libraryPage, libraryPages - 1);
   const newDeck = () => { if (decks.length >= DECK_LIMIT) { notify(`Можно сохранить до ${DECK_LIMIT} колод.`); return; } setNewName('Новая колода'); setNewClass('mage'); setStarter(true); setCreating(true); };
-  return <section className={`collection-page collection-album page-enter phone-panel-${panel}`}>
-    <div className="collection-panel-tabs" role="tablist" aria-label="Разделы коллекции"><button role="tab" aria-selected={panel === 'cards'} onClick={() => setPanel('cards')}>Карты</button><button role="tab" aria-selected={panel === 'deck'} onClick={() => setPanel('deck')}>{building ? `Колода · ${shownDeck.length}/30` : `Мои колоды · ${decks.length}`}</button><button onClick={editCards}>Редактор карт</button><button onClick={back} aria-label="Из коллекции в меню"><ArrowLeft size={17} />Меню</button></div>
+  return <section className={`collection-page collection-album collection-v2 page-enter phone-panel-${panel}`}>
+    <div className="collection-panel-tabs" role="tablist" aria-label="Разделы коллекции"><button role="tab" aria-selected={panel === 'cards'} onClick={() => setPanel('cards')}>Карты</button><button role="tab" aria-selected={panel === 'deck'} onClick={() => setPanel('deck')}>{building ? `Колода · ${shownDeck.length}/30` : `Мои колоды · ${decks.length}`}</button><button onClick={back} aria-label="Из коллекции в меню"><ArrowLeft size={17} />Меню</button></div>
     <div className="album-layout"><div className="album-main">
-      <div className="book-tabs" role="tablist" aria-label="Категории карт">{TABS.map(tab => <button key={tab.id} role="tab" aria-selected={filter === tab.id} className={`book-tab ${tab.id} ${filter === tab.id ? 'active' : ''}`} onClick={() => setFilter(tab.id)} aria-label={tab.label} title={tab.label}>{tab.icon}<span>{tab.label}</span></button>)}</div>
+      <div className="book-tabs class-book-tabs" role="tablist" aria-label="Классы карт">{(Object.keys(HERO_CLASSES) as HeroClass[]).map(id => <button key={id} role="tab" aria-selected={classFilter === id} className={`book-tab class-book-tab ${id} ${classFilter === id ? 'active' : ''}`} onClick={() => setClassFilter(id)} aria-label={`Карты класса ${HERO_CLASSES[id].name}`} title={HERO_CLASSES[id].name}><Art index={HERO_CLASSES[id].art} cardId={HERO_CLASSES[id].hero} /><ClassSymbol heroClass={id} /></button>)}
+        <button role="tab" aria-selected={classFilter === 'neutral'} className={`book-tab neutral ${classFilter === 'neutral' ? 'active' : ''}`} onClick={() => setClassFilter('neutral')} aria-label="Общие карты" title="Общие карты"><BookOpen /></button>
+        <button className="book-tab workshop-brush" onClick={editCards} aria-label="Редактор карт" title="Редактор карт"><Paintbrush /></button>
+        <button role="tab" aria-selected={classFilter === 'class'} className={`book-tab ${classFilter === 'class' ? 'active' : ''}`} onClick={() => setClassFilter('class')} aria-label="Классовые карты" title="Все классовые карты"><Shield /></button>
+        <button role="tab" aria-selected={classFilter === 'all'} className={`book-tab ${classFilter === 'all' ? 'active' : ''}`} onClick={() => setClassFilter('all')} aria-label="Все классы" title="Все карты"><Layers3 /></button>
+      </div>
       <div className="book-paper"><span className="paper-corner tl" /><span className="paper-corner tr" /><span className="paper-corner bl" /><span className="paper-corner br" />
-        <div className="book-heading"><span>❧</span><h1>{filter === 'all' ? 'Моя коллекция' : TABS.find(t => t.id === filter)?.label}</h1><span>❧</span></div>
-        <div className="card-grid album-card-grid">{visible.map(c => <div className="collection-card-wrap" key={c.id}><Card card={c} onClick={() => inspect(c)} /><span className="album-owned" title={c.kind === 'power' || c.kind === 'token' || c.reward ? 'Создаётся во время боя' : 'Доступно копий в колоде'}>{c.reward ? 'Награда за задачу' : c.kind === 'power' ? 'Сила героя' : c.kind === 'token' ? 'Призыв' : `×${deckCopyLimit(c)}`}</span>{building && c.kind !== 'power' && c.kind !== 'token' && !c.reward && <button className="add-card" aria-label={`Добавить ${c.name}`} onClick={() => add(c)}><Plus size={15} /> В колоду <span>{draft.filter(id => id === c.id).length}</span></button>}</div>)}</div>
-        {!filtered.length && <div className="empty-state"><Search size={32} /><h3>Карты спрятались</h3><p>Попробуй другое название или убери фильтры.</p><button className="button secondary" onClick={() => { setQuery(''); setFilter('all'); setCost(null); }}>Сбросить фильтры</button></div>}
+        <div className="book-heading"><span>❧</span><h1>{classFilter === 'all' ? filter === 'all' ? 'Моя коллекция' : TABS.find(t => t.id === filter)?.label : classFilter === 'neutral' ? 'Общие карты' : classFilter === 'class' ? 'Классовые карты' : HERO_CLASSES[classFilter as HeroClass].name}</h1><span>❧</span></div>
+        <div className="card-grid album-card-grid">{visible.map(c => <div className="collection-card-wrap" key={c.id}><Card card={c} onClick={() => inspect(c)} /><span className="album-owned" title={c.kind === 'power' || c.kind === 'token' || c.reward ? 'Создаётся во время боя' : 'Доступно копий в колоде'}>{c.reward ? 'Награда за задачу' : c.kind === 'power' ? 'Сила героя' : c.kind === 'token' ? 'Призыв' : `×${deckCopyLimit(c)}`}</span>{building && c.kind !== 'power' && c.kind !== 'token' && !c.reward && <button className="add-card" aria-label={`Добавить ${c.name}`} disabled={!!deckInfo && !belongsToClass(c, deckInfo.heroClass)} onClick={() => add(c)}><Plus size={15} /> В колоду <span>{draft.filter(id => id === c.id).length}</span></button>}</div>)}</div>
+        {!filtered.length && <div className="empty-state"><Search size={32} /><h3>Карты спрятались</h3><p>Попробуй другое название или убери фильтры.</p><button className="button secondary" onClick={() => { setQuery(''); setFilter('all'); setClassFilter('all'); setCost(null); }}>Сбросить фильтры</button></div>}
         <div className="book-pagination"><button disabled={current <= 1} onClick={() => setPage(current - 1)} aria-label="Предыдущая страница"><ChevronLeft size={25} /></button><span role="status">Страница <b>{current}</b> из {pages}</span><button disabled={current >= pages} onClick={() => setPage(current + 1)} aria-label="Следующая страница"><ChevronRight size={25} /></button></div>
       </div>
-      <div className="book-controls"><div className="mana-filters" aria-label="Стоимость маны"><button className={cost === null ? 'active' : ''} onClick={() => setCost(null)} aria-label="Любая стоимость"><BookOpen size={19} /></button>{Array.from({ length: 8 }, (_, n) => <button key={n} className={cost === n ? 'active' : ''} onClick={() => setCost(cost === n ? null : n)} aria-label={`Стоимость ${n === 7 ? '7 и больше' : n}`}>{n === 7 ? '7+' : n}</button>)}</div>
+      <div className="book-controls"><select className="album-type-filter" aria-label="Тип и редкость карт" value={filter} onChange={e => setFilter(e.target.value)}>{TABS.map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}</select><div className="mana-filters" aria-label="Стоимость маны"><button className={cost === null ? 'active' : ''} onClick={() => setCost(null)} aria-label="Любая стоимость"><BookOpen size={19} /></button>{Array.from({ length: 8 }, (_, n) => <button key={n} className={cost === n ? 'active' : ''} onClick={() => setCost(cost === n ? null : n)} aria-label={`Стоимость ${n === 7 ? '7 и больше' : n}`}>{n === 7 ? '7+' : n}</button>)}</div>
         <label className="search-box"><Search size={19} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Найти карту…" aria-label="Поиск карт" />{query && <button className="icon-button" onClick={() => setQuery('')} aria-label="Очистить поиск"><X size={17} /></button>}</label>
       </div><div className="album-caption"><span>Найдено: {filtered.length}</span><span>Нажми на карту, чтобы прочитать описание</span></div>
     </div>
@@ -87,11 +94,11 @@ export default function Collection({ deckInfo, decks, selectDeck, createDeck, de
       <div className="deck-edit-class"><ClassSymbol heroClass={deckInfo?.heroClass ?? 'mage'} /><strong>{HERO_CLASSES[deckInfo?.heroClass ?? 'mage'].name}</strong><span>{shownDeck.length}/30</span></div>
       <div className="deck-mana-curve" aria-label="Кривая маны">{Array.from({ length: 8 }, (_, n) => <div key={n}><div className="curve-track"><i style={{ height: `${Math.min(100, shownDeck.filter(id => n === 7 ? CARD[id].cost >= 7 : CARD[id].cost === n).length * 13)}%` }} /></div><span>{n === 7 ? '7+' : n}</span></div>)}</div>
       <div className="deck-list">{unique.slice((shownDeckPage - 1) * deckPageSize, shownDeckPage * deckPageSize).map(id => <div key={id} className="deck-row"><span className="mini-mana">{CARD[id].cost}</span><button className="deck-row-name" onClick={() => inspect(CARD[id])}>{CARD[id].name}</button><span className="deck-quantity">×{shownDeck.filter(x => x === id).length}</span><button className="icon-button" aria-label={`Убрать ${CARD[id].name}`} onClick={() => { const copy = [...draft]; copy.splice(copy.indexOf(id), 1); updateDraft(copy); }}><Minus size={16} /></button></div>)}</div>
-      {phone && deckPages > 1 && <div className="deck-pagination"><button aria-label="Предыдущая страница колоды" disabled={shownDeckPage <= 1} onClick={() => setDeckPage(shownDeckPage - 1)}><ChevronLeft size={18} /></button><span>{shownDeckPage} / {deckPages}</span><button aria-label="Следующая страница колоды" disabled={shownDeckPage >= deckPages} onClick={() => setDeckPage(shownDeckPage + 1)}><ChevronRight size={18} /></button></div>}
+      {deckPages > 1 && <div className="deck-pagination"><button aria-label="Предыдущая страница колоды" disabled={shownDeckPage <= 1} onClick={() => setDeckPage(shownDeckPage - 1)}><ChevronLeft size={18} /></button><span>{shownDeckPage} / {deckPages}</span><button aria-label="Следующая страница колоды" disabled={shownDeckPage >= deckPages} onClick={() => setDeckPage(shownDeckPage + 1)}><ChevronRight size={18} /></button></div>}
       {!shownDeck.length && <p className="deck-empty">Нажимай «В колоду» под картами, чтобы собрать свою комбинацию.</p>}
       <p className="deck-rule">Обычная ×3 · Редкая ×3 · Эпическая ×2 · Легендарная ×1. Всего 30 карт.</p><div className="deck-editor-actions"><button className="button primary deck-save" disabled={!draftName.trim()} onClick={() => { saveDeck(draft, draftName); setBuilding(false); setPanel('deck'); notify(deckError(draft) ? 'Черновик сохранён. Для боя нужно 30 карт.' : 'Колода сохранена.'); }}><Check size={17} /> Сохранить колоду</button><button className="text-button deck-reset" onClick={() => updateDraft([...STARTER_DECK])}><RotateCcw size={15} /> Стартовая колода</button><button className="text-button deck-reset" onClick={() => updateDraft([])}>Очистить колоду</button></div>
     </>}
-      <button className="text-button workshop-entry" onClick={editCards}><Plus size={17} />Редактор карт</button><button className="album-back" onClick={back}><ArrowLeft size={18} /> В главное меню</button>
+      <button className="album-back" onClick={back}><ArrowLeft size={18} />Назад</button>
     </aside></div>
     {creating && <HeroClassPicker value={newClass} change={setNewClass} name={newName} changeName={setNewName} starter={starter} changeStarter={setStarter} close={() => setCreating(false)} confirm={() => { const created = createDeck(newClass, newName, starter); if (created) { setDraft([...created.cards]); setDraftName(created.name); setBuilding(true); setPanel('cards'); setCreating(false); setDeckPage(1); } }} />}
     {deleting && <Modal title="Удаление колоды" close={() => setDeleting(null)} className="small-modal"><h2>Удалить «{deleting.name}»?</h2><p>Карты останутся в коллекции.</p><button className="button danger" onClick={() => { deleteDeck(deleting.id); setDeleting(null); setBuilding(false); setPanel('deck'); }}>Удалить колоду</button><button className="button secondary" onClick={() => setDeleting(null)}>Отмена</button></Modal>}

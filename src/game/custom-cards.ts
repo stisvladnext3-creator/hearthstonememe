@@ -7,7 +7,7 @@ let library: CardDef[] = [];
 export const userCards = () => [...library];
 export const isCustomHero = (id: string) => CARD[id]?.kind === 'hero';
 export function validateCardPack(raw: unknown): CardDef[] {
-  if (!Array.isArray(raw) || raw.length > CUSTOM_LIMIT || new TextEncoder().encode(JSON.stringify(raw)).length > PACK_LIMIT) throw new Error('В наборе допустимо до 60 карт и 600 КБ. Уменьши число карт или размер картинок.');
+  if (!Array.isArray(raw) || raw.length > CUSTOM_LIMIT || new TextEncoder().encode(JSON.stringify(raw)).length > PACK_LIMIT) throw new Error('В наборе допустимо до 60 карт и 2000 КБ. Уменьши число карт или размер картинок.');
   const cards = raw.map(normalizeCustomCard);
   if (cards.some(c => !c)) throw new Error('Некорректная карта или правило. Проверь параметры редактора.');
   const result = cards as CardDef[], map = new Map(result.map(c => [c.id, c]));

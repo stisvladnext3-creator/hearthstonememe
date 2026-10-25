@@ -9,8 +9,8 @@ afterEach(() => vi.unstubAllGlobals());
 it('migrates the old deck and its chosen class without losing its composition', () => {
   const old = STARTER_DECK.map(id => id === 'casino' ? 'heal' : id);
   saved.set('memestone.v1.deck', JSON.stringify(old)); saved.set('memestone.v1.hero-class', JSON.stringify('warrior'));
-  const book = loadDeckBook(); expect(book.decks).toHaveLength(3); expect(book.decks[0]).toMatchObject({ name: 'Твои правила', heroClass: 'warrior', cards: old }); expect(book.selectedId).toBe(book.decks[0].id);
-  expect(new Set(book.decks.map(d => d.heroClass)).size).toBe(3);
+  const book = loadDeckBook(); expect(book.decks).toHaveLength(4); expect(book.decks[0]).toMatchObject({ name: 'Твои правила', heroClass: 'warrior', cards: old }); expect(book.selectedId).toBe(book.decks[0].id);
+  expect(new Set(book.decks.map(d => d.heroClass)).size).toBe(4);
   saveDeckBook(book); expect(loadDeckBook()).toEqual(book);
 });
 it('keeps independent same-class decks, names, selection and incomplete drafts across reload', () => {

@@ -1,4 +1,5 @@
 import type { PeerOptions } from 'peerjs';
+import { MESSAGE_LIMIT } from './limits';
 
 export const localRooms = () => ['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).get('localRooms') === '1';
 
@@ -17,6 +18,6 @@ export async function peerRuntime() {
 
 export function readMessage(raw: unknown): unknown {
   if (typeof raw !== 'string') return raw;
-  if (raw.length > 2_000_000) return null;
+  if (raw.length > MESSAGE_LIMIT) return null;
   try { return JSON.parse(raw); } catch { return null; }
 }

@@ -1,13 +1,15 @@
 import mqtt, { type MqttClient } from 'mqtt';
 import { cleanName, ROOM_PREFIX, validCode } from './protocol';
 import type { DirectoryState, PublicRoom } from './directory';
+import { MESSAGE_LIMIT } from './limits';
 
 // Public prototype relay. WSS uses the normal HTTPS port; game messages are
 // end-to-end encrypted, while only room names/codes enter the public directory.
 export const RELAY_URL = 'wss://public.cloud.shiftr.io';
 const ROOT = 'memestone/live-v3';
 const PEERS = `${ROOT}/peers/`, INBOX = `${ROOT}/inbox/`, ROOMS = `${ROOT}/rooms/`;
-const LIMIT = 2_000_000, CHUNK = 24_000;
+const LIMIT = MESSAGE_LIMIT, CHUNK = 24_000;
+const MAX_CHUNKS = Math.ceil((LIMIT + 16) * 4 / 3 / CHUNK);
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 type Listener = (...args: any[]) => void;
 class Events {
@@ -97,7 +99,7 @@ export class RelayConnection extends Events {
     }
     if (frame.t !== 'data' || !this.key || !frame.mid || this.seen.has(frame.mid) || typeof frame.body !== 'string'
       || frame.body.length > CHUNK || !Number.isInteger(frame.i) || !Number.isInteger(frame.n)
-      || frame.n! < 1 || frame.n! > 128 || frame.i! < 0 || frame.i! >= frame.n! || typeof frame.iv !== 'string' || frame.iv.length > 30) return;
+      || frame.n! < 1 || frame.n! > MAX_CHUNKS || frame.i! < 0 || frame.i! >= frame.n! || typeof frame.iv !== 'string' || frame.iv.length > 30) return;
     for (const [id, pending] of this.pieces) if (Date.now() - pending.since > 30_000) this.pieces.delete(id);
     let pending = this.pieces.get(frame.mid);
     if (!pending) { if (this.pieces.size >= 4) return; pending = { parts: Array(frame.n).fill(''), count: 0, iv: frame.iv, zipped: !!frame.z, since: Date.now() }; this.pieces.set(frame.mid, pending); }

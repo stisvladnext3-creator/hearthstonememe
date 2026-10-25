@@ -2,6 +2,7 @@ import { chromium, expect } from '@playwright/test';
 import WebSocket from 'ws';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { readFileSync } from 'node:fs';
+import { largeStormPack } from './large-card-fixture.mjs';
 
 // Two independent browsers use the production relay, never ?localRooms=1.
 // In the managed environment Node supplies the configured proxy and trusted CA
@@ -13,9 +14,18 @@ const errors = [];
 const withCustomCards = process.env.CUSTOM_CARDS === '1';
 const withWarrior = process.env.WARRIOR === '1';
 const withDecks = process.env.CLASS_DECKS === '1';
+const withStorm = process.env.STORM === '1';
 const starter = [...readFileSync(new URL('../src/game/cards.ts', import.meta.url), 'utf8').match(/export const STARTER_DECK = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
 async function participant(viewport, role) {
   const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+  if (withStorm) {
+    const cards = largeStormPack(), deck = starter.map(id => id === 'casino' ? cards[0].id : id);
+    await context.addInitScript(({ cards, deck }) => {
+      if (!localStorage.getItem('memestone.v1.custom-cards')) localStorage.setItem('memestone.v1.custom-cards', JSON.stringify(cards));
+      if (!localStorage.getItem('memestone.v1.deck')) localStorage.setItem('memestone.v1.deck', JSON.stringify(deck));
+      if (!localStorage.getItem('memestone.v1.hero-class')) localStorage.setItem('memestone.v1.hero-class', JSON.stringify('storm'));
+    }, { cards, deck });
+  }
   if (withCustomCards) {
     const rule = { trigger: 'play', operation: 'damage', target: 'selectedEnemy', amount: 3, health: 0, count: 1, chance: 100, filter: { side: 'friendly' } };
     const card = (name, kind) => ({ id: 'custom-' + crypto.randomUUID(), name, kind, cost: 0, text: 'Наносит урон выбранному врагу.', flavor: '', rarity: 'common', art: 10, custom: true, editor: { version: 1, tags: ['Проверка'], rules: [] } });
@@ -49,12 +59,12 @@ async function lobby(page, name, heroClass = 'mage') {
   await page.goto(origin);
   await page.getByRole('button', { name: 'Комнаты', exact: true }).click();
   await page.getByLabel('Имя игрока').fill(name);
-  if (heroClass !== 'mage') {
+  if (heroClass !== 'mage' || withStorm) {
     await page.getByRole('button', { name: 'Выбрать колоду', exact: true }).click();
     const picker = page.getByRole('dialog', { name: 'Выбор колоды', exact: true });
     await picker.locator('.deck-slot.' + heroClass).first().click();
     await picker.getByRole('button', { name: 'Выбрать колоду', exact: true }).click();
-    await expect(page.locator('.room-deck-note')).toContainText(heroClass === 'warrior' ? 'Воин' : 'Чернокнижник');
+    await expect(page.locator('.room-deck-note')).toContainText(heroClass === 'warrior' ? 'Воин' : heroClass === 'storm' ? 'Предвестник бури' : heroClass === 'mage' ? 'Маг' : 'Чернокнижник');
   }
   if (withWarrior && page.viewportSize().width <= 960) await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
 }
@@ -74,16 +84,16 @@ async function findRoom(page, code) {
 }
 async function flow(listed) {
   const host = await participant({ width: 1440, height: 900 }, 'host');
-  const guest = await participant((withWarrior || withDecks) && listed ? { width: 844, height: 390 } : { width: 390, height: 844 }, 'guest');
+  const guest = await participant((withWarrior || withDecks || withStorm) && listed ? { width: 844, height: 390 } : { width: 390, height: 844 }, 'guest');
   const name = `Проверка-${crypto.randomUUID().slice(0, 5)}`;
   try {
-    await lobby(host.page, name, !listed && (withWarrior || withDecks) ? withDecks ? 'warlock' : 'warrior' : 'mage');
+    await lobby(host.page, name, !listed && (withWarrior || withDecks || withStorm) ? withStorm ? 'storm' : withDecks ? 'warlock' : 'warrior' : 'mage');
     await host.page.getByLabel('Показывать в списке комнат', { exact: true }).setChecked(listed);
     await host.page.getByRole('button', { name: 'Создать комнату', exact: true }).click();
     await host.page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Создать комнату', exact: true }).click();
     await expect(host.page.locator('.room-code-heading strong')).toBeVisible({ timeout: 25_000 });
     const code = (await host.page.locator('.room-code-heading strong').innerText()).trim();
-    await lobby(guest.page, 'Гость-проверка', listed && (withWarrior || withDecks) ? withDecks ? 'warlock' : 'warrior' : 'mage');
+    await lobby(guest.page, 'Гость-проверка', listed && (withWarrior || withDecks || withStorm) ? withStorm ? 'storm' : withDecks ? 'warlock' : 'warrior' : 'mage');
     if (listed) {
       const row = await findRoom(guest.page, code);
       await row.getByRole('button', { name: `Войти в комнату ${name}`, exact: true }).click();
@@ -96,7 +106,7 @@ async function flow(listed) {
     console.log(`${listed ? 'Public list' : 'Room code'}: two players connected`);
     await host.page.getByRole('button', { name: 'Начать бой', exact: true }).click();
     for (const { page } of [host, guest]) {
-      await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible({ timeout: withStorm ? 45000 : 15_000 });
       await page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click();
     }
     for (const { page } of [host, guest]) await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0, { timeout: 15_000 });
@@ -153,7 +163,16 @@ async function flow(listed) {
       await expect(warlock.locator('.arena-bottom .mana-bar strong')).toHaveText('0/2');
       console.log((listed ? 'Guest' : 'Host') + ' warlock: deck class, self damage, draw, enemy power and mana synchronized');
     }
-    if (!listed || withWarrior || withDecks) {
+    if (withStorm) {
+      const storm = listed ? guest.page : host.page, opponent = listed ? host.page : guest.page;
+      if (storm !== first) { await first.getByRole('button', { name: 'Завершить', exact: true }).click(); await expect(storm.locator('.end-turn')).toBeEnabled(); }
+      await expect(storm.locator('.own-power strong')).toHaveText('Зов бури'); await expect(opponent.locator('.enemy-power strong')).toHaveText('Зов бури');
+      await storm.getByRole('button', { name: 'Сила героя Зов бури, 2 маны', exact: true }).click();
+      await expect(storm.locator('.player-board .unit-attack')).toHaveText('2'); await expect(storm.locator('.player-board .unit-health')).toHaveText('1');
+      await expect(opponent.locator('.enemy-board .unit-health')).toHaveText('1', { timeout: 25000 }); await expect(storm.locator('.arena-bottom .mana-bar strong')).toHaveText('0/2');
+      console.log('Storm summon and class-card pack above 1700 KB synchronized in both browsers');
+    }
+    if (!listed || withWarrior || withDecks || withStorm) {
       if (withWarrior) await guest.page.evaluate(() => localStorage.setItem('memestone.v1.hero-class', JSON.stringify('mage')));
       await guest.page.reload();
       if (await guest.page.getByRole('button', { name: 'Комнаты', exact: true }).isVisible()) await guest.page.getByRole('button', { name: 'Комнаты', exact: true }).click();

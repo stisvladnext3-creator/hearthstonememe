@@ -1,0 +1,31 @@
+.hero-class-choice.storm,.deck-slot.storm { background: radial-gradient(ellipse at top,#183b70,#08172f 85%); border-color: #416da7; }
+.deck-hero-preview.storm { background: radial-gradient(ellipse at center,#163c71,#081b3d 80%,#071325); border-color: #4772a6; }
+.deck-library-list .album-deck-banner.storm { border-color: #3e72b9; background: #0c2348; }.deck-slot.storm .deck-slot-class { color: #cce5ff; }.deck-slot.storm.chosen { border-color: #85c7ff; }
+.hero-class-choices { grid-template-columns: repeat(4,minmax(0,1fr)); }.new-deck-modal .hero-class-choices { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.hero-class-choice > strong { overflow-wrap: anywhere; }.deck-slot.storm .deck-slot-class small { max-width: 105px; line-height: 1.05; }.deck-preview-class { line-height: 1.1; }
+.collection-class-filter { display: flex; align-items: center; justify-content: flex-end; gap: 10px; height: 40px; min-height: 40px; padding: 4px 12px; color: #f7dfae; font-size: 14px; }
+.collection-class-filter select { min-width: 185px; max-width: 70%; height: 32px; background: #382c22; border: 1px solid #c7ab70; color: #fff0d0; border-radius: 5px; padding: 3px 8px; font-size: 14px; }.collection-class-filter.storm select { background: #10274e; border-color: #548bcd; color: #e0efff; }
+.collection-card-wrap .add-card:disabled { opacity: .45; cursor: default; }.storm-power .power-orb { border-color: #548bd2; background: #0d2450; }
+.fx-storm-vortex { position: absolute; width: 145px; height: 145px; transform: translate(-50%,-50%); animation: storm-bloom 950ms both; filter: drop-shadow(0 0 8px #2478e7) drop-shadow(0 0 18px #8dceff88); }
+.fx-storm-vortex > svg { width: 100%; height: 100%; overflow: visible; }.wind-halo { fill: #092b6833; stroke: #327bdb; stroke-width: 2; stroke-dasharray: 13 5; transform-origin: 80px 80px; animation: storm-turn 950ms ease-out both; }
+.wind-spiral { transform-origin: 80px 80px; animation: storm-turn 950ms cubic-bezier(.15,.7,.3,1) both; fill: none; stroke: #b5e7ff; stroke-width: 7; stroke-linecap: round; }.wind-spiral > path:nth-child(2) { stroke: #397be6; stroke-width: 11; }.wind-spiral > path:nth-child(3) { stroke: #effaff; stroke-width: 4; }
+.wind-sparks { transform-origin: 80px 80px; animation: storm-turn 950ms linear reverse both; fill: #d3efff; stroke: #6baaff; stroke-width: 2; }
+.hero-power .power-orb.combat-wind { opacity: 1; animation: storm-orb 950ms both; }
+@keyframes storm-turn { from { transform: rotate(-200deg); } to { transform: rotate(760deg); } }
+@keyframes storm-bloom { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.12); } 20% { opacity: .9; } 45% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.25); } }
+@keyframes storm-orb { 0%,100% { filter: none; } 45% { filter: brightness(1.8) drop-shadow(0 0 14px #438af6); } }
+@media(max-width:960px), (max-height:600px) and (max-width:1180px) {
+  .collection-class-filter { height: 30px; min-height: 30px; padding: 2px 6px; gap: 7px; font-size: 12px; }.collection-class-filter select { height: 27px; min-width: 160px; font-size: 12px; }.fx-storm-vortex { width: 105px; height: 105px; }
+  .new-deck-modal .hero-class-choices { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(2,minmax(0,1fr)); gap: 7px; }
+  .new-deck-modal .hero-class-choice { padding: 5px; gap: 4px; }.new-deck-modal .class-portrait { width: 46px; height: 50px; }.new-deck-modal .hero-class-choice > strong { font-size: 14px; }.new-deck-modal .class-power-name { font-size: 12px; }.new-deck-modal .class-power-cost { font-size: 10px; }
+  .deck-preview-class { font-size: 12px; }.deck-slot.storm .deck-slot-class { gap: 3px; }.deck-slot.storm .deck-slot-class small { font-size: 10px; max-width: 95px; }
+}
+@media(max-height:600px) and (min-width:601px) and (max-width:1180px), (max-width:960px) and (orientation:landscape) {
+  .new-deck-modal .hero-class-choices { grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: minmax(0,1fr); }.new-deck-modal .hero-class-choice { grid-template-columns: 36px minmax(0,1fr); padding: 5px; }.new-deck-modal .class-portrait { width: 36px; height: 50px; }.new-deck-modal .hero-class-choice > strong { font-size: 13px; }.new-deck-modal .class-power-name { font-size: 11px; }.new-deck-modal .class-power-cost { font-size: 9px; }
+  .collection-class-filter { height: 25px; min-height: 25px; }.collection-class-filter select { height: 23px; }
+}
+@media(max-width:650px) and (orientation:landscape) { .new-deck-modal .hero-class-choices { grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(2,minmax(0,1fr)); }.new-deck-modal .class-portrait { width: 32px; height: 40px; }.new-deck-modal .hero-class-choice { grid-template-columns: 32px minmax(0,1fr); gap: 1px 5px; padding: 3px 5px; } }
+@media(max-width:600px) and (orientation:landscape) {
+ .card-editor .window-tabs { display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;padding-bottom:3px; }.card-editor .window-tabs button { height:25px;min-height:25px;padding:2px;font-size:10px; }.editor-heading h1 { font-size:15px; }.editor-form-grid { grid-template-columns:repeat(4,minmax(0,1fr));gap:5px; }.editor-field { font-size:10px;gap:2px; }.editor-field input,.editor-field select { height:27px;min-height:27px;font-size:13px;padding:3px 4px; }.card-editor .window-panel { padding:6px; }.editor-save .button { min-height:28px;height:28px; }.card-editor { gap:4px; }.editor-save p { font-size:9px; }
+}
+.hero-panel.hero-storm-herald .hero-label { width:min(30cqw,185px); }.hero-panel.hero-storm-herald .hero-label strong { font-size:clamp(11px,1.8cqh,18px);white-space:normal;line-height:1.12; }

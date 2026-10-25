@@ -44,7 +44,7 @@ test('home, illustrated card details, rules and keyboard dialog dismissal', asyn
 test('collection searches, categories and mana filters work together', async ({ page }) => {
   await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
   await expect(page.locator('.card-grid .game-card')).toHaveCount(8);
-  await page.getByRole('tab', { name: 'Твои мемы' }).click();
+  await page.getByLabel('Тип и редкость карт').selectOption('custom');
   await expect(page.locator('.card-grid .game-card')).toHaveCount(8);
   await page.getByLabel('Поиск карт').fill('рус');
   await expect(page.locator('.card-grid .game-card')).toHaveCount(1);
@@ -832,7 +832,7 @@ for (const width of [1440, 390]) for (const appearance of ['signature', 'diamond
   const legends = CARDS.filter(c => c.rarity === 'legendary');
   await page.addInitScript(choices => localStorage.setItem('memestone.v1.card-appearances', JSON.stringify(choices)), Object.fromEntries(legends.map(c => [c.id, appearance])));
   await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click();
-  await page.getByRole('tab', { name: 'Легендарные', exact: true }).click();
+  await page.getByLabel('Тип и редкость карт').selectOption('legendary');
   await page.evaluate(() => document.fonts.ready);
   const visited = new Set<string>();
   for (;;) {

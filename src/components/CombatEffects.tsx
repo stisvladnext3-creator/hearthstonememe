@@ -49,6 +49,11 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
           orb?.classList.add('combat-forge');
           timers.current.push(window.setTimeout(() => orb?.classList.remove('combat-forge'), 1000));
         }
+        if (event.kind === 'power' && event.cardId === 'storm-power') {
+          const orb = document.querySelector<HTMLElement>(`[data-combat-anchor="${sourceKey}"]`);
+          orb?.classList.add('combat-wind');
+          timers.current.push(window.setTimeout(() => orb?.classList.remove('combat-wind'), 1000));
+        }
         if (['damage', 'power', 'transform'].includes(event.kind)) {
           const el = document.querySelector<HTMLElement>(`[data-combat-anchor="${targetKey}"]`);
           const cls = event.kind === 'damage' ? 'combat-hit' : event.kind === 'power' && event.cardId === 'armor-power' ? 'combat-armor' : event.kind === 'power' && event.cardId === 'spark-power' ? 'combat-arcane' : 'combat-magic';
@@ -76,6 +81,9 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
     const width = e.kind === 'summon' ? to.width : from.width;
     const height = e.kind === 'summon' ? to.height : from.height;
     const style = { '--fx-dx': `${dx}px`, '--fx-dy': `${dy}px`, left: from.x + (from.width - width) / 2, top: from.y + (from.height - height) / 2, width, height } as CSSProperties;
+    if (e.kind === 'power' && e.cardId === 'storm-power') return <div key={e.id} data-fx="storm-vortex" className="fx-storm-vortex" style={{ left: from.x + from.width / 2, top: from.y + from.height / 2 }}>
+      <svg viewBox="0 0 160 160"><circle className="wind-halo" cx="80" cy="80" r="58" /><g className="wind-spiral"><path d="M80 80C53 85 46 60 62 48C92 25 126 60 111 89C89 133 31 113 25 78C17 30 68 2 110 26" /><path d="M80 80C107 75 114 100 98 112C68 135 34 100 49 71C71 27 129 47 135 82C143 130 92 158 50 134" /><path d="M80 80C62 53 95 42 108 60C125 85 103 114 78 105C40 90 42 38 78 25" /></g><g className="wind-sparks">{[0, 72, 144, 216, 288].map(angle => <path key={angle} transform={`rotate(${angle} 80 80)`} d="m80 12-5 17 10-4-6 15" />)}</g></svg>
+    </div>;
     if (e.kind === 'power' && e.cardId === 'armor-power') return <div key={e.id} data-fx="warrior-hammer" className="fx-forge-power" style={{ left: from.x + from.width / 2, top: from.y + from.height / 2, '--forge-size': `${Math.max(42, from.width)}px` } as CSSProperties}>
       <div className="fx-forge-burst">{Array.from({ length: 10 }, (_, i) => <i key={i} style={{ '--ember-angle': `${i * 36}deg`, '--ember-distance': `${32 + i % 3 * 9}px` } as CSSProperties} />)}</div>
       <svg className="fx-warhammer" viewBox="0 0 120 150"><path d="m50 45 12-5 36 98-12 5Z" fill="#6e301c" stroke="#29130b" strokeWidth="4" /><path d="m76 98 13-5m-9 16 13-5m-9 16 13-5" stroke="#d99f4b" strokeWidth="5" /><path d="m8 26 13-16 58-5 20 17-2 38-17 15-58-4L9 56Z" fill="#252a35" stroke="#ecb95e" strokeWidth="4" /><path d="m22 18 54-5 14 13-53 8-18 26Z" fill="#74808c" /><path d="m37 34 53-8-1 31-13 10-40-2Z" fill="#4b5665" /><path d="m58 24-10 20 15-3-6 19 22-29-15 3 6-13Z" fill="#ffb444" stroke="#fff0a2" strokeWidth="2" /></svg>

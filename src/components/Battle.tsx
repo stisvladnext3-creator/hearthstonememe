@@ -28,7 +28,7 @@ function Mana({ player, compact = false }: { player: Player; compact?: boolean }
 function Hero({ player, side, targetable, onClick, active, inspect }: { player: Player; side: Side; targetable: boolean; onClick: () => void; active: boolean; inspect: Inspect }) {
   const gesture = useLongPress(() => inspect(heroCard(player.hero), { zone: 'hero', owner: side, note: player.powerSilenceTurns ? `Сила героя отключена немотой. Осталось своих ходов: ${player.powerSilenceTurns}.` : undefined }));
   const hero = heroDefinition(player.hero);
-  return <div className={`hero-panel ${side} ${active ? 'active' : ''}`}>
+  return <div className={`hero-panel hero-${player.hero} ${side} ${active ? 'active' : ''}`}>
     <div className="hero-label"><strong>{player.name ?? hero.name}</strong><span>{player.powerSilenceTurns ? `Сила отключена: ещё ${player.powerSilenceTurns} ${player.powerSilenceTurns === 1 ? 'ход' : 'хода'}` : player.name ? hero.name : hero.title}</span></div>
     <button data-combat-anchor={`${side}:hero`} className={`hero-portrait ${targetable ? 'targetable' : ''}`} onClick={onClick} aria-label={`${side === 'bot' ? 'Герой противника' : 'Ваш герой'}: ${player.health} здоровья${targetable ? ', атаковать' : ''}`} aria-disabled={!targetable} {...gesture}>
       <Art index={hero.art} cardId={player.hero} /><span className="hero-hp"><Flame size={14} />{Math.max(0, player.health)}</span>

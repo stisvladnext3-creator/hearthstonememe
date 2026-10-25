@@ -122,3 +122,18 @@
   .collection-v2 .book-paper { padding:3px 2px 1px; border-width:3px; }
   .collection-v2 .book-heading > span { display:none; }
 }
+
+/* Give the chevrons their own box instead of overflowing the round button. */
+.collection-v2 .book-pagination { height: 30px; min-height: 30px; align-items: center; }
+.collection-v2 .book-pagination > button {
+  display: grid; place-items: center; width: 28px; height: 28px; min-width: 28px;
+  flex: 0 0 28px; padding: 0; line-height: 1; box-sizing: border-box;
+}
+.collection-v2 .book-pagination > button > svg { display: block; width: 20px; height: 20px; }
+.collection-v2 .book-pagination > span { font-size: inherit; line-height: 1.2; white-space: nowrap; }
+.collection-v2 .book-pagination b { font-size: inherit; }
+@media(max-width:960px),(max-height:600px) and (max-width:1180px) {
+  .collection-v2 .book-pagination { height: 28px; min-height: 28px; }
+  .collection-v2 .book-pagination > button { width: 26px; height: 26px; min-width: 26px; flex-basis: 26px; }
+  .collection-v2 .book-pagination > button > svg { width: 18px; height: 18px; }
+}

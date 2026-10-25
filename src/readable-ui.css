@@ -139,7 +139,23 @@
   .editor-home .editor-heading h1 { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 }
 @media(max-height:650px) and (orientation:portrait) {
+  .profile-metric { padding:8px;gap:5px; }
   .profile-metric > span { font-size:12px; }
   .profile-metric > strong { font-size:24px; }
   .readable-profile .profile-explanation p { font-size:11px; }
+}
+
+/* Keep all page content inside the light paper, beyond the illustrated rim. */
+.modal.readable-profile, .modal.handbook-modal { padding: 34px; }
+.modal.readable-profile > h2 { margin: 0; }
+.modal.readable-profile > .modal-close, .modal.handbook-modal > .modal-close { top: 18px; right: 22px; }
+@media(max-width:960px),(max-height:600px) and (max-width:1180px) {
+  .modal.readable-profile, .modal.handbook-modal {
+    padding: max(50px,env(safe-area-inset-top)) max(28px,env(safe-area-inset-right)) max(26px,env(safe-area-inset-bottom)) max(28px,env(safe-area-inset-left));
+  }
+  .modal.readable-profile > .modal-close, .modal.handbook-modal > .modal-close { top: 18px; right: 22px; width: 28px; height: 28px; }
+  .modal.readable-profile > .fullscreen-button, .modal.handbook-modal > .fullscreen-button { top: 18px; right: 58px; width: 28px; height: 28px; }
+}
+@media(max-height:600px) and (orientation:landscape) {
+  .modal.readable-profile, .modal.handbook-modal { padding-top: 50px; padding-bottom: 22px; }
 }

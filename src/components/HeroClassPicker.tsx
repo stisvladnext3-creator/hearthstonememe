@@ -11,7 +11,7 @@ export default function HeroClassPicker({ value, change, confirm, close, start =
     <div className="hero-class-choices" aria-label="Доступные классы">{(Object.keys(HERO_CLASSES) as HeroClass[]).map(id => {
       const option = HERO_CLASSES[id], warrior = id === 'warrior';
       return <button key={id} className={'hero-class-choice ' + id + (value === id ? ' selected' : '')} aria-label={option.name} aria-pressed={value === id} onClick={() => change(id)}>
-        <span className="class-portrait"><Art index={option.art} />{warrior ? <Shield /> : <Sparkles />}</span>
+        <span className="class-portrait"><Art index={option.art} cardId={option.hero} />{warrior ? <Shield /> : <Sparkles />}</span>
         <strong>{option.name}</strong><span className="class-power-name">{option.powerName}</span><p>{option.description}</p><span className="class-power-cost">{option.cost} маны · раз за ход</span>{value === id && <Check className="class-selected-mark" size={19} />}
       </button>;
     })}</div>

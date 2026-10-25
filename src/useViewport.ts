@@ -6,6 +6,9 @@ export function useViewport() {
   useEffect(() => {
     const update = () => setSize(measure());
     window.addEventListener('resize', update); window.visualViewport?.addEventListener('resize', update);
+    // Rotation or browser chrome can resize the screen between the initial
+    // render and listener registration. Re-measure after subscribing.
+    update();
     return () => { window.removeEventListener('resize', update); window.visualViewport?.removeEventListener('resize', update); };
   }, []);
   return size;

@@ -28,11 +28,14 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Test game rules
-        if: ${{ !contains(github.event.head_commit.message, '[connection-only]') && !contains(github.event.head_commit.message, '[editor-checks]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[connection-only]') && !contains(github.event.head_commit.message, '[editor-checks]') && !contains(github.event.head_commit.message, '[hero-effects]') }}
         run: npm test
       - name: Test editor, classes and room protocol
         if: ${{ contains(github.event.head_commit.message, '[editor-checks]') }}
         run: npm run test:editor
+      - name: Test hero powers and spell targets
+        if: ${{ contains(github.event.head_commit.message, '[hero-effects]') }}
+        run: npm run test:hero-effects
       - name: Configure GitHub Pages
         id: pages
         uses: actions/configure-pages@v5

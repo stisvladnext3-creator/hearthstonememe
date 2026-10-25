@@ -23,7 +23,7 @@ export function copyCardTemplate(source: CardDef): CardDef {
   }
   if (source.kind === 'power' && !source.editor) {
     delete c.effect; delete c.editor.legacyText;
-    c.editor.rules = [source.id === 'spark-power' ? rule({ operation: 'damage', target: 'selectedEnemy', amount: 1 })
+    c.editor.rules = [source.id === 'spark-power' ? rule({ operation: 'damage', target: 'selectedCharacter', amount: 1 })
       : source.effect === 'armor' ? rule({ operation: 'armor', target: 'ownHero', amount: 2 })
       : source.effect === 'rds' ? rule({ operation: 'summon', target: 'ownHero', cardId: 'rash' })
       : source.effect === 'oy' ? rule({ operation: 'addCard', target: 'ownHero', cardId: 'deathwing' })

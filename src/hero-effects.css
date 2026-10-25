@@ -1,0 +1,26 @@
+/* Hero powers originate from their actual icons on either side of the table. */
+.fx-forge-power { position: absolute; width: 0; height: 0; --forge-size: 58px; }
+.fx-warhammer { position: absolute; width: calc(var(--forge-size) * 1.8); height: calc(var(--forge-size) * 2.25); left: calc(var(--forge-size) * -.52); top: calc(var(--forge-size) * -.5); transform-origin: 75% 90%; filter: drop-shadow(0 3px 3px #160b08) drop-shadow(0 0 7px #ff9a40aa); animation: forge-hammer 900ms both; }
+.fx-forge-burst { position: absolute; left: 0; top: 0; }
+.fx-forge-burst::before { content: ''; position: absolute; width: calc(var(--forge-size) * 1.65); height: calc(var(--forge-size) * 1.65); border-radius: 50%; background: radial-gradient(circle,#fff1b9 0,#ffcc5b88 24%,#ff68196b 46%,transparent 69%); animation: forge-flash 900ms both; }
+.fx-forge-burst > i { position: absolute; width: 4px; height: 13px; border-radius: 50%; background: #ffcf65; box-shadow: 0 0 6px #ff5e15; animation: forge-ember 900ms both; }
+.fx-armor-gain { position: absolute; width: 120px; left: -60px; top: -20px; text-align: center; font-family: 'Russo One',sans-serif; font-size: 27px; color: #fff0b3; text-shadow: 0 2px 3px #29100a,0 0 13px #ff6819; animation: forge-armor 950ms both; }
+.fx-armor-gain > span { font-size: 13px; }
+.hero-power .power-orb.combat-forge { opacity: 1; animation: forge-orb 900ms both; }
+.combat-armor { animation: forge-hero 850ms both; }
+.combat-arcane { animation: arcane-glow 850ms both; }
+.fx-arcane-flight { position: absolute; width: 0; height: 0; animation: arcane-flight 850ms linear both; }
+.fx-arcane-arrow { position: absolute; width: 100px; height: 34px; left: -93px; top: -17px; transform: rotate(var(--arrow-angle)); transform-origin: 93% 50%; filter: drop-shadow(0 0 4px #f3c2ff) drop-shadow(0 0 11px #982bff); }
+.fx-arcane-impact { position: absolute; width: 70px; height: 70px; border-radius: 50%; border: 3px solid #dfb4ff; box-shadow: 0 0 13px #9e36ff,inset 0 0 14px #cc63ff; background: radial-gradient(#f2d5ffb0,#9c28e955,transparent 65%); animation: arcane-impact 850ms both; }
+.fx-arcane-impact > i { position: absolute; inset: -12px; border: 2px solid #b95dff; border-radius: 50%; transform: rotate(45deg) scaleX(.35); }
+.fx-arcane-impact > i:nth-child(2) { transform: rotate(-45deg) scaleX(.35); }.fx-arcane-impact > i:nth-child(3) { transform: scaleX(.35); }
+@keyframes forge-hammer { 0% { opacity: 0; transform: translate(16%,-25%) rotate(55deg); } 12% { opacity: 1; transform: translate(16%,-25%) rotate(55deg); } 34% { transform: translate(0,0) rotate(0); } 43% { transform: translate(3%,-8%) rotate(9deg); } 54% { opacity: 1; transform: translate(0,0) rotate(0); } 85%,100% { opacity: 0; transform: translate(12%,-25%) rotate(23deg); } }
+@keyframes forge-flash { 0%,25% { opacity: 0; transform: translate(-50%,-50%) scale(.15); } 36% { opacity: 1; transform: translate(-50%,-50%) scale(1); } 76%,100% { opacity: 0; transform: translate(-50%,-50%) scale(1.5); } }
+@keyframes forge-ember { 0%,29% { opacity: 0; transform: rotate(var(--ember-angle)) translateY(0); } 37% { opacity: 1; } 90%,100% { opacity: 0; transform: rotate(var(--ember-angle)) translateY(calc(var(--ember-distance) * -1.5)) scale(.3); } }
+@keyframes forge-orb { 0%,26%,100% { filter: none; translate: 0 0; } 35% { filter: brightness(2.2) drop-shadow(0 0 13px #ff982a); translate: 0 3px; } 47% { filter: brightness(1.4) drop-shadow(0 0 7px #ff671a); translate: 0 -2px; } 65% { filter: none; translate: 0 0; } }
+@keyframes forge-hero { 0%,28%,100% { filter: none; } 46% { filter: brightness(1.4) drop-shadow(0 0 18px #ff9f33); } }
+@keyframes arcane-glow { 0%,29%,100% { filter: none; } 43% { filter: brightness(1.7) drop-shadow(0 0 16px #b657ff); } }
+@keyframes forge-armor { 0%,32% { opacity: 0; transform: translate(var(--armor-dx),var(--armor-dy)); } 47%,70% { opacity: 1; transform: translate(var(--armor-dx),calc(var(--armor-dy) - 25px)); } 100% { opacity: 0; transform: translate(var(--armor-dx),calc(var(--armor-dy) - 50px)); } }
+@keyframes arcane-flight { 0% { opacity: 0; transform: translate(0,0) scale(.6); } 9% { opacity: 1; transform: translate(0,0) scale(1); } 38% { opacity: 1; transform: translate(var(--fx-dx),var(--fx-dy)) scale(1); } 47%,100% { opacity: 0; transform: translate(var(--fx-dx),var(--fx-dy)) scale(.4); } }
+@keyframes arcane-impact { 0%,29% { opacity: 0; transform: translate(-50%,-50%) scale(.1); } 40% { opacity: 1; transform: translate(-50%,-50%) scale(.8) rotate(20deg); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.5) rotate(85deg); } }
+@media(max-width:600px) { .fx-arcane-arrow { width: 75px; height: 26px; left: -70px; top: -13px; }.fx-arcane-impact { width: 48px; height: 48px; }.fx-armor-gain { font-size: 22px; } }

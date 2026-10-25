@@ -296,6 +296,7 @@ export function legalTargets(g: Game, action: 'attack' | 'bolt' | 'silence' | 's
   if (action === 'echoMaxim') return g[g.active].board.map(m => m.uid);
   if (action === 'masik') return ['hero', 'own-hero', ...g[g.active].board.map(m => m.uid), ...enemies.map(m => m.uid)];
   if (action === 'silence') return [...g[g.active].board, ...enemies].map(m => m.uid);
+  if (action === 'spark' || action === 'bolt') return ['hero', ...(action === 'spark' ? ['own-hero' as const] : []), ...g[g.active].board.map(m => m.uid), ...enemies.map(m => m.uid)];
   const taunts = enemies.filter(m => m.taunt);
   if (action === 'attack' && taunts.length) return taunts.map(m => m.uid);
   const attacker = g[g.active].board.find(m => m.uid === attackerUid);
@@ -356,7 +357,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     const fullHand = p.hand.length >= 10;
     addToHand(g, side, action.cardId);
     record(`Раскопка: ${CARD[action.cardId].name} — ${fullHand ? 'копия сгорает: рука полна' : 'копия добавлена в руку'}. Колода не меняется.`, { kind: 'discover', target: cardEntity(action.cardId, side) });
-    if ((!discovery.custom || discovery.custom.afterLegacy) && (discovery.target === 'hero' || enemy.board.some(m => m.uid === discovery.target))) {
+    if ((!discovery.custom || discovery.custom.afterLegacy) && (discovery.target === 'hero' || [...p.board, ...enemy.board].some(m => m.uid === discovery.target))) {
       const target = targetEntity(discovery.target);
       emit(g, { kind: 'spell', side, source: 'hero', cardId: discovery.sourceId, target: anchorFor(discovery.target) });
       hit(discovery.target, 4);
@@ -552,7 +553,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     const problem = powerProblem(g, side);
     if (problem) return fail(problem);
     if (targetNeeded(g) && (action.target === undefined || !abilityTargets(g).includes(action.target))) return fail('Выберите подходящую цель силы героя.');
-    if (power === 'spark' && (action.target === undefined || !legalTargets(g, 'spark').includes(action.target))) return fail('Выберите врага для Искры.');
+    if (power === 'spark' && (action.target === undefined || !legalTargets(g, 'spark').includes(action.target))) return fail('Выберите персонажа для Искры.');
     p.powerUsed = true;
     p.mana -= cost;
     const powerId = powerCardId(power);

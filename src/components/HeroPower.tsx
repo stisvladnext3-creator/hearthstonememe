@@ -20,7 +20,7 @@ export default function HeroPower({ game, side, inspect, unavailableReason, sele
     aria-disabled={enemy ? undefined : !!unavailableReason} {...gesture} onClick={enemy ? open : onClick}
     title={`${power.name}: ${power.text}${note ? ` ${note}` : ''}`}
     aria-label={`${enemy ? 'Сила героя противника' : 'Сила героя'} ${power.name}, ${cost} маны`}>
-    <span className="power-orb"><Art index={power.art} cardId={power.id} /><span>{cost}</span></span>
+    <span className="power-orb" data-combat-anchor={`${side}:power`}><Art index={power.art} cardId={power.id} /><span>{cost}</span></span>
     <strong>{power.name}</strong><small>{status}</small>
   </button>;
 }

@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.12.0",
+  "version": "0.12.1",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -17,6 +17,8 @@
     "test:warrior": "vitest run src/game/warrior.test.ts src/online/protocol.test.ts",
     "test:warrior-ui": "node scripts/check-warrior.mjs",
     "test:warrior-rooms": "WARRIOR=1 node scripts/check-live-connection.mjs",
+    "test:hero-effects": "vitest run src/game/friendly-targets.test.ts src/game/discover.test.ts src/game/warrior.test.ts",
+    "test:hero-effects-ui": "node scripts/check-hero-effects.mjs",
     "test:editor-ui": "node scripts/check-editor.mjs",
     "test:custom-rooms": "CUSTOM_CARDS=1 node scripts/check-live-connection.mjs",
     "rooms:signaling": "node scripts/signaling.mjs"

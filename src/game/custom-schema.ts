@@ -40,7 +40,7 @@ export function normalizeCustomCard(raw: unknown): CardDef | null {
     || !['common', 'rare', 'epic', 'legendary'].includes(raw.rarity) || !integer(raw.art, 0, 11)
     || !text(raw.text, 1800) || !text(raw.flavor, 400) || raw.tribe !== undefined && !text(raw.tribe, 32)
     || raw.heroClass !== undefined && !validHeroClass(raw.heroClass)
-    || raw.effect !== undefined && !EFFECTS.includes(raw.effect) || raw.deathrattle !== undefined && !['rds-guard', 'slime-token', 'randomEnemyDamage'].includes(raw.deathrattle)
+    || raw.effect !== undefined && !EFFECTS.includes(raw.effect) || raw.deathrattle !== undefined && !['rds-guard', 'slime-token', 'randomEnemyDamage', 'clawFuryThree'].includes(raw.deathrattle)
     || raw.auraAttack !== undefined && !integer(raw.auraAttack, 0, 20)
     || !object(raw.editor) || raw.editor.version !== 1) return null;
   const e = raw.editor, creature = raw.kind === 'minion' || raw.kind === 'token';

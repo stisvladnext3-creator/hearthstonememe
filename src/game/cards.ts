@@ -7,7 +7,7 @@ export interface CardDef {
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; heroClass?: HeroClass; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean; reward?: boolean;
-  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; stealth?: boolean; bulky?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage';
+  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; stealth?: boolean; bulky?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage' | 'clawFuryThree';
   editor?: EditorData;
   abilities?: EditorData;
 }
@@ -15,6 +15,11 @@ export interface CardDef {
 export const cardAbilities = (card?: CardDef) => card?.editor ?? card?.abilities;
 
 export const CARDS: CardDef[] = [
+  { id: 'tigerra', name: 'Тигрерра', heroClass: 'cat', cost: 6, kind: 'minion', attack: 6, health: 3, rarity: 'epic', art: 9, tribe: 'Мяу', frame: 'simple', deathrattle: 'clawFuryThree',
+    text: 'Боевой клич: 3 урона герою противника. Предсмертный хрип: бесплатно активирует «Ярость когтей» — случайная карта за 3 маны в руку и 3 урона вашему герою.',
+    flavor: 'Хрип срабатывает в ход любого игрока, независимо от маны и использования силы. Карта выбирается из общих и карт Кота ровно за 3 маны. Броня поглощает урон; при полной руке копия сгорает. Не меняет ману, силу героя и её отметку использования. Немота существа отменяет хрип.',
+    abilities: { version: 1, tags: ['Мяу'], legacyText: 'Предсмертный хрип: бесплатно активирует «Ярость когтей» — случайная карта за 3 маны в руку и 3 урона вашему герою.',
+      rules: [{ trigger: 'play', operation: 'damage', target: 'enemyHero', amount: 3, health: 0, count: 1, chance: 100, filter: { side: 'friendly' } }] } },
   { id: 'lizard', name: 'Ящерка', cost: 8, kind: 'minion', attack: 6, health: 7, rarity: 'epic', art: 9, bulky: true, tribe: 'Динозавр', frame: 'simple',
     text: 'Громоздкий.', flavor: 'При атаке существа наносит половину своей текущей атаки его левому и правому соседу, с округлением вверх. Основная цель получает полный урон и отвечает. Соседи не отвечают; маскировка их не защищает. При атаке героя бокового урона нет. Немота отключает «Громоздкого».' },
   { id: 'meowster', name: 'Тёмный мастер Мяустер', heroClass: 'cat', cost: 4, kind: 'minion', attack: 4, health: 5, rarity: 'epic', art: 9, stealth: true, tribe: 'Мяу', frame: 'simple',

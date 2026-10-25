@@ -7,6 +7,7 @@ function generatedAtlas(file: 'a' | 'b', column: number, row: number): SharedArt
   return { path: `art/generated/characters-${file}.png`, format: 'portrait', position: `${column * 100 / 3}% ${row * 100}%`, size: '400% 200%' };
 }
 export const ORIGINAL_ART: Record<string, SharedArtwork> = {
+  tigerra: { path: 'art/generated/tigerra.webp', format: 'portrait', position: 'center 35%' },
   lizard: { path: 'art/generated/lizard.webp', format: 'portrait', position: '65% 30%' },
   meowster: { path: 'art/generated/meowster.webp', format: 'portrait', position: 'center 35%' },
   stegosaurus: { path: 'art/generated/stegosaurus.webp', format: 'portrait', position: '35% 45%' },

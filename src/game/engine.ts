@@ -168,6 +168,21 @@ function resolve(g: Game) {
         emit(g, { kind: 'damage', side: foe, cardId: minion.id, target: { side: foe, uid }, amount: 1 });
         log(g, `Предсмертный хрип «${CARD[minion.id].name}» → ${victim.name}: 1 урон.`, side,
           { actor: cardEntity(minion.id, side, minion), target: victim, amount: 1 });
+      } else if (deathrattle === 'clawFuryThree') {
+        const p = g[side], pool = clawFuryPool(g).filter(c => c.cost === 3);
+        const card = pool[Math.floor(random(g) * pool.length)];
+        const power = powerEntity(p, side, 'clawFury'), full = p.hand.length >= 10;
+        log(g, `Предсмертный хрип «${CARD[minion.id].name}»: бесплатно активирует «Ярость когтей» для карты за 3 маны.`, side,
+          { actor: cardEntity(minion.id, side, minion), target: power });
+        emit(g, { kind: 'power', side, source: 'hero', cardId: 'claw-fury', target: { side, uid: 'hero' } });
+        if (card) {
+          addToHand(g, side, card.id);
+          log(g, `Ярость когтей: ${card.name} (3 маны) ${full ? 'сгорает — рука полна' : 'добавлена в руку'}.`, side,
+            { kind: 'discover', actor: power, target: cardEntity(card.id, side) });
+        }
+        damageHero(p, 3);
+        emit(g, { kind: 'damage', side, cardId: 'claw-fury', target: { side, uid: 'hero' }, amount: 3 });
+        log(g, 'Ярость когтей: 3 урона своему герою.', side, { kind: 'power', actor: power, hero: heroEntity(p, side), target: heroEntity(p, side), amount: 3 });
       } else {
         const token = summon(g, side, deathrattle, undefined, minion.id);
         emit(g, { kind: 'spell', side, source: minion.uid, cardId: minion.id, target: { side, uid: token?.uid ?? 'hero' } });

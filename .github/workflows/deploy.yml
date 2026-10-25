@@ -28,7 +28,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Test game rules
-        if: ${{ !contains(github.event.head_commit.message, '[connection-only]') && !contains(github.event.head_commit.message, '[editor-checks]') && !contains(github.event.head_commit.message, '[hero-effects]') && !contains(github.event.head_commit.message, '[class-decks]') && !contains(github.event.head_commit.message, '[storm-update]') && !contains(github.event.head_commit.message, '[cat-update]') && !contains(github.event.head_commit.message, '[card-update]') }}
+        if: ${{ !contains(github.event.head_commit.message, '[connection-only]') && !contains(github.event.head_commit.message, '[editor-checks]') && !contains(github.event.head_commit.message, '[hero-effects]') && !contains(github.event.head_commit.message, '[class-decks]') && !contains(github.event.head_commit.message, '[storm-update]') && !contains(github.event.head_commit.message, '[cat-update]') && !contains(github.event.head_commit.message, '[card-update]') && !contains(github.event.head_commit.message, '[tigerra]') }}
         run: npm test
       - name: Test editor, classes and room protocol
         if: ${{ contains(github.event.head_commit.message, '[editor-checks]') }}
@@ -48,6 +48,9 @@ jobs:
       - name: Test quests, class cards, stealth and bulky
         if: ${{ contains(github.event.head_commit.message, '[card-update]') }}
         run: npm run test:card-update
+      - name: Test Tigerra battlecry and deathrattle
+        if: ${{ contains(github.event.head_commit.message, '[tigerra]') }}
+        run: npm run test:tigerra
       - name: Configure GitHub Pages
         id: pages
         uses: actions/configure-pages@v5

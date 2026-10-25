@@ -19,6 +19,6 @@ export default function WoodMenu({ resume, start, collection, help, settings, pr
     <button className="wood-side-button collection" onClick={collection}><span className="wood-emblem"><Layers3 /></span><span className="wood-side-caption">Коллекция</span></button>
     <button className="wood-side-button rules" onClick={help}><span className="wood-side-caption">Правила</span><span className="wood-emblem"><BookOpen /></span></button>
     <button className="wood-side-button settings" onClick={settings}><span className="wood-emblem"><Settings2 /></span><span className="wood-side-caption">Настройки</span></button>
-    <div className="wood-bottom-note"><span>MEMESTONE · ТЕСТОВАЯ ВЕРСИЯ 0.14.0</span><span>СДЕЛАНО ДЛЯ СВОИХ</span></div>
+    <div className="wood-bottom-note"><span>MEMESTONE · ТЕСТОВАЯ ВЕРСИЯ 0.16.1</span><span>СДЕЛАНО ДЛЯ СВОИХ</span></div>
   </section>;
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createDeck, DECK_LIMIT, draftError, loadDeckBook, readyDeck, saveDeckBook } from './decks';
-import { STARTER_DECK } from './game/cards';
+import { STARTER_DECK, classDeck } from './game/cards';
 import { act, createGame } from './game/engine';
 
 let saved: Map<string, string>;
@@ -9,7 +9,7 @@ afterEach(() => vi.unstubAllGlobals());
 it('migrates the old deck and its chosen class without losing its composition', () => {
   const old = STARTER_DECK.map(id => id === 'casino' ? 'heal' : id);
   saved.set('memestone.v1.deck', JSON.stringify(old)); saved.set('memestone.v1.hero-class', JSON.stringify('warrior'));
-  const book = loadDeckBook(); expect(book.decks).toHaveLength(5); expect(book.decks[0]).toMatchObject({ name: 'Твои правила', heroClass: 'warrior', cards: old }); expect(book.selectedId).toBe(book.decks[0].id);
+  const book = loadDeckBook(); expect(book.decks).toHaveLength(5); expect(book.decks[0]).toMatchObject({ name: 'Твои правила', heroClass: 'warrior', cards: classDeck(old,'warrior') }); expect(book.selectedId).toBe(book.decks[0].id);
   expect(new Set(book.decks.map(d => d.heroClass)).size).toBe(5);
   saveDeckBook(book); expect(loadDeckBook()).toEqual(book);
 });
@@ -17,7 +17,7 @@ it('keeps independent same-class decks, names, selection and incomplete drafts a
   const a = createDeck('warlock', 'Контроль'), b = createDeck('warlock', 'Агро', false); b.cards = ['regular'];
   saveDeckBook({ version: 1, decks: [a, b], selectedId: b.id }); const book = loadDeckBook();
   expect(book.decks).toEqual([a, b]); expect(book.selectedId).toBe(b.id); expect(readyDeck(b)).toBe(false); expect(readyDeck(a)).toBe(true);
-  book.decks[1].cards.push('heal'); expect(book.decks[0].cards).toEqual(STARTER_DECK);
+  book.decks[1].cards.push('heal'); expect(book.decks[0].cards).toEqual(classDeck(STARTER_DECK,'warlock'));
 });
 it('can persist an empty library after deleting all decks without remigrating the old deck', () => {
   saveDeckBook({ version: 1, decks: [], selectedId: null }); expect(loadDeckBook()).toEqual({ version: 1, decks: [], selectedId: null });

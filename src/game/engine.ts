@@ -1,4 +1,4 @@
-import { BOT_DECK, CARD, STARTER_DECK, deckError } from './cards';
+import { BOT_DECK, CARD, STARTER_DECK, cardAbilities, classDeck, deckError } from './cards';
 import { cardEntity, heroEntity, powerEntity, type HistoryEntry, type HistoryDetails, type HistoryEntity } from './history';
 import { powerCardId, powerKey } from './presentation';
 import { packForCards, registerCardPack } from './custom-cards';
@@ -16,6 +16,7 @@ export interface Minion extends HandCard {
   auraBonus?: number;
   auraSource?: string;
   charge?: boolean; rush?: boolean; enteredTurn?: number; attackedThisTurn?: boolean;
+  stealth?: boolean;
   attackBuff?: number;
   healthBuff?: number;
 }
@@ -105,6 +106,13 @@ function damageHero(p: Player, n: number) {
   const absorbed = Math.min(n, p.armor);
   p.armor -= absorbed;
   p.health -= n - absorbed;
+}
+function reveal(g: Game, side: Side, uid: number) {
+  const m = g[side].board.find(m => m.uid === uid);
+  if (!m?.stealth) return;
+  m.stealth = false;
+  log(g, `${CARD[m.id].name} выходит из маскировки.`, side, { actor: cardEntity(m.id, side, m) });
+  custom.record(g, { kind: 'reveal', side, cardId: m.id, uid, revealed: structuredClone(m) });
 }
 // Deathrattles wait until all casualties have left the battlefield. The queue is
 // transient: no half-resolved actions are saved or copied into the next action.
@@ -204,7 +212,7 @@ function summon(g: Game, side: Side, id: string, source?: number | 'hero', creat
   if (g[side].board.length >= boardLimit(g)) return;
   const c = CARD[id];
   const m: Minion = { id, uid: g.nextUid++, attack: c.attack ?? 0, health: c.health ?? 1,
-    maxHealth: c.health ?? 1, ready: !!(c.charge || c.rush), charge: !!c.charge, rush: !!c.rush, enteredTurn: g.turn, attackedThisTurn: false, taunt: !!c.taunt, cannotAttack: !!c.cannotAttack,
+    maxHealth: c.health ?? 1, ready: !!(c.charge || c.rush), charge: !!c.charge, rush: !!c.rush, enteredTurn: g.turn, attackedThisTurn: false, taunt: !!c.taunt, stealth: !!c.stealth, cannotAttack: !!c.cannotAttack,
     silenced: false, ephemeral: c.effect === 'deathwing', origin: typeof source === 'number' ? 'played' : 'summoned', createdBy };
   g[side].board.push(m);
   emit(g, { kind: 'summon', side, source, target: { side, uid: m.uid }, cardId: id });
@@ -226,13 +234,13 @@ function emptyPlayer(hero: string, power = 'spark'): Player {
   return { health: 30, armor: 0, mana: 0, maxMana: 0, hand: [], deck: [], board: [],
     fatigue: 0, hero, power, powerUsed: false, powerSilenceTurns: 0 };
 }
-const custom = createCustomEngine({ random, log, emit, damageHero, destroy, summon, draw, addToHand, boardLimit });
+const custom = createCustomEngine({ random, log, emit, damageHero, destroy, summon, draw, addToHand, boardLimit, reveal });
 export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck = BOT_DECK, mulliganDeadline?: number, classes: { player?: HeroClass; bot?: HeroClass } = {}): Game {
   const playerClass = HERO_CLASSES[classes.player ?? 'mage'], botClass = classes.bot ? HERO_CLASSES[classes.bot] : undefined;
   const g: Game = { id: String(seed), rashDeaths: 0, events: [], player: emptyPlayer(playerClass.hero, playerClass.power), bot: emptyPlayer(botClass?.hero ?? 'boris', botClass?.power ?? 'spark'), active: 'player', turn: 1,
     winner: null, nextUid: 1, rng: seed, log: [], nextLog: 1, customCards: packForCards([...deck, ...opponentDeck]) };
-  g.player.deck = shuffled(g, deckError(deck, classes.player ?? 'mage') ? STARTER_DECK : deck);
-  g.bot.deck = shuffled(g, deckError(opponentDeck, classes.bot ?? 'mage') ? BOT_DECK : opponentDeck);
+  g.player.deck = shuffled(g, deckError(deck, classes.player ?? 'mage') ? classDeck(STARTER_DECK, classes.player ?? 'mage') : deck);
+  g.bot.deck = shuffled(g, deckError(opponentDeck, classes.bot ?? 'mage') ? classDeck(BOT_DECK, classes.bot ?? 'mage') : opponentDeck);
   for (const side of ['player', 'bot'] as Side[]) {
     const p = g[side], openingSize = mulliganDeadline !== undefined ? 3 : side === 'player' ? 3 : 4;
     // Reserve quests before other guaranteed cards, then deal the random
@@ -294,7 +302,7 @@ export function abilityTargets(g: Game, uid?: number): Target[] {
   return targets && legacy ? targets.filter(t => legacy.includes(t)) : targets ?? legacy ?? [];
 }
 export function legalTargets(g: Game, action: 'attack' | 'bolt' | 'silence' | 'spark' | 'masik' | 'echoMaxim', attackerUid?: number): Target[] {
-  const enemies = g[other(g.active)].board;
+  const enemies = g[other(g.active)].board.filter(m => !m.stealth);
   if (action === 'echoMaxim') return g[g.active].board.map(m => m.uid);
   if (action === 'masik') return ['hero', 'own-hero', ...g[g.active].board.map(m => m.uid), ...enemies.map(m => m.uid)];
   if (action === 'silence') return [...g[g.active].board, ...enemies].map(m => m.uid);
@@ -330,6 +338,7 @@ export function act(input: Game, side: Side, action: Action): Result {
   const enemy = g[enemySide];
   let actor: HistoryEntity = heroEntity(p, side);
   let actingHero: HistoryEntity | undefined;
+  let actingUid: number | undefined;
   const record = (text: string, details: HistoryDetails = {}) => log(g, text, side, { actor, hero: actingHero, ...details });
   const anchorFor = (target: Target): Anchor => target === 'own-hero' ? { side, uid: 'hero' }
     : { side: target === 'hero' || !p.board.some(m => m.uid === target) ? enemySide : side, uid: target };
@@ -339,6 +348,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     return anchor.uid === 'hero' ? heroEntity(owner, anchor.side) : cardEntity(minion!.id, anchor.side, minion);
   };
   const hit = (target: Target, n: number) => {
+    if (n > 0 && actingUid !== undefined) reveal(g, side, actingUid);
     const anchor = anchorFor(target), owner = g[anchor.side];
     if (anchor.uid === 'hero') damageHero(owner, n);
     else { const m = owner.board.find(x => x.uid === anchor.uid); if (m) m.health -= n; }
@@ -379,7 +389,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     const cost = cardCost(g, c.id);
     if (p.mana < cost) return fail('Недостаточно маны.');
     if (c.kind === 'minion' && p.board.length >= boardLimit(g)) return fail(`На поле уже ${boardLimit(g)} существ. ${g.briefing ? 'Действует «Держать в курсе».' : ''}`);
-    if ((c.effect === 'rashQuest' || c.editor?.quest) && p.quest) return fail('Сначала выполните активную задачу.');
+    if ((c.effect === 'rashQuest' || cardAbilities(c)?.quest) && p.quest) return fail('Сначала выполните активную задачу.');
     if (targetNeeded(g, action.uid) && (action.target === undefined || !abilityTargets(g, action.uid).includes(action.target))) return fail('Выберите подходящую цель.');
     if (c.effect === 'echoMaxim' && p.board.length && (action.target === undefined || !legalTargets(g, 'echoMaxim').includes(action.target))) return fail('Выберите своё существо для +1 к атаке.');
     if (c.effect === 'bolt' || c.effect === 'silence' || c.effect === 'discoverBlast' || c.effect === 'masik') {
@@ -390,6 +400,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     actor = cardEntity(c.id, side);
     record(`Разыграна карта «${c.name}» за ${cost} маны.`, { kind: 'play' });
     const body = c.kind === 'minion' ? summon(g, side, c.id, action.uid, c.id) : undefined;
+    actingUid = body?.uid;
     const targetAnchor = action.target !== undefined ? anchorFor(action.target) : { side, uid: 'hero' as const };
     const previousPower = p.power;
     if ((c.kind === 'spell' || c.kind === 'hero' || c.effect === 'masik') && c.effect !== 'discoverBlast') emit(g, { kind: 'spell', side, source: body?.uid ?? action.uid, cardId: c.id, target: targetAnchor });
@@ -523,15 +534,16 @@ export function act(input: Game, side: Side, action: Action): Result {
         break;
       }
     }
-    if (c.editor) {
+    const abilities = cardAbilities(c);
+    if (abilities) {
       if (c.kind === 'hero') {
         p.hero = c.id;
         if (!['jaina', 'maratik', 'trachukcha'].includes(c.effect ?? '')) p.armor += c.armor ?? 0;
-        p.power = c.editor.powerId ? powerKey(c.editor.powerId) : previousPower; p.powerUsed = false; p.powerSilenceTurns = 0;
+        p.power = abilities.powerId ? powerKey(abilities.powerId) : previousPower; p.powerUsed = false; p.powerSilenceTurns = 0;
         record('Герой «' + c.name + '»: +' + (c.armor ?? 0) + ' брони. Сила героя: «' + CARD[powerCardId(p.power)].name + '».', { target: powerEntity(p, side) });
       }
-      if (c.editor.quest) p.quest = { id: c.id, progress: 0 };
-      if (g.discovery?.sourceId === c.id) g.discovery.custom = { rules: c.editor.rules.filter(r => r.trigger === 'play'), sourceUid: body?.uid, afterLegacy: true };
+      if (abilities.quest) p.quest = { id: c.id, progress: 0 };
+      if (g.discovery?.sourceId === c.id) g.discovery.custom = { rules: abilities.rules.filter(r => r.trigger === 'play'), sourceUid: body?.uid, afterLegacy: true };
       else custom.play(g, side, c.id, body?.uid, action.target);
     }
     custom.record(g, { kind: 'play', side, cardId: c.id, uid: body?.uid });
@@ -546,11 +558,19 @@ export function act(input: Game, side: Side, action: Action): Result {
     if (!m || !m.ready || m.cannotAttack || m.attack <= 0) return fail('Это существо пока не может атаковать.');
     if (!legalTargets(g, 'attack', m.uid).includes(action.target)) return fail(m.rush && m.enteredTurn === g.turn && action.target === 'hero' ? 'Натиск позволяет сразу атаковать только существ. Героя можно атаковать со следующего своего хода.' : 'Сначала атакуйте существо с провокацией.');
     const defender = action.target === 'hero' ? null : enemy.board.find(x => x.uid === action.target)!;
-    actor = cardEntity(m.id, side, m);
+    const defenderIndex = defender ? enemy.board.indexOf(defender) : -1;
+    const splash = defender && CARD[m.id].bulky && !m.silenced ? [enemy.board[defenderIndex - 1], enemy.board[defenderIndex + 1]].filter((neighbor): neighbor is Minion => !!neighbor && neighbor.health > 0) : [];
+    const splashDamage = Math.ceil(m.attack / 2);
+    actor = cardEntity(m.id, side, m); actingUid = m.uid;
     const victim = targetEntity(action.target);
     emit(g, { kind: 'attack', side, source: m.uid, target: anchorFor(action.target), cardId: m.id });
     hit(action.target, m.attack);
     if (defender) { m.health -= defender.attack; emit(g, { kind: 'damage', side: enemySide, target: { side, uid: m.uid }, amount: defender.attack }); }
+    if (splashDamage > 0) for (const neighbor of splash) {
+      emit(g, { kind: 'spell', side, source: m.uid, target: { side: enemySide, uid: neighbor.uid }, cardId: m.id });
+      hit(neighbor.uid, splashDamage);
+      record(`Громоздкий: ${CARD[m.id].name} → ${CARD[neighbor.id].name}: ${splashDamage} урона.`, { target: cardEntity(neighbor.id, enemySide, neighbor), amount: splashDamage });
+    }
     m.ready = false;
     m.attackedThisTurn = true;
     record(`${CARD[m.id].name} → ${defender ? CARD[defender.id].name : side === 'player' ? 'герой Бориса' : 'ваш герой'}: ${m.attack} урона.${defender ? ` Ответный удар ${CARD[defender.id].name}: ${defender.attack} урона.` : ''}`, { kind: 'attack', target: victim, amount: m.attack, retaliation: defender?.attack });
@@ -608,7 +628,7 @@ export function act(input: Game, side: Side, action: Action): Result {
         record(`Дибильнутый!: ${CARD[m.id].name} (${CARD[m.id].cost} маны) → ${c.name} (${c.cost} маны). Боевой клич результата не срабатывает.`, { kind: 'transform', target: cardEntity(m.id, enemySide, m), result: cardEntity(c.id, enemySide) });
         emit(g, { kind: 'transform', side, source: 'hero', target: { side: enemySide, uid: m.uid }, cardId: c.id });
         return { id: c.id, uid: g.nextUid++, attack: c.attack!, health: c.health!, maxHealth: c.health!, ready: m.ready || !!(c.charge || c.rush) && !m.attackedThisTurn, charge: !!c.charge, rush: !!c.rush, enteredTurn: m.enteredTurn ?? g.turn - 1, attackedThisTurn: m.attackedThisTurn ?? false,
-          taunt: !!c.taunt, cannotAttack: !!c.cannotAttack, silenced: false, ephemeral: c.effect === 'deathwing', origin: 'transformed', createdBy: 'fool-power' };
+          taunt: !!c.taunt, stealth: !!c.stealth, cannotAttack: !!c.cannotAttack, silenced: false, ephemeral: c.effect === 'deathwing', origin: 'transformed', createdBy: 'fool-power' };
       });
       record('Дибильнутый! Все существа противника превращены в случайных на 5 маны дешевле.', { kind: 'power' });
     }
@@ -655,7 +675,7 @@ export function chooseBotAction(g: Game): Action {
 
   if (g.winner || g.active !== 'bot') return { type: 'end' };
   const p = g.bot;
-  const silenceTarget = g.player.board.find(m => m.taunt || !m.silenced && !!CARD[m.id].auraAttack)
+  const silenceTarget = g.player.board.find(m => !m.stealth && (m.taunt || !m.silenced && !!CARD[m.id].auraAttack))
     ?? p.board.find(m => (m.cannotAttack || m.ephemeral) && !m.silenced && !m.taunt && !CARD[m.id].auraAttack);
   if (g.discovery?.side === 'bot') {
     const score = (id: string) => {
@@ -677,7 +697,7 @@ export function chooseBotAction(g: Game): Action {
     const c = CARD[h.id];
     if (cardCost(g, c.id) > p.mana || c.effect === 'concede') return false;
     if (c.kind === 'minion' && p.board.length >= boardLimit(g)) return false;
-    if ((c.effect === 'rashQuest' || c.editor?.quest) && p.quest) return false;
+    if ((c.effect === 'rashQuest' || cardAbilities(c)?.quest) && p.quest) return false;
     if (targetNeeded(g, h.uid) && abilityTargets(g, h.uid).length === 0) return false;
     if (c.effect === 'paperArmy' && p.board.length >= boardLimit(g)) return false;
     if (c.effect === 'heal' && p.health > 25) return false;
@@ -694,7 +714,7 @@ export function chooseBotAction(g: Game): Action {
     const card = playable[0];
     const effect = CARD[card.id].effect;
     let target: Target | undefined;
-    if (effect === 'bolt' || effect === 'discoverBlast') target = [...g.player.board].filter(m => m.health <= (effect === 'bolt' ? 3 : 4)).sort((a, b) => b.attack - a.attack)[0]?.uid ?? 'hero';
+    if (effect === 'bolt' || effect === 'discoverBlast') target = [...g.player.board].filter(m => !m.stealth && m.health <= (effect === 'bolt' ? 3 : 4)).sort((a, b) => b.attack - a.attack)[0]?.uid ?? 'hero';
     if (effect === 'silence') target = silenceTarget!.uid;
     if (effect === 'masik') target = silenceTarget?.uid ?? 'hero';
     if (effect === 'echoMaxim') target = [...p.board].sort((a, b) => Number(b.ready && !b.cannotAttack) - Number(a.ready && !a.cannotAttack) || b.health - a.health)[0]?.uid;
@@ -710,7 +730,7 @@ export function chooseBotAction(g: Game): Action {
   if (!powerProblem(g, 'bot')) {
     if (activePower(g, 'bot') === 'lifeTap' && (p.health + p.armor <= 2 + (!p.deck.length ? p.fatigue + 1 : 0) || p.hand.length >= 10)) return { type: 'end' };
     if (CARD[powerCardId(activePower(g, 'bot'))].effect === 'clawFury' && (p.health + p.armor <= 3 || p.hand.length >= 10)) return { type: 'end' };
-    const weak = g.player.board.find(m => m.health === 1);
+    const weak = g.player.board.find(m => !m.stealth && m.health === 1);
     if (CARD[powerCardId(activePower(g, 'bot'))].editor) return { type: 'power', target: abilityTargets(g).find(t => t === 'hero') ?? abilityTargets(g)[0] };
     return { type: 'power', target: weak?.uid ?? 'hero' };
   }

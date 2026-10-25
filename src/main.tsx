@@ -19,6 +19,7 @@ import './hero-effects.css';
 import './decks.css';
 import './storm.css';
 import './cat.css';
+import './class-card-colors.css';
 import './collection-album.css';
 
 restoreCustomCards();

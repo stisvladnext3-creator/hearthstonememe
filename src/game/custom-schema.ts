@@ -1,11 +1,11 @@
 import type { CardDef, Effect } from './cards';
 import { validHeroClass } from './classes';
 
-export const TRIGGERS = { play: 'Розыгрыш / боевой клич', death: 'Предсмертный хрип', summon: 'Когда призвано существо', died: 'Когда погибло существо', played: 'Когда разыграна карта', turnStart: 'В начале хода', turnEnd: 'В конце хода', aura: 'Аура' } as const;
+export const TRIGGERS = { play: 'Розыгрыш / боевой клич', death: 'Предсмертный хрип', summon: 'Когда призвано существо', died: 'Когда погибло существо', played: 'Когда разыграна карта', turnStart: 'В начале хода', turnEnd: 'В конце хода', aura: 'Аура', reveal: 'При выходе из маскировки' } as const;
 export const OPERATIONS = { damage: 'Нанести урон', heal: 'Восстановить здоровье', buff: 'Изменить атаку / здоровье', silence: 'Наложить немоту', destroy: 'Уничтожить', summon: 'Призвать карту', draw: 'Взять карты', addCard: 'Добавить карту в руку', shuffle: 'Замешать карту в колоду', discard: 'Сбросить карты', purgeDeck: 'Удалить карты из колоды', armor: 'Дать броню', mana: 'Восстановить ману', transform: 'Превратить в карту', devolve: 'Превратить в более дешёвое', discover: 'Раскопать копию из колоды', replacePower: 'Заменить силу героя', briefing: 'Держать в курсе' } as const;
 export const TARGETS = { selectedEnemy: 'Выбранный враг', selectedFriendly: 'Выбранный союзник', selectedMinion: 'Выбранное существо', selectedCharacter: 'Выбранный персонаж', self: 'Это существо', ownHero: 'Ваш герой', enemyHero: 'Герой противника', friendlyMinions: 'Все ваши существа', enemyMinions: 'Все вражеские существа', allMinions: 'Все существа', friendlyCharacters: 'Все ваши персонажи', enemyCharacters: 'Все враги', allCharacters: 'Все персонажи', randomEnemy: 'Случайный враг', randomFriendly: 'Случайный союзник', randomEnemyMinion: 'Случайное вражеское существо', randomFriendlyMinion: 'Случайное своё существо', event: 'Существо / игрок события' } as const;
 export const SIDES = { friendly: 'Ваши', enemy: 'Противника', any: 'Обоих игроков' } as const;
-export const KEYWORDS = { taunt: 'Провокация', charge: 'Рывок', rush: 'Натиск', echo: 'Эхо', cannotAttack: 'Не может атаковать' } as const;
+export const KEYWORDS = { taunt: 'Провокация', charge: 'Рывок', rush: 'Натиск', echo: 'Эхо', cannotAttack: 'Не может атаковать', stealth: 'Маскировка', bulky: 'Громоздкий' } as const;
 export type Trigger = keyof typeof TRIGGERS;
 export type Operation = keyof typeof OPERATIONS;
 export type RuleTarget = keyof typeof TARGETS;
@@ -56,7 +56,7 @@ export function normalizeCustomCard(raw: unknown): CardDef | null {
       || !integer(r.amount, -99, 99) || !integer(r.health, -99, 99) || !integer(r.count, 1, 10) || !integer(r.chance, 1, 100)
       || r.cardId !== undefined && !id(r.cardId) || r.targetCardId !== undefined && !id(r.targetCardId) || r.targetTag !== undefined && !text(r.targetTag, 32)) return null;
     const f = filter(r.filter); if (!f) return null;
-    if (!creature && r.trigger === 'death' || !creature && raw.kind !== 'hero' && !['play'].includes(r.trigger) || r.operation === 'discover' && r.trigger !== 'play'
+    if (!creature && ['death', 'reveal'].includes(r.trigger) || !creature && raw.kind !== 'hero' && !['play'].includes(r.trigger) || r.operation === 'discover' && r.trigger !== 'play'
       || r.trigger === 'aura' && (r.operation !== 'buff' || !['friendlyMinions', 'enemyMinions', 'allMinions'].includes(r.target) || r.health !== 0 || r.amount < 0 || r.chance !== 100)
       || r.trigger !== 'play' && r.target.startsWith('selected')) return null;
     let condition: CustomRule['condition'];

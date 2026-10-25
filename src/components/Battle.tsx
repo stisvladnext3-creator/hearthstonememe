@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { ArrowLeft, BookOpen, ChevronRight, CircleHelp, Crown, Flag, Flame, Layers3, Map, RefreshCw, Settings2, Shield, Sparkles, Swords, X, Zap } from 'lucide-react';
-import { CARD, type CardDef } from '../game/cards';
+import { CARD, cardAbilities, type CardDef } from '../game/cards';
 import { abilityTargets, cardCost, legalTargets, powerProblem, targetNeeded, type Action, type Game, type Minion, type Player, type Side, type Target } from '../game/engine';
 import { Art, Card } from './Card';
 import Modal from './Modal';
@@ -42,12 +42,14 @@ function Unit({ m, side, selected, canSelect, targetable, onClick, inspect }: {
 }) {
   const c = CARD[m.id];
   const gesture = useLongPress(inspect);
-  return <div className="unit-wrap"><button data-combat-anchor={`${side}:${m.uid}`} className={`board-unit ${m.taunt ? 'taunt' : ''} ${canSelect ? 'ready' : ''} ${selected ? 'selected' : ''} ${targetable ? 'targetable' : ''}`} onClick={onClick} {...gesture} aria-label={`${c.name}: ${m.attack} атаки, ${m.health} здоровья${canSelect ? ', готов атаковать' : ''}`} title={`${c.name}. ${c.text}`}>
+  return <div className="unit-wrap"><button data-combat-anchor={`${side}:${m.uid}`} className={`board-unit ${m.taunt ? 'taunt' : ''} ${m.stealth ? 'stealth' : ''} ${canSelect ? 'ready' : ''} ${selected ? 'selected' : ''} ${targetable ? 'targetable' : ''}`} onClick={onClick} {...gesture} aria-label={`${c.name}: ${m.attack} атаки, ${m.health} здоровья${canSelect ? ', готов атаковать' : ''}`} title={`${c.name}. ${c.text}`}>
     <Art index={c.art} cardId={c.id} /><div className="unit-shade" /><span className="unit-name">{c.name}</span>
     {m.origin === 'transformed' && <span className="origin-badge" title="Превращение: боевой клич не срабатывал"><RefreshCw size={11} /></span>}
     {m.charge && !m.silenced && <span className="charge-badge" title="Рывок: может атаковать сразу после выхода"><Zap size={12} /></span>}
     {m.rush && !m.silenced && <span className="rush-badge" title="Натиск: сразу атакует существ, героя — со следующего своего хода"><Swords size={12} /></span>}
     {(c.deathrattle || c.editor?.rules.some(r => r.trigger === 'death')) && !m.silenced && <span className="deathrattle-badge" title={c.text.slice(c.text.indexOf('Предсмертный хрип:'))}>☠</span>}
+    {c.bulky && !m.silenced && <span className="bulky-badge" title="Громоздкий: половина атаки по соседям цели">↔</span>}
+    {m.stealth && <span className="stealth-badge" title="Маскировка: нельзя выбрать целью вражеской атаки или способности">◉</span>}
     {m.taunt && <Shield className="taunt-icon" size={17} />}
     {!m.ready && !m.cannotAttack && <span className="sleep-mark">zZ</span>}
     {m.cannotAttack && <span className="sleep-mark"><X size={15} /></span>}
@@ -102,7 +104,7 @@ export default function Battle({ game, dispatch, back, rematch, inspect, help, s
       <div className="enemy-status"><Mana player={game.bot} compact /><span><Layers3 size={13} /> {game.bot.deck.length} в колоде</span></div>
       <div className="enemy-hero-row"><Hero inspect={inspect} player={game.bot} side="bot" active={game.active === 'bot' && !game.winner} targetable={playerTurn && allowed.includes('hero')} onClick={() => hit('hero')} /><HeroPower game={game} side="bot" inspect={inspect} /></div>
       {game.briefing && <button className="briefing-status" onClick={() => inspect(CARD.briefing, { zone: 'board', owner: 'player', note: `Осталось своих ходов: у вас ${game.briefing!.remainingTurns.player}, у ${opponent} ${game.briefing!.remainingTurns.bot}. Лимит: одно существо у каждого.` })}><BookOpen size={14} /><span>Держать в курсе<small>Вы: {game.briefing.remainingTurns.player} · {opponent}: {game.briefing.remainingTurns.bot}</small><small>1 существо · добор за 6</small></span></button>}
-      {(['player', 'bot'] as const).map(side => game[side].quest && <button key={side} className={`quest-progress ${side}`} onClick={() => inspect(CARD[game[side].quest!.id], { zone: 'board', owner: side, note: CARD[game[side].quest!.id].text })}><Crown size={15} /><span>{side === 'bot' ? `${opponent}: ` : ''}{CARD[game[side].quest!.id].editor ? 'Задача' : 'РДШ'} {game[side].quest!.progress}/{CARD[game[side].quest!.id].editor?.quest?.goal ?? 8}</span></button>)}
+      {(['player', 'bot'] as const).map(side => game[side].quest && <button key={side} className={`quest-progress ${side}`} onClick={() => inspect(CARD[game[side].quest!.id], { zone: 'board', owner: side, note: CARD[game[side].quest!.id].text })}><Crown size={15} /><span>{side === 'bot' ? `${opponent}: ` : ''}{CARD[game[side].quest!.id].effect === 'rashQuest' ? 'РДШ' : 'Задача'} {game[side].quest!.progress}/{cardAbilities(CARD[game[side].quest!.id])?.quest?.goal ?? 8}</span></button>)}
       <div className="battle-board enemy-board">{game.bot.board.length ? game.bot.board.map(m => <Unit key={m.uid} m={m} side="bot" selected={false} canSelect={false} targetable={playerTurn && allowed.includes(m.uid)} onClick={() => hit(m.uid)} inspect={() => inspect(CARD[m.id], { zone: 'board', owner: 'bot', minion: m })} />) : <span className="empty-board-hint">Здесь появятся существа соперника</span>}</div>
       <div className="board-divider"><span /><i>✦</i><span /></div>
       <div className="battle-board player-board">{game.player.board.length ? game.player.board.map(m => <Unit key={m.uid} m={m} side="player" selected={selection?.type === 'attack' && selection.uid === m.uid} canSelect={playerTurn && !selectingSpell && m.ready && !m.cannotAttack && m.attack > 0 && legalTargets(game, 'attack', m.uid).length > 0} targetable={playerTurn && allowed.includes(m.uid)} onClick={() => { if (!playerTurn) return; if (allowed.includes(m.uid)) { hit(m.uid); return; } if (selectingSpell) return; if (m.ready && !m.cannotAttack && m.attack > 0 && legalTargets(game, 'attack', m.uid).length > 0) setSelection(selection?.type === 'attack' && selection.uid === m.uid ? null : { type: 'attack', uid: m.uid }); }} inspect={() => inspect(CARD[m.id], { zone: 'board', owner: 'player', minion: m })} />) : <div className="summon-hint"><Swords size={25} /><span>Разыграй карту из руки</span></div>}</div>

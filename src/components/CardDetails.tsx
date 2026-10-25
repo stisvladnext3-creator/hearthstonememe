@@ -29,6 +29,8 @@ export default function CardDetails({ card, info, close, notify }: { card: CardD
     m?.rush && !m.silenced && 'Натиск: в ход призыва атакует только существ.',
     m?.silenced && 'Немота: способности отключены.', m?.taunt && 'Провокация активна.',
     m?.cannotAttack && 'Не может атаковать.', m?.auraBonus && `Аура: +${m.auraBonus} к атаке.`,
+    m && card.bulky && !m.silenced && 'Громоздкий: половина атаки по соседям цели, с округлением вверх.',
+    m?.stealth && 'Маскировка: враг не может выбрать целью. Снимается при атаке или нанесении урона.',
     m && (card.deathrattle || card.editor?.rules.some(r => r.trigger === 'death')) && !m.silenced && 'Предсмертный хрип активен.',
     info?.cost !== undefined && `Текущая стоимость: ${info.cost} маны.`,
   ].filter(Boolean);

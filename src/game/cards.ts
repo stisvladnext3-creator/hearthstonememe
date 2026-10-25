@@ -7,13 +7,31 @@ export interface CardDef {
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; heroClass?: HeroClass; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean; reward?: boolean;
-  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage';
+  effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; stealth?: boolean; bulky?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage';
   editor?: EditorData;
+  abilities?: EditorData;
 }
+// Built-in declarative abilities use the same resolver as cards from the editor.
+export const cardAbilities = (card?: CardDef) => card?.editor ?? card?.abilities;
 
 export const CARDS: CardDef[] = [
-  { id: 'marshal-mars', name: 'Маршал Марс', cost: 3, kind: 'minion', attack: 3, health: 4, text: 'Натиск.', flavor: 'Может атаковать существ сразу после выхода. Для атаки героя нужно дождаться следующего своего хода.', rarity: 'rare', art: 9, rush: true, tribe: 'Мяу', frame: 'simple' },
-  { id: 'general-mikhalych', name: 'Генерал Михалыч', cost: 5, kind: 'minion', attack: 3, health: 9, text: 'Провокация.', flavor: 'Защищает остальных персонажей: пока он на столе, противник обязан атаковать существ с провокацией.', rarity: 'common', art: 9, taunt: true, tribe: 'Мяу', frame: 'simple' },
+  { id: 'lizard', name: 'Ящерка', cost: 8, kind: 'minion', attack: 6, health: 7, rarity: 'epic', art: 9, bulky: true, tribe: 'Динозавр', frame: 'simple',
+    text: 'Громоздкий.', flavor: 'При атаке существа наносит половину своей текущей атаки его левому и правому соседу, с округлением вверх. Основная цель получает полный урон и отвечает. Соседи не отвечают; маскировка их не защищает. При атаке героя бокового урона нет. Немота отключает «Громоздкого».' },
+  { id: 'meowster', name: 'Тёмный мастер Мяустер', heroClass: 'cat', cost: 4, kind: 'minion', attack: 4, health: 5, rarity: 'epic', art: 9, stealth: true, tribe: 'Мяу', frame: 'simple',
+    text: 'Маскировка. При выходе из маскировки наносит 1 урон всем вражеским существам.',
+    flavor: 'Маскировка скрывает от вражеских атак и выбора целью до первой атаки или нанесения урона. Массовые и случайные эффекты могут задеть скрытое существо. Немота снимает и маскировку, и способность. Эффект срабатывает один раз, в том числе если Мяустер погибает при своей атаке.',
+    abilities: { version: 1, tags: ['Мяу'], rules: [{ trigger: 'reveal', operation: 'damage', target: 'enemyMinions', amount: 1, health: 0, count: 1, chance: 100, filter: { side: 'friendly' } }] } },
+  { id: 'stegosaurus', name: 'Стегозавр', cost: 3, kind: 'minion', attack: 2, health: 3, text: 'Провокация.', flavor: 'Защищает своих персонажей. Неприятности принимает на пластины.', rarity: 'common', art: 8, taunt: true, tribe: 'Динозавр', frame: 'simple' },
+  { id: 'incinerate-quest', name: 'Испепелим их!', cost: 1, kind: 'spell', rarity: 'legendary', art: 8, quest: true,
+    text: 'Задача: гибель 12 вражеских существ. Награда: Т-34. Начало матча: в стартовую руку.',
+    flavor: 'Считает только существ противника, погибших после розыгрыша задачи, в ход любого игрока. Ваши существа, превращения и возврат в руку не засчитываются. Награда добавляется в руку; при полной руке сгорает.',
+    abilities: { version: 1, tags: [], rules: [], startInHand: true, quest: { event: 'death', goal: 12, rewardId: 't34', filter: { side: 'enemy' } } } },
+  { id: 't34', name: 'Т-34', cost: 7, kind: 'minion', attack: 8, health: 9, rarity: 'legendary', art: 9, reward: true, cannotAttack: true, tribe: 'Техника', frame: 'simple',
+    text: 'Не может атаковать. В конце вашего хода наносит 8 урона случайному врагу.',
+    flavor: 'Награда за задачу «Испепелим их!». Случайная цель — герой или живое существо противника. Броня поглощает урон. Немота снимает запрет атаковать и выстрел. Не добавляется в колоду.',
+    abilities: { version: 1, tags: ['Техника'], rules: [{ trigger: 'turnEnd', operation: 'damage', target: 'randomEnemy', amount: 8, health: 0, count: 1, chance: 100, filter: { side: 'friendly' } }] } },
+  { id: 'marshal-mars', heroClass: 'cat', name: 'Маршал Марс', cost: 3, kind: 'minion', attack: 3, health: 4, text: 'Натиск.', flavor: 'Может атаковать существ сразу после выхода. Для атаки героя нужно дождаться следующего своего хода.', rarity: 'rare', art: 9, rush: true, tribe: 'Мяу', frame: 'simple' },
+  { id: 'general-mikhalych', heroClass: 'cat', name: 'Генерал Михалыч', cost: 5, kind: 'minion', attack: 3, health: 9, text: 'Провокация.', flavor: 'Защищает остальных персонажей: пока он на столе, противник обязан атаковать существ с провокацией.', rarity: 'common', art: 9, taunt: true, tribe: 'Мяу', frame: 'simple' },
   { id: 'claw-fury', heroClass: 'cat', name: 'Ярость когтей', cost: 3, kind: 'power', text: 'Раскопайте карту за 3, 5 или 7 маны. Ваш герой получает урон, равный её стоимости.', flavor: 'Предлагается по одной случайной общей карте или карте вашего класса каждой стоимости. Копия выбранной карты добавляется в руку, затем ваш герой получает 3, 5 или 7 урона. Броня поглощает урон; при полной руке копия сгорает. Раз за ход.', rarity: 'common', art: 9, effect: 'clawFury' },
   { id: 'galinka', name: 'Галинка', cost: 10, kind: 'minion', attack: 0, health: 1, text: 'Провокация. Боевой клич: призывает Пушкина 15/15 с провокацией.', flavor: 'За каждой великой женщиной стоит Пушкин 15/15.', rarity: 'legendary', art: 0, custom: true, taunt: true, effect: 'galinka', tribe: 'Сверхчеловек' },
   { id: 'goodgame', name: 'Хорошая игра.', cost: 0, kind: 'minion', attack: 99, health: 99, text: 'Боевой клич: уничтожает вашего персонажа.', flavor: 'Боевой клич срабатывает только при розыгрыше из руки. Если существо появилось через призыв или превращение, герой не уничтожается.', rarity: 'common', art: 1, custom: true, effect: 'concede', tribe: 'Я сдаюсь.' },
@@ -44,15 +62,15 @@ export const CARDS: CardDef[] = [
   { id: 'mage', name: 'Хранительница искр', cost: 3, kind: 'minion', attack: 3, health: 4, text: 'Хранит свет. И немного пассивной агрессии.', flavor: 'Заклинания — её язык любви.', rarity: 'rare', art: 10, tribe: 'Эльф' },
   { id: 'guardian', name: 'Страж трактира', cost: 5, kind: 'minion', attack: 4, health: 6, text: 'Провокация.', flavor: 'Пока он здесь, ваш герой в безопасности.', rarity: 'rare', art: 9, taunt: true, tribe: 'Дворф' },
   { id: 'dragon', name: 'Пепельный дракон', cost: 7, kind: 'minion', attack: 7, health: 7, text: 'Большой. Горячий. Никаких сложностей.', flavor: 'Отличается от Смертокрыла воспитанием.', rarity: 'rare', art: 6, tribe: 'Дракон' },
-  { id: 'bolt', name: 'Искра хаоса', cost: 2, kind: 'spell', text: 'Наносит 3 урона выбранному врагу или вашему существу.', flavor: 'Можно выбрать врага или своё существо. Немного магии в ваш и без того трудный день.', rarity: 'common', art: 10, effect: 'bolt' },
+  { id: 'bolt', heroClass: 'mage', name: 'Искра хаоса', cost: 2, kind: 'spell', text: 'Наносит 3 урона выбранному врагу или вашему существу.', flavor: 'Можно выбрать врага или своё существо. Немного магии в ваш и без того трудный день.', rarity: 'common', art: 10, effect: 'bolt' },
   { id: 'heal', name: 'Чай с мёдом', cost: 2, kind: 'spell', text: 'Восстанавливает 5 здоровья вашему герою.', flavor: 'От всех бед. Кроме летального урона.', rarity: 'common', art: 9, effect: 'heal' },
-  { id: 'draw', name: 'Гениальный план', cost: 3, kind: 'spell', text: 'Возьмите 2 карты.', flavor: 'План простой: взять карты. Дальше разберёмся.', rarity: 'common', art: 5, effect: 'draw' },
+  { id: 'draw', heroClass: 'mage', name: 'Гениальный план', cost: 3, kind: 'spell', text: 'Возьмите 2 карты.', flavor: 'План простой: взять карты. Дальше разберёмся.', rarity: 'common', art: 5, effect: 'draw' },
   { id: 'silence', name: 'Тихий час', cost: 1, kind: 'spell', text: 'Накладывает немоту на своё или вражеское существо.', flavor: 'Иногда всем нужно просто помолчать.', rarity: 'rare', art: 4, effect: 'silence' },
   { id: 'dragonslayer', name: 'Драконоборец', cost: 2, kind: 'minion', attack: 1, health: 2, text: 'Боевой клич: наносит 4 урона герою противника.', flavor: 'Для четырёх единиц урона дракон поблизости не обязателен.', rarity: 'epic', art: 9, custom: true, effect: 'dragonslayer', tribe: 'Чел', frame: 'simple' },
   { id: 'dog-spell', name: 'Такая вот хуйня, собачка', cost: 2, kind: 'spell', text: 'Раскопайте копию карты из своей колоды. Наносит 4 урона выбранному врагу или вашему существу.', flavor: 'Выберите одну из трёх разных карт своей колоды. Копия попадёт в руку, оригинал останется в колоде. Затем выбранный враг или ваше существо получит 4 урона. При пустой колоде остаётся урон.', rarity: 'epic', art: 11, custom: true, effect: 'discoverBlast', tribe: 'Чел' },
   { id: 'vasiliy', name: 'Василий — хранитель мультивселенных', cost: 3, kind: 'minion', attack: 4, health: 5, text: 'Провокация. Все ваши существа получают +2 к атаке.', flavor: 'Аура действует на всех союзных существ, включая Василия, пока он на столе без немоты. Бонусы нескольких Василиев складываются. После его гибели, превращения или немоты бонус исчезает.', rarity: 'legendary', art: 9, custom: true, taunt: true, auraAttack: 2, tribe: 'Мяу' },
   { id: 'masik', name: 'Масик, уничтожитель миров', cost: 7, kind: 'minion', attack: 6, health: 4, text: 'Рывок. Боевой клич: немота выбранного персонажа. На героя действует 2 хода.', flavor: 'Рывок позволяет атаковать сразу, включая героя, но не обходит провокацию. Немота существа снимает его способности; немота героя отключает его силу на 2 его хода.', rarity: 'legendary', art: 9, custom: true, charge: true, effect: 'masik', tribe: 'Мяу' },
-  { id: 'paper-army', name: 'Армия бумажек', cost: 7, kind: 'spell', text: 'Заполняет стол обоих игроков Бумажками 2/2.', flavor: 'Занимает только свободные места. Во время «Держать в курсе» учитывает ограничение в одно существо.', rarity: 'legendary', art: 5, custom: true, effect: 'paperArmy' },
+  { id: 'paper-army', heroClass: 'warlock', name: 'Армия бумажек', cost: 7, kind: 'spell', text: 'Заполняет стол обоих игроков Бумажками 2/2.', flavor: 'Занимает только свободные места. Во время «Держать в курсе» учитывает ограничение в одно существо.', rarity: 'legendary', art: 5, custom: true, effect: 'paperArmy' },
   { id: 'briefing', name: 'Держать в курсе!', cost: 10, kind: 'spell', text: 'На 5 ходов каждого игрока: не больше одного существа на стороне. Силы героев: взять карту за 6 маны.', flavor: 'Текущий ход считается первым ходом разыгравшего. На каждой стороне остаётся случайное существо, остальные уничтожаются. После пяти ходов обоих игроков возвращаются обычный лимит и прежние силы героев.', rarity: 'legendary', art: 9, custom: true, effect: 'briefing' },
   { id: 'rash-quest', name: 'Сам ты говно', cost: 1, kind: 'spell', text: 'Задача: призовите 8 РДШ. Награда: Волонтер-босс в руку.', flavor: 'Всегда приходит первой картой в стартовую руку, если есть в колоде. Считает только ваших РДШ, призванных после начала задачи. Превращения не считаются призывами. Если рука полна, награда сгорает.', rarity: 'legendary', art: 11, custom: true, quest: true, effect: 'rashQuest' },
   { id: 'echo-maxim', name: 'Забивной Максимка', cost: 2, kind: 'minion', attack: 2, health: 2, text: 'Эхо. Боевой клич: 2 урона случайному врагу. Даёт +1 к атаке выбранному своему существу.', flavor: 'Эхо добавляет повторную копию в руку до конца хода. Если других своих существ нет, Максимка усиливает себя. Случайный урон может попасть в героя или существо врага.', rarity: 'epic', art: 5, custom: true, echo: true, effect: 'echoMaxim', tribe: 'Максим' },
@@ -80,6 +98,19 @@ export const BOT_DECK = [
 ];
 export const deckCopyLimit = (card: CardDef) => card.rarity === 'legendary' ? 1 : card.rarity === 'epic' ? 2 : 3;
 export const RARITY_NAMES = { common: 'Обычная', rare: 'Редкая', epic: 'Эпическая', legendary: 'Легендарная' } as const;
+const REASSIGNED_CARDS = new Set(['marshal-mars', 'general-mikhalych', 'bolt', 'draw', 'paper-army']);
+export function classDeck(ids: string[], heroClass: HeroClass, reassignedOnly = false): string[] {
+  const result = [...ids];
+  for (let index = 0; index < result.length; index++) {
+    const previous = CARD[result[index]];
+    if (!previous || belongsToClass(previous, heroClass) || reassignedOnly && !REASSIGNED_CARDS.has(previous.id)) continue;
+    const replacement = COLLECTIBLE.filter(c => belongsToClass(c, heroClass) && !c.quest && c.effect !== 'concede'
+      && result.filter(id => id === c.id).length < deckCopyLimit(c)).sort((a, b) => Math.abs(a.cost - previous.cost) - Math.abs(b.cost - previous.cost)
+        || Number(a.kind !== previous.kind) - Number(b.kind !== previous.kind))[0];
+    if (replacement) result[index] = replacement.id;
+  }
+  return result;
+}
 export function migrateRewardDeck(ids: string[]): string[] {
   const result = ids.filter(id => !CARD[id]?.reward);
   const preferred = ['guardian', 'slime', 'regular', 'bouncer'];

@@ -1,0 +1,9 @@
+.card-class-label.mage { color:#e1edff; background:#25486e; border-color:#749aca; }
+.card-class-label.warlock { color:#efd6ff; background:#482457; border-color:#aa74bd; }
+.card-class-label.warrior { color:#ffe2d7; background:#702624; border-color:#ce7165; }
+.card-class-label.storm { color:#dce9ff; background:#142c55; border-color:#4e74a4; }
+.card-class-label.cat { color:#d6efcf; background:#173b29; border-color:#608960; }
+.board-unit.stealth > .portrait-art { opacity:.55; filter:saturate(.6) brightness(.75); }
+.board-unit.stealth { box-shadow:0 0 13px #b5c4e485,inset 0 0 16px #b7ceef77; }
+.stealth-badge { position:absolute; z-index:5; right:6%; top:8%; color:#d9e4ff; font-size:15px; text-shadow:0 0 5px #172246; }
+.bulky-badge { position:absolute; z-index:5; left:7%; top:9%; color:#ffdf86; font-size:19px; font-weight:bold; text-shadow:0 1px 3px #1a0e03; }

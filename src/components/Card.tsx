@@ -7,6 +7,20 @@ import { CardRules } from './CardRules';
 import { useArtwork } from '../artwork';
 import { useLongPress } from '../useLongPress';
 
+function MagePortrait({ className }: { className: string }) {
+  const ref = useRef<SVGSVGElement>(null);
+  useLayoutEffect(() => {
+    const svg = ref.current!, box = svg.parentElement!;
+    const update = () => {
+      const wide = box.clientWidth > box.clientHeight * 1.4;
+      svg.setAttribute('viewBox', wide ? '724 804 362 282' : '724 724 362 362');
+      svg.setAttribute('preserveAspectRatio', wide ? 'xMidYMin slice' : 'xMidYMid slice');
+    };
+    update(); const observer = new ResizeObserver(update); observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+  return <div className={`portrait-art mage-portrait ${className}`}><svg ref={ref} viewBox="724 724 362 362" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><image href={import.meta.env.BASE_URL + 'art/portraits.png'} width="1448" height="1086" /></svg></div>;
+}
 export function Art({ index, className = '', cardId, picture, sourceId }: { index: number; className?: string; cardId?: string; picture?: string; sourceId?: string }) {
   const { images } = useArtwork();
   const image = cardId ? images[cardId] : undefined;
@@ -16,6 +30,7 @@ export function Art({ index, className = '', cardId, picture, sourceId }: { inde
   const source = sourceId ?? (cardId ? CARD[cardId]?.editor?.artSourceId : undefined);
   const inherited = source ? images[source] : undefined;
   if (inherited) return <div className={`portrait-art original-portrait ${inherited.format} ${className}`} style={{ backgroundImage: 'url("' + inherited.url + '")', '--portrait-position': inherited.position, '--portrait-size': inherited.size } as CSSProperties} />;
+  if (cardId === 'mage' || source === 'mage') return <MagePortrait className={className} />;
   if (cardId && CARD[cardId]?.custom && !CARD[cardId].editor) return <div className={`portrait-art awaiting-original ${className}`}><ImagePlus /><span>ТВОЙ ОРИГИНАЛ</span></div>;
   return <div className={`portrait-art ${className}`} style={{ '--art-x': `${(index % 4) * 100 / 3}%`, '--art-y': `${Math.floor(index / 4) * 50}%` } as CSSProperties} />;
 }

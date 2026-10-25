@@ -1,4 +1,4 @@
-import { CARD, deckError, type CardDef } from '../game/cards';
+import { CARD, cardAbilities, deckError, type CardDef } from '../game/cards';
 import { registerCardPack, validContinuation, validCustomCounts } from '../game/custom-cards';
 import { createGame, other, type Action, type Game, type Side } from '../game/engine';
 import type { HistoryEntity } from '../game/history';
@@ -119,12 +119,12 @@ export function validRoomView(value: unknown): value is Game {
   for (const side of ['player', 'bot'] as const) {
     const p = g[side];
     if (!p || ![p.health, p.armor, p.mana, p.maxMana].every(Number.isFinite) || !knownPower(p.power) || !knownHero(p.hero)) return false;
-    if (p.quest && (!knownCard(p.quest.id) || !Number.isSafeInteger(p.quest.progress) || p.quest.progress < 0 || p.quest.progress >= (CARD[p.quest.id].editor?.quest?.goal ?? 8))) return false;
+    if (p.quest && (!knownCard(p.quest.id) || !Number.isSafeInteger(p.quest.progress) || p.quest.progress < 0 || p.quest.progress >= (cardAbilities(CARD[p.quest.id])?.quest?.goal ?? 8))) return false;
     if (p.name !== undefined && (typeof p.name !== 'string' || p.name.length > 20)) return false;
     if (!Array.isArray(p.hand) || p.hand.length > 10 || !p.hand.every(c => c && Number.isSafeInteger(c.uid) && (side === 'bot' ? c.id === 'hidden' : knownCard(c.id)))) return false;
     if (!Array.isArray(p.deck) || p.deck.length > 100 || !p.deck.every(id => id === 'hidden')) return false;
     if (!Array.isArray(p.board) || p.board.length > 7 || !p.board.every(m => m && knownCard(m.id) && uid(m.uid) && [m.attack, m.health, m.maxHealth].every(Number.isFinite)
-      && [m.ready, m.taunt, m.cannotAttack, m.silenced, m.ephemeral].every(v => typeof v === 'boolean'))) return false;
+      && [m.ready, m.taunt, m.cannotAttack, m.silenced, m.ephemeral].every(v => typeof v === 'boolean') && (m.stealth === undefined || typeof m.stealth === 'boolean'))) return false;
   }
   if (g.briefing && (!g.briefing.remainingTurns || !['player', 'bot'].every(s => {
     const n = g.briefing!.remainingTurns[s as Side]; return Number.isInteger(n) && n >= 0 && n <= 5;

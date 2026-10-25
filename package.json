@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.16.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -29,7 +29,9 @@
     "test:custom-rooms": "CUSTOM_CARDS=1 node scripts/check-live-connection.mjs",
     "rooms:signaling": "node scripts/signaling.mjs",
     "test:cat": "vitest run src/game/cat.test.ts src/decks.test.ts",
-    "test:cat-ui": "node scripts/check-cat.mjs"
+    "test:cat-ui": "node scripts/check-cat.mjs",
+    "test:card-update": "vitest run src/game/incinerate.test.ts src/game/class-cards.test.ts src/game/stealth.test.ts src/game/bulky.test.ts src/decks.test.ts",
+    "test:card-update-ui": "node scripts/check-card-update.mjs"
   },
   "dependencies": {
     "@fontsource/roboto-condensed": "^5.3.0",

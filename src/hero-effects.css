@@ -24,3 +24,7 @@
 @keyframes arcane-flight { 0% { opacity: 0; transform: translate(0,0) scale(.6); } 9% { opacity: 1; transform: translate(0,0) scale(1); } 38% { opacity: 1; transform: translate(var(--fx-dx),var(--fx-dy)) scale(1); } 47%,100% { opacity: 0; transform: translate(var(--fx-dx),var(--fx-dy)) scale(.4); } }
 @keyframes arcane-impact { 0%,29% { opacity: 0; transform: translate(-50%,-50%) scale(.1); } 40% { opacity: 1; transform: translate(-50%,-50%) scale(.8) rotate(20deg); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.5) rotate(85deg); } }
 @media(max-width:600px) { .fx-arcane-arrow { width: 75px; height: 26px; left: -70px; top: -13px; }.fx-arcane-impact { width: 48px; height: 48px; }.fx-armor-gain { font-size: 22px; } }
+
+/* Crop the mage's square atlas cell uniformly in both wide banners and portraits. */
+.portrait-art.mage-portrait { background-image:none; overflow:hidden; }
+.mage-portrait > svg { display:block; width:100%; height:100%; }

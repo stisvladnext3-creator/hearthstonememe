@@ -104,7 +104,7 @@ export function describeCustomCard(card: CardDef, legacyText = card.editor?.lega
     ...e.rules.map(r => (r.trigger === 'play' && (card.kind === 'minion' || card.kind === 'hero') ? 'Боевой клич: ' : '') + ruleDescription(r, find)),
     e.powerId && 'Сила героя: «' + (find(e.powerId)?.name ?? 'своя сила') + '».',
     e.discount && 'Скидка ' + e.discount.amount + ' маны за ' + eventText[e.discount.event] + (e.discount.filter.tag ? ' с меткой «' + e.discount.filter.tag + '»' : '') + (e.discount.filter.side === 'any' ? ' у обоих игроков' : e.discount.filter.side === 'enemy' ? ' у противника' : ' у вас') + '.',
-    e.quest && 'Задача: ' + e.quest.goal + ' × ' + eventText[e.quest.event] + (e.quest.filter.tag ? ' (' + e.quest.filter.tag + ')' : '') + '. Награда: «' + (find(e.quest.rewardId)?.name ?? 'карта') + '».',
+    e.quest && 'Задача: ' + e.quest.goal + ' × ' + eventText[e.quest.event] + (e.quest.filter.side === 'enemy' ? ' противника' : e.quest.filter.side === 'friendly' ? ' у вас' : ' у обоих игроков') + (e.quest.filter.tag ? ' (' + e.quest.filter.tag + ')' : '') + '. Награда: «' + (find(e.quest.rewardId)?.name ?? 'карта') + '».',
     e.startInHand && 'Начало матча: приходит в стартовую руку.'].filter(Boolean).join(' ');
   return text || (card.kind === 'hero' ? 'Даёт ' + (card.armor ?? 0) + ' брони.' : 'Без дополнительных способностей.');
 }

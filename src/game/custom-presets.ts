@@ -6,7 +6,9 @@ const rule = (patch: Partial<CustomRule>): CustomRule => ({ ...newRule(), ...pat
 export function copyCardTemplate(source: CardDef): CardDef {
   const c = structuredClone(source);
   c.id = newCustomCard().id; c.custom = true; delete c.printedCost;
-  c.editor = c.editor ?? { version: 1, tags: source.tribe ? [source.tribe] : [], rules: [], legacyText: source.text, artSourceId: source.id };
+  c.editor = c.editor ?? c.abilities ?? { version: 1, tags: source.tribe ? [source.tribe] : [], rules: [], legacyText: source.text, artSourceId: source.id };
+  delete c.abilities;
+  if (!source.editor) c.editor.artSourceId ??= source.id;
   const rewrite = (value: unknown) => {
     if (!value || typeof value !== 'object') return;
     for (const [key, child] of Object.entries(value)) {

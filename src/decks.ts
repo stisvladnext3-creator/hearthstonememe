@@ -1,4 +1,4 @@
-import { CARD, STARTER_DECK, deckCopyLimit, deckError, migrateRewardDeck } from './game/cards';
+import { CARD, STARTER_DECK, deckCopyLimit, deckError, migrateRewardDeck, classDeck } from './game/cards';
 import { belongsToClass, HERO_CLASSES, validHeroClass, type HeroClass } from './game/classes';
 import { loadDeck, read, write } from './storage';
 
@@ -12,7 +12,7 @@ export function draftError(cards: unknown, heroClass?: HeroClass): string | unde
   if (heroClass && cards.some(id => !belongsToClass(CARD[id], heroClass))) return 'Эта карта принадлежит другому классу.';
 }
 export function createDeck(heroClass: HeroClass, name: string, starter = true): SavedDeck {
-  return { id: crypto.randomUUID(), name: deckName(name), heroClass, cards: starter ? [...STARTER_DECK] : [] };
+  return { id: crypto.randomUUID(), name: deckName(name), heroClass, cards: starter ? classDeck(STARTER_DECK, heroClass) : [] };
 }
 export const readyDeck = (deck: SavedDeck) => validHeroClass(deck.heroClass) && !deckError(deck.cards, deck.heroClass);
 export function loadDeckBook(): DeckBook {
@@ -23,7 +23,7 @@ export function loadDeckBook(): DeckBook {
       if (!value || typeof value.id !== 'string' || !value.id || value.id.length > 100 || ids.has(value.id) || typeof value.name !== 'string' || !validHeroClass(value.heroClass) || !Array.isArray(value.cards)) continue;
       const cards: string[] = [];
       // Keep a recoverable draft if a card definition was removed externally.
-      for (const id of migrateRewardDeck(value.cards.filter((id: unknown) => typeof id === 'string')).slice(0, 30)) {
+      for (const id of classDeck(migrateRewardDeck(value.cards.filter((id: unknown) => typeof id === 'string')), value.heroClass, true).slice(0, 30)) {
         if (!draftError([...cards, id], value.heroClass)) cards.push(id);
       }
       decks.push({ id: value.id, name: deckName(value.name), heroClass: value.heroClass, cards }); ids.add(value.id);
@@ -32,7 +32,7 @@ export function loadDeckBook(): DeckBook {
     return { version: 1, decks, selectedId };
   }
   const oldClass = read<unknown>('hero-class', 'mage'), heroClass = validHeroClass(oldClass) ? oldClass : 'mage';
-  const original: SavedDeck = { id: crypto.randomUUID(), name: 'Твои правила', heroClass, cards: loadDeck() };
+  const original: SavedDeck = { id: crypto.randomUUID(), name: 'Твои правила', heroClass, cards: classDeck(loadDeck(), heroClass, true) };
   const others = (Object.keys(HERO_CLASSES) as HeroClass[]).filter(c => c !== heroClass).map(c => createDeck(c, 'Стартовый ' + HERO_CLASSES[c].name.toLowerCase()));
   return { version: 1, decks: [original, ...others], selectedId: original.id };
 }

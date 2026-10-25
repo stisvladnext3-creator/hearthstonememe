@@ -1,4 +1,4 @@
-import { CARD, migrateRewardDeck, type CardDef } from '../game/cards';
+import { CARD, classDeck, migrateRewardDeck, type CardDef } from '../game/cards';
 import { packForCards, registerCardPack } from '../game/custom-cards';
 import type { Peer, DataConnection } from 'peerjs';
 import { act, expireMulligan, type Action, type Game } from '../game/engine';
@@ -13,8 +13,8 @@ export function savedRoom(): SavedRoom | null {
   try {
     const s = JSON.parse(sessionStorage.getItem(SAVE_KEY) ?? 'null') as SavedRoom | null;
     if (s) { registerCardPack(s.self?.cards ?? []); registerCardPack(s.guest?.cards ?? []); registerCardPack(s.game?.customCards ?? []); }
-    if (s?.self && Array.isArray(s.self.deck)) s.self.deck = migrateRewardDeck(s.self.deck);
-    if (s?.guest && Array.isArray(s.guest.deck)) s.guest.deck = migrateRewardDeck(s.guest.deck);
+    if (s?.self && Array.isArray(s.self.deck)) s.self.deck = classDeck(migrateRewardDeck(s.self.deck), s.self.heroClass ?? 'mage', true);
+    if (s?.guest && Array.isArray(s.guest.deck)) s.guest.deck = classDeck(migrateRewardDeck(s.guest.deck), s.guest.heroClass ?? 'mage', true);
     if (!s || !['host', 'guest'].includes(s.role) || !validCode(s.code) || !validDeck(s.self?.deck, s.self?.heroClass ?? 'mage') || typeof s.self.name !== 'string' || typeof s.self.token !== 'string') return null;
     if (s.self.heroClass !== undefined && !validHeroClass(s.self.heroClass) || s.guest?.heroClass !== undefined && !validHeroClass(s.guest.heroClass)) return null;
     if (s.guest && (!validDeck(s.guest.deck, s.guest.heroClass ?? 'mage') || typeof s.guest.name !== 'string' || typeof s.guest.token !== 'string')) return null;

@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef } from 'react';
 import { RARITY_NAMES, type CardDef } from '../game/cards';
 import type { CardAppearance } from '../card-appearance';
+import { HERO_CLASSES } from '../game/classes';
 
 // All coordinates are in the source PNG, including the cropped hero/power atlas.
 // The gem is already painted into each frame. Tint those exact pixels instead
@@ -53,8 +54,28 @@ export function CardFrame({ card, appearance = 'standard' }: { card: CardDef; ap
   const id = useId(), frame = FRAMES[model], colors = COLORS[card.rarity];
   const channel = (offset: number) => colors.map(c => (parseInt(c.slice(offset, offset + 2), 16) / 255).toFixed(4)).join(' ');
   const href = `${import.meta.env.BASE_URL}art/${frame.file}`;
+  const classColors = card.heroClass ? ['#131b20', HERO_CLASSES[card.heroClass].cardColor, '#ae9762', '#f4dda2'] : undefined;
+  const classChannel = (offset: number) => classColors!.map(c => (parseInt(c.slice(offset, offset + 2), 16) / 255).toFixed(4)).join(' ');
+  const [x, y, w, h] = frame.viewBox.split(' ').map(Number);
+  const nameTop = model === 'spell' ? .44 : model === 'signature' ? .61 : .5;
   return <svg className="card-frame card-frame-svg" data-frame-model={model} viewBox={frame.viewBox} preserveAspectRatio="none">
     <defs>
+      {classColors && <>
+        <mask id={`${id}-class-mask`} maskUnits="userSpaceOnUse" x={x} y={y} width={w} height={h}>
+          <rect x={x} y={y} width={w} height={h} fill="white" />
+          <rect x={x} y={y} width={w * .27} height={h * .25} fill="black" />
+          <rect x={x + w * .10} y={y + h * nameTop} width={w * .84} height={h * .14} fill="black" />
+          <rect x={x + w * .15} y={y + h * .64} width={w * .73} height={h * .28} rx={w * .05} fill="black" />
+          <rect x={x} y={y + h * .83} width={w * .28} height={h * .17} fill="black" />
+          <rect x={x + w * .75} y={y + h * .81} width={w * .25} height={h * .19} fill="black" />
+          <rect x={x + w * .23} y={y + h * .88} width={w * .53} height={h * .09} fill="black" />
+          <path d={frame.gem} fill="black" />
+        </mask>
+        <filter id={`${id}-class-color`} colorInterpolationFilters="sRGB">
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer><feFuncR type="table" tableValues={classChannel(1)} /><feFuncG type="table" tableValues={classChannel(3)} /><feFuncB type="table" tableValues={classChannel(5)} /></feComponentTransfer>
+        </filter>
+      </>}
       <clipPath id={`${id}-gem`}><path d={frame.gem} /></clipPath>
       <filter id={`${id}-color`} filterUnits="userSpaceOnUse" x={frame.region[0]} y={frame.region[1]} width={frame.region[2]} height={frame.region[3]} colorInterpolationFilters="sRGB">
         <feColorMatrix type="saturate" values="0" />
@@ -62,6 +83,7 @@ export function CardFrame({ card, appearance = 'standard' }: { card: CardDef; ap
       </filter>
     </defs>
     <image href={href} width={frame.width} height={frame.height} />
+    {classColors && <g className="card-class-paint" data-card-class={card.heroClass} mask={`url(#${id}-class-mask)`}><image href={href} width={frame.width} height={frame.height} filter={`url(#${id}-class-color)`} /></g>}
     <g className="card-rarity" data-rarity={card.rarity} role="img" aria-label={`Редкость: ${RARITY_NAMES[card.rarity]}`} clipPath={`url(#${id}-gem)`}>
       <image href={href} width={frame.width} height={frame.height} filter={`url(#${id}-color)`} />
     </g>

@@ -1,4 +1,4 @@
-import { CARD, STARTER_DECK, deckError, migrateRewardDeck } from './game/cards';
+import { CARD, cardAbilities, STARTER_DECK, deckError, migrateRewardDeck } from './game/cards';
 import { clawFuryPool, refreshAuras, type Game, type Minion, type Player } from './game/engine';
 import { HEROES } from './game/presentation';
 import { knownPower } from './game/presentation';
@@ -38,14 +38,14 @@ function validPlayer(p: Player): boolean {
     && knownPower(p.power) && typeof p.powerUsed === 'boolean' && typeof p.hero === 'string'
     && (p.name === undefined || typeof p.name === 'string' && p.name.length <= 20)
     && (p.powerSilenceTurns === undefined || Number.isSafeInteger(p.powerSilenceTurns) && p.powerSilenceTurns >= 0 && p.powerSilenceTurns <= 2)
-    && (p.quest === undefined || !!CARD[p.quest?.id] && Number.isSafeInteger(p.quest.progress) && p.quest.progress >= 0 && p.quest.progress < (CARD[p.quest.id].editor?.quest?.goal ?? 8))
+    && (p.quest === undefined || !!CARD[p.quest?.id] && Number.isSafeInteger(p.quest.progress) && p.quest.progress >= 0 && p.quest.progress < (cardAbilities(CARD[p.quest.id])?.quest?.goal ?? 8))
     && Array.isArray(p.deck) && p.deck.every(cardId)
     && Array.isArray(p.hand) && p.hand.length <= 10 && p.hand.every(c => c && cardId(c.id) && finite(c.uid) && (c.expiresTurn === undefined || Number.isSafeInteger(c.expiresTurn) && c.expiresTurn > 0))
     && Array.isArray(p.board) && p.board.length <= 7 && p.board.every((m: Minion) => m && cardId(m.id)
       && [m.uid, m.attack, m.health, m.maxHealth].every(finite)
       && (m.auraBonus === undefined || finite(m.auraBonus) && m.auraBonus >= 0)
       && (m.attackBuff === undefined || finite(m.attackBuff)) && (m.healthBuff === undefined || finite(m.healthBuff))
-      && (m.charge === undefined || typeof m.charge === 'boolean') && (m.attackedThisTurn === undefined || typeof m.attackedThisTurn === 'boolean')
+      && (m.stealth === undefined || typeof m.stealth === 'boolean') && (m.charge === undefined || typeof m.charge === 'boolean') && (m.attackedThisTurn === undefined || typeof m.attackedThisTurn === 'boolean')
       && (m.rush === undefined || typeof m.rush === 'boolean')
       && (m.enteredTurn === undefined || Number.isSafeInteger(m.enteredTurn) && m.enteredTurn >= 0)
       && (m.origin === undefined || ['played', 'summoned', 'transformed'].includes(m.origin))

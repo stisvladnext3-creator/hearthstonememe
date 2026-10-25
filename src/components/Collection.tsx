@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Crown, Flame, Layers3, Minus, Paintbrush, Plus, RotateCcw, Search, Shield, Sparkles, Swords, Trash2, X } from 'lucide-react';
-import { CARDS, CARD, STARTER_DECK, deckCopyLimit, deckError, type CardDef } from '../game/cards';
+import { CARDS, CARD, STARTER_DECK, deckCopyLimit, deckError, classDeck, type CardDef } from '../game/cards';
 import { Art, Card } from './Card';
 import { useViewport } from '../useViewport';
 import { DECK_LIMIT, readyDeck, type SavedDeck } from '../decks';
@@ -94,7 +94,7 @@ export default function Collection({ deckInfo, decks, selectDeck, createDeck, de
       <div className="deck-list">{unique.slice((shownDeckPage - 1) * deckPageSize, shownDeckPage * deckPageSize).map(id => <div key={id} className="deck-row"><span className="mini-mana">{CARD[id].cost}</span><button className="deck-row-name" onClick={() => inspect(CARD[id])}>{CARD[id].name}</button><span className="deck-quantity">×{shownDeck.filter(x => x === id).length}</span><button className="icon-button" aria-label={`Убрать ${CARD[id].name}`} onClick={() => { const copy = [...draft]; copy.splice(copy.indexOf(id), 1); updateDraft(copy); }}><Minus size={16} /></button></div>)}</div>
       {deckPages > 1 && <div className="deck-pagination"><button aria-label="Предыдущая страница колоды" disabled={shownDeckPage <= 1} onClick={() => setDeckPage(shownDeckPage - 1)}><ChevronLeft size={18} /></button><span>{shownDeckPage} / {deckPages}</span><button aria-label="Следующая страница колоды" disabled={shownDeckPage >= deckPages} onClick={() => setDeckPage(shownDeckPage + 1)}><ChevronRight size={18} /></button></div>}
       {!shownDeck.length && <p className="deck-empty">Нажимай «В колоду» под картами, чтобы собрать свою комбинацию.</p>}
-      <p className="deck-rule">Обычная ×3 · Редкая ×3 · Эпическая ×2 · Легендарная ×1. Всего 30 карт.</p><div className="deck-editor-actions"><button className="button primary deck-save" disabled={!draftName.trim()} onClick={() => { saveDeck(draft, draftName); setBuilding(false); notify(deckError(draft) ? 'Черновик сохранён. Для боя нужно 30 карт.' : 'Колода сохранена.'); }}><Check size={17} /> Сохранить колоду</button><button className="text-button deck-reset" onClick={() => updateDraft([...STARTER_DECK])}><RotateCcw size={15} /> Стартовая колода</button><button className="text-button deck-reset" onClick={() => updateDraft([])}>Очистить колоду</button></div>
+      <p className="deck-rule">Обычная ×3 · Редкая ×3 · Эпическая ×2 · Легендарная ×1. Всего 30 карт.</p><div className="deck-editor-actions"><button className="button primary deck-save" disabled={!draftName.trim()} onClick={() => { saveDeck(draft, draftName); setBuilding(false); notify(deckError(draft) ? 'Черновик сохранён. Для боя нужно 30 карт.' : 'Колода сохранена.'); }}><Check size={17} /> Сохранить колоду</button><button className="text-button deck-reset" onClick={() => updateDraft(classDeck(STARTER_DECK, deckInfo?.heroClass ?? 'mage'))}><RotateCcw size={15} /> Стартовая колода</button><button className="text-button deck-reset" onClick={() => updateDraft([])}>Очистить колоду</button></div>
     </>}
       <button className="album-back" onClick={back}><ArrowLeft size={18} />Назад</button>
     </aside></div>

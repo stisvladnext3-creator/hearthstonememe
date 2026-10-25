@@ -561,6 +561,11 @@ export function act(input: Game, side: Side, action: Action): Result {
     emit(g, { kind: 'power', side, source: 'hero', target: power === 'spark' ? anchorFor(action.target!) : { side, uid: 'hero' }, cardId: powerId });
     if (power === 'spark') { const target = targetEntity(action.target!); hit(action.target!, 1); record(`Сила героя «Искра» → ${target.name}: 1 урон.`, { kind: 'power', target, amount: 1 }); }
     if (power === 'armor') { p.armor += 2; record('Сила героя «Поднять щит!»: +2 брони.', { kind: 'power', target: heroEntity(p, side), amount: 2 }); }
+    if (power === 'lifeTap') {
+      hit('own-hero', 2);
+      record('Сила героя «Жизнеотвод»: 2 урона вашему герою, добор одной карты.', { kind: 'power', target: heroEntity(p, side), amount: 2 });
+      draw(g, side);
+    }
     if (power === 'oy') { addToHand(g, side, 'deathwing'); record('Ой! Смертокрыл добавлен в руку.', { kind: 'power', target: cardEntity('deathwing', side) }); }
     if (power === 'rds') { summon(g, side, 'rash', 'hero', 'rds-power'); record('Сила РДШ призывает РДШ 2/5.', { kind: 'power', target: cardEntity('rash', side) }); }
     if (power === 'briefing') { const id = p.deck[0]; draw(g, side); record('Сила героя «Взять карту»: добор одной карты.', { kind: 'power', target: id ? cardEntity(id, side) : undefined }); }
@@ -679,6 +684,7 @@ export function chooseBotAction(g: Game): Action {
     return { type: 'attack', uid: attacker.uid, target: favorable?.uid ?? (targets.includes('hero') ? 'hero' : targets[0]) };
   }
   if (!powerProblem(g, 'bot')) {
+    if (activePower(g, 'bot') === 'lifeTap' && (p.health + p.armor <= 2 + (!p.deck.length ? p.fatigue + 1 : 0) || p.hand.length >= 10)) return { type: 'end' };
     const weak = g.player.board.find(m => m.health === 1);
     if (CARD[powerCardId(activePower(g, 'bot'))].editor) return { type: 'power', target: abilityTargets(g).find(t => t === 'hero') ?? abilityTargets(g)[0] };
     return { type: 'power', target: weak?.uid ?? 'hero' };

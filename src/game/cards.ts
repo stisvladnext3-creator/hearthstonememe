@@ -1,6 +1,6 @@
 import type { EditorData } from './custom-schema';
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
-export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
+export type Effect = 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'lifeTap' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
 export interface CardDef {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
@@ -22,6 +22,7 @@ export const CARDS: CardDef[] = [
   { id: 'oy', name: 'Ой', cost: 6, kind: 'power', text: 'Вы кладёте в руку Смертокрыла 1/1.', flavor: 'Сила героя Маратика. Одно маленькое слово. Очень большие последствия.', rarity: 'rare', art: 6, custom: true, effect: 'oy' },
   { id: 'spark-power', name: 'Искра', cost: 2, kind: 'power', text: 'Наносит 1 урон выбранному персонажу. Один раз за ход.', flavor: 'Фиолетовая магическая стрела. Можно выбрать любого героя или существо, включая своих. «Искра хаоса» — отдельное заклинание, которое наносит 3 урона.', rarity: 'common', art: 10 },
   { id: 'armor-power', name: 'Поднять щит!', cost: 2, kind: 'power', text: 'Даёт вашему герою 2 брони. Один раз за ход.', flavor: 'Сила героя воина. Броня складывается и поглощает урон перед здоровьем.', rarity: 'common', art: 9, effect: 'armor' },
+  { id: 'life-tap', name: 'Жизнеотвод', cost: 2, kind: 'power', text: 'Наносит вашему герою 2 урона. Вы берёте карту. Один раз за ход.', flavor: 'Сила героя чернокнижника. Броня поглощает урон. Если колода пуста, добор вызывает усталость; при полной руке карта сгорает.', rarity: 'common', art: 4, effect: 'lifeTap' },
   { id: 'jaina', name: 'Джайна-ассасин', cost: 12, kind: 'hero', armor: 10, text: 'Стоит на 1 ману меньше за каждое РДШ, погибшее в матче. Боевой клич: ваша сила героя меняется на «Сила РДШ».', flavor: 'Погибшие РДШ обоих игроков снижают стоимость, но не ниже нуля. Новая сила за 4 маны призывает РДШ 2/5.', rarity: 'legendary', art: 10, custom: true, effect: 'jaina' },
   { id: 'rds-power', name: 'Сила РДШ', cost: 4, kind: 'power', text: 'Призывает РДШ 2/5.', flavor: 'Сила героя Джайны-ассасина. Новому РДШ нужен ход, чтобы подготовиться к атаке.', rarity: 'rare', art: 10, custom: true, effect: 'rds' },
   { id: 'fool-power', name: 'Дибильнутый!', cost: 3, kind: 'power', text: 'Превращает врагов в существ на 5 маны дешевле. Исключена «Хорошая игра.».', flavor: 'Если нужной стоимости нет, выбирается ближайшая меньшая или самое дешёвое доступное существо. Превращение не запускает боевые кличи и предсмертные хрипы.', rarity: 'epic', art: 4, custom: true, effect: 'devolve' },

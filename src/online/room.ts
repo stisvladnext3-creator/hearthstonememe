@@ -163,7 +163,19 @@ export class PeerRoom {
         if (result.error) this.send({ type: 'reject', message: result.error, requestId: data.requestId });
         else { this.canonical = result.state; this.state.revision++; }
         this.publish();
-      } else if (data.type === 'rematch' && this.canonical?.winner) { this.guestRematch = true; this.maybeRematch(); }
+      } else if (data.type === 'rematch' && this.canonical?.winner) {
+        if (data.deck !== undefined) {
+          try {
+            registerCardPack(data.cards ?? []);
+            if (!validDeck(data.deck) || data.heroClass !== undefined && !validHeroClass(data.heroClass)) {
+              this.send({ type: 'reject', message: 'Собери колоду из 30 карт и выбери её класс.' }); return;
+            }
+            packForCards([...this.self!.deck, ...data.deck]);
+            this.guest = { ...this.guest!, deck: [...data.deck], cards: packForCards(data.deck), heroClass: data.heroClass ?? this.guest?.heroClass ?? 'mage' };
+          } catch { this.send({ type: 'reject', message: 'Не удалось загрузить карты новой колоды.' }); return; }
+        }
+        this.guestRematch = true; this.maybeRematch();
+      }
       else if (data.type === 'leave') {
         if (this.canonical && !this.canonical.winner) { this.canonical = act(this.canonical, 'bot', { type: 'concede' }).state; this.state.revision++; this.publish(); }
         else if (!this.canonical) this.guest = undefined;
@@ -220,7 +232,7 @@ export class PeerRoom {
   }
   private publish() {
     if (!this.self) return;
-    this.update({ phase: this.canonical ? 'playing' : 'waiting', game: this.canonical ? roomGameView(this.canonical, 'player') : null, rematchSelf: this.hostRematch, rematchOpponent: this.guestRematch });
+    this.update({ phase: this.canonical ? 'playing' : 'waiting', game: this.canonical ? roomGameView(this.canonical, 'player') : null, rematchSelf: this.hostRematch, rematchOpponent: this.guestRematch, heroClass: this.self.heroClass ?? 'mage', opponentClass: this.guest?.heroClass ?? null });
     if (this.guest) this.send({ type: 'snapshot', protocol: ROOM_PROTOCOL, code: this.state.code, name: this.guest.name, opponent: this.self.name, game: this.canonical ? roomGameView(this.canonical, 'bot') : null, revision: this.state.revision, rematchSelf: this.guestRematch, rematchOpponent: this.hostRematch, heroClass: this.guest.heroClass ?? 'mage', opponentClass: this.self.heroClass ?? 'mage' });
     this.save();
   }
@@ -245,10 +257,17 @@ export class PeerRoom {
     this.outbound = message; this.update({ pending: true, error: '' }); this.send(message);
     clearTimeout(this.actionTimer); this.actionTimer = setTimeout(() => { this.outbound = undefined; this.update({ pending: false, error: 'Ответ задерживается. Проверь соединение.' }); }, 15000);
   }
-  rematch() {
+  rematch(deck?: string[], heroClass?: HeroClass) {
     if (!this.state.game?.winner || !this.state.connected) return;
+    if (deck) {
+      if (!validDeck(deck) || !validHeroClass(heroClass)) { this.update({ error: 'Для нового боя выбери готовую колоду.' }); return; }
+      try {
+        packForCards([...deck, ...(this.guest?.deck ?? [])]);
+        this.self = { ...this.self!, deck: [...deck], cards: packForCards(deck), heroClass }; this.save();
+      } catch { this.update({ error: 'Не удалось загрузить карты новой колоды.' }); return; }
+    }
     if (this.state.role === 'host') { this.hostRematch = true; this.maybeRematch(); }
-    else { this.update({ rematchSelf: true }); this.send({ type: 'rematch' }); }
+    else { this.update({ rematchSelf: true }); this.send({ type: 'rematch', deck: this.self!.deck, cards: this.self!.cards, heroClass: this.self!.heroClass }); }
   }
   private maybeRematch() {
     if (this.canonical?.winner && this.hostRematch && this.guestRematch) this.start(); else this.publish();

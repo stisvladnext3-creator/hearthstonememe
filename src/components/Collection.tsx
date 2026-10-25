@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Crown, Flame, Layers3, Minus, Plus, RotateCcw, Search, Shield, Sparkles, Swords, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Crown, Flame, Minus, Plus, RotateCcw, Search, Shield, Sparkles, Swords, Trash2, X } from 'lucide-react';
 import { CARDS, CARD, STARTER_DECK, deckCopyLimit, deckError, type CardDef } from '../game/cards';
 import { Art, Card } from './Card';
 import { phoneScreen, useViewport } from '../useViewport';
+import { DECK_LIMIT, readyDeck, type SavedDeck } from '../decks';
+import { HERO_CLASSES, type HeroClass } from '../game/classes';
+import HeroClassPicker from './HeroClassPicker';
+import { ClassSymbol } from './DeckPicker';
+import Modal from './Modal';
 
 const TABS = [
   { id: 'all', label: 'Все карты', icon: <BookOpen /> },
@@ -13,18 +18,25 @@ const TABS = [
   { id: 'spell', label: 'Заклинания', icon: <Flame /> },
   { id: 'hero', label: 'Герои', icon: <Shield /> },
 ];
-export default function Collection({ deck, saveDeck, inspect, back, notify, editCards, revision }: {
-  deck: string[]; saveDeck: (ids: string[]) => void; inspect: (c: CardDef) => void; back: () => void; notify: (text: string) => void;
+export default function Collection({ deckInfo, decks, selectDeck, createDeck, deleteDeck, initialPanel, saveDeck, inspect, back, notify, editCards, revision }: {
+  deckInfo: SavedDeck | null; decks: SavedDeck[]; selectDeck: (id: string) => void;
+  createDeck: (heroClass: HeroClass, name: string, starter: boolean) => SavedDeck | null; deleteDeck: (id: string) => void; initialPanel: string;
+  saveDeck: (ids: string[], name?: string) => void; inspect: (c: CardDef) => void; back: () => void; notify: (text: string) => void;
   editCards: () => void; revision: number;
 }) {
+  const deck = deckInfo?.cards ?? [];
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const [cost, setCost] = useState<number | null>(null);
   const [building, setBuilding] = useState(false);
   const [draft, setDraft] = useState([...deck]);
+  const [draftName, setDraftName] = useState(deckInfo?.name ?? '');
+  const [creating, setCreating] = useState(false), [newClass, setNewClass] = useState<HeroClass>('mage'), [newName, setNewName] = useState('Новая колода'), [starter, setStarter] = useState(true);
+  const [deleting, setDeleting] = useState<SavedDeck | null>(null), [libraryPage, setLibraryPage] = useState(0);
+  useEffect(() => { setDraft([...(deckInfo?.cards ?? [])]); setDraftName(deckInfo?.name ?? ''); }, [deckInfo?.id]);
   const [page, setPage] = useState(1);
   const size = useViewport(), phone = phoneScreen(size), pageSize = phone ? 4 : 8;
-  const [panel, setPanel] = useState('cards');
+  const [panel, setPanel] = useState(initialPanel);
   const [deckPage, setDeckPage] = useState(1);
   const deckPageSize = !phone ? 30 : size.width > size.height ? 3 : size.height < 650 ? building ? 4 : 6 : building ? 8 : 10;
   useEffect(() => setPage(1), [query, filter, cost]);
@@ -42,13 +54,17 @@ export default function Collection({ deck, saveDeck, inspect, back, notify, edit
     if (draft.length >= 30) { notify('Колода полна. Сначала уберите карту кнопкой «−».'); return; }
     const limit = deckCopyLimit(c);
     if (draft.filter(id => id === c.id).length >= limit) { notify(`Для этой карты разрешено копий: ${limit}.`); return; }
-    setDraft([...draft, c.id]);
+    updateDraft([...draft, c.id]);
   };
   const unique = [...new Set(shownDeck)].sort((a, b) => CARD[a].cost - CARD[b].cost || CARD[a].name.localeCompare(CARD[b].name, 'ru'));
   const deckPages = Math.max(1, Math.ceil(unique.length / deckPageSize)), shownDeckPage = Math.min(deckPage, deckPages);
-  const startEditing = () => { setDraft([...deck]); setBuilding(true); setPanel('cards'); };
+  const updateDraft = (ids: string[]) => { setDraft(ids); saveDeck(ids, draftName); };
+  const startEditing = (chosen: SavedDeck) => { selectDeck(chosen.id); setDraft([...chosen.cards]); setDraftName(chosen.name); setBuilding(true); setPanel('cards'); setDeckPage(1); };
+  const libraryPageSize = phone ? size.width > size.height ? 3 : size.height < 650 ? 4 : 6 : 6;
+  const libraryPages = Math.max(1, Math.ceil(decks.length / libraryPageSize)), libraryCurrent = Math.min(libraryPage, libraryPages - 1);
+  const newDeck = () => { if (decks.length >= DECK_LIMIT) { notify(`Можно сохранить до ${DECK_LIMIT} колод.`); return; } setNewName('Новая колода'); setNewClass('mage'); setStarter(true); setCreating(true); };
   return <section className={`collection-page collection-album page-enter phone-panel-${panel}`}>
-    <div className="collection-panel-tabs" role="tablist" aria-label="Разделы коллекции"><button role="tab" aria-selected={panel === 'cards'} onClick={() => setPanel('cards')}>Карты</button><button role="tab" aria-selected={panel === 'deck'} onClick={() => setPanel('deck')}>Моя колода · {shownDeck.length}/30</button><button onClick={editCards}>Редактор карт</button><button onClick={back} aria-label="Из коллекции в меню"><ArrowLeft size={17} />Меню</button></div>
+    <div className="collection-panel-tabs" role="tablist" aria-label="Разделы коллекции"><button role="tab" aria-selected={panel === 'cards'} onClick={() => setPanel('cards')}>Карты</button><button role="tab" aria-selected={panel === 'deck'} onClick={() => setPanel('deck')}>{building ? `Колода · ${shownDeck.length}/30` : `Мои колоды · ${decks.length}`}</button><button onClick={editCards}>Редактор карт</button><button onClick={back} aria-label="Из коллекции в меню"><ArrowLeft size={17} />Меню</button></div>
     <div className="album-layout"><div className="album-main">
       <div className="book-tabs" role="tablist" aria-label="Категории карт">{TABS.map(tab => <button key={tab.id} role="tab" aria-selected={filter === tab.id} className={`book-tab ${tab.id} ${filter === tab.id ? 'active' : ''}`} onClick={() => setFilter(tab.id)} aria-label={tab.label} title={tab.label}>{tab.icon}<span>{tab.label}</span></button>)}</div>
       <div className="book-paper"><span className="paper-corner tl" /><span className="paper-corner tr" /><span className="paper-corner bl" /><span className="paper-corner br" />
@@ -61,13 +77,23 @@ export default function Collection({ deck, saveDeck, inspect, back, notify, edit
         <label className="search-box"><Search size={19} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Найти карту…" aria-label="Поиск карт" />{query && <button className="icon-button" onClick={() => setQuery('')} aria-label="Очистить поиск"><X size={17} /></button>}</label>
       </div><div className="album-caption"><span>Найдено: {filtered.length}</span><span>Нажми на карту, чтобы прочитать описание</span></div>
     </div>
-    <aside className="album-deck-sidebar"><h2>Моя колода</h2><button className="album-deck-banner" onClick={building ? () => setBuilding(false) : startEditing} aria-label={building ? 'Скрыть колоду' : 'Колода Твои правила — редактировать'}><Art index={10} /><span><strong>Твои правила</strong><small>{shownDeck.length}/30 карт · {building ? 'Редактирование' : 'Готова к бою'}</small></span><Layers3 size={22} /></button>
+    <aside className={`album-deck-sidebar ${building ? 'editing-deck' : 'deck-library-sidebar'}`}>
+    {!building ? <><h2>Мои колоды <small>{decks.length}/{DECK_LIMIT}</small></h2><div className="deck-library-list">{decks.slice(libraryCurrent * libraryPageSize, (libraryCurrent + 1) * libraryPageSize).map(d => <button key={d.id} className={'album-deck-banner ' + d.heroClass + (d.id === deckInfo?.id ? ' active-deck' : '')} aria-label={`Редактировать колоду ${d.name}`} onClick={() => startEditing(d)}><Art index={HERO_CLASSES[d.heroClass].art} cardId={HERO_CLASSES[d.heroClass].hero} /><span><strong>{d.name}</strong><small>{HERO_CLASSES[d.heroClass].name} · {d.cards.length}/30 · {readyDeck(d) ? 'Готова' : 'Черновик'}</small></span><ClassSymbol heroClass={d.heroClass} /></button>)}</div>
+      {!decks.length && <p className="deck-empty">Создай колоду и выбери её класс.</p>}
+      <div className="deck-library-pagination"><button aria-label="Предыдущие колоды" disabled={libraryCurrent === 0} onClick={() => setLibraryPage(libraryCurrent - 1)}><ChevronLeft size={18} /></button><span>{libraryCurrent + 1}/{libraryPages}</span><button aria-label="Следующие колоды" disabled={libraryCurrent + 1 === libraryPages} onClick={() => setLibraryPage(libraryCurrent + 1)}><ChevronRight size={18} /></button></div>
+      <button className="button primary create-deck-button" onClick={newDeck}><Plus size={17} />Создать колоду</button><p className="deck-library-hint">У каждой колоды свой класс. Перед матчем выбирай готовую колоду.</p>
+    </> : <><div className="deck-edit-heading"><button className="text-button" aria-label="К списку колод" onClick={() => { setBuilding(false); setPanel('deck'); }}><ArrowLeft size={17} />Мои колоды</button><button className="icon-button" aria-label="Удалить колоду" onClick={() => setDeleting(deckInfo)}><Trash2 size={17} /></button></div>
+      <label className="deck-name-editor">Название<input aria-label="Название колоды" value={draftName} maxLength={32} onChange={e => { setDraftName(e.target.value); saveDeck(draft, e.target.value); }} /></label>
+      <div className="deck-edit-class"><ClassSymbol heroClass={deckInfo?.heroClass ?? 'mage'} /><strong>{HERO_CLASSES[deckInfo?.heroClass ?? 'mage'].name}</strong><span>{shownDeck.length}/30</span></div>
       <div className="deck-mana-curve" aria-label="Кривая маны">{Array.from({ length: 8 }, (_, n) => <div key={n}><div className="curve-track"><i style={{ height: `${Math.min(100, shownDeck.filter(id => n === 7 ? CARD[id].cost >= 7 : CARD[id].cost === n).length * 13)}%` }} /></div><span>{n === 7 ? '7+' : n}</span></div>)}</div>
-      <div className="deck-list">{unique.slice((shownDeckPage - 1) * deckPageSize, shownDeckPage * deckPageSize).map(id => <div key={id} className="deck-row"><span className="mini-mana">{CARD[id].cost}</span><button className="deck-row-name" onClick={() => inspect(CARD[id])}>{CARD[id].name}</button><span className="deck-quantity">×{shownDeck.filter(x => x === id).length}</span>{building && <button className="icon-button" aria-label={`Убрать ${CARD[id].name}`} onClick={() => { const copy = [...draft]; copy.splice(copy.indexOf(id), 1); setDraft(copy); }}><Minus size={16} /></button>}</div>)}</div>
+      <div className="deck-list">{unique.slice((shownDeckPage - 1) * deckPageSize, shownDeckPage * deckPageSize).map(id => <div key={id} className="deck-row"><span className="mini-mana">{CARD[id].cost}</span><button className="deck-row-name" onClick={() => inspect(CARD[id])}>{CARD[id].name}</button><span className="deck-quantity">×{shownDeck.filter(x => x === id).length}</span><button className="icon-button" aria-label={`Убрать ${CARD[id].name}`} onClick={() => { const copy = [...draft]; copy.splice(copy.indexOf(id), 1); updateDraft(copy); }}><Minus size={16} /></button></div>)}</div>
       {phone && deckPages > 1 && <div className="deck-pagination"><button aria-label="Предыдущая страница колоды" disabled={shownDeckPage <= 1} onClick={() => setDeckPage(shownDeckPage - 1)}><ChevronLeft size={18} /></button><span>{shownDeckPage} / {deckPages}</span><button aria-label="Следующая страница колоды" disabled={shownDeckPage >= deckPages} onClick={() => setDeckPage(shownDeckPage + 1)}><ChevronRight size={18} /></button></div>}
       {!shownDeck.length && <p className="deck-empty">Нажимай «В колоду» под картами, чтобы собрать свою комбинацию.</p>}
-      {building ? <><p className="deck-rule">Обычная ×3 · Редкая ×3 · Эпическая ×2 · Легендарная ×1. Всего 30 карт.</p><div className="deck-editor-actions"><button className="button primary deck-save" disabled={!!deckError(draft)} onClick={() => { saveDeck(draft); notify('Колода сохранена.'); }}><Check size={17} /> Сохранить колоду</button><button className="text-button deck-reset" onClick={() => setDraft([...STARTER_DECK])}><RotateCcw size={15} /> Стартовая колода</button><button className="text-button deck-reset" onClick={() => setDraft([])}>Очистить колоду</button></div></> : <button className="button primary deck-save" onClick={startEditing}><Layers3 size={17} /> Изменить колоду</button>}
+      <p className="deck-rule">Обычная ×3 · Редкая ×3 · Эпическая ×2 · Легендарная ×1. Всего 30 карт.</p><div className="deck-editor-actions"><button className="button primary deck-save" disabled={!draftName.trim()} onClick={() => { saveDeck(draft, draftName); setBuilding(false); setPanel('deck'); notify(deckError(draft) ? 'Черновик сохранён. Для боя нужно 30 карт.' : 'Колода сохранена.'); }}><Check size={17} /> Сохранить колоду</button><button className="text-button deck-reset" onClick={() => updateDraft([...STARTER_DECK])}><RotateCcw size={15} /> Стартовая колода</button><button className="text-button deck-reset" onClick={() => updateDraft([])}>Очистить колоду</button></div>
+    </>}
       <button className="text-button workshop-entry" onClick={editCards}><Plus size={17} />Редактор карт</button><button className="album-back" onClick={back}><ArrowLeft size={18} /> В главное меню</button>
     </aside></div>
+    {creating && <HeroClassPicker value={newClass} change={setNewClass} name={newName} changeName={setNewName} starter={starter} changeStarter={setStarter} close={() => setCreating(false)} confirm={() => { const created = createDeck(newClass, newName, starter); if (created) { setDraft([...created.cards]); setDraftName(created.name); setBuilding(true); setPanel('cards'); setCreating(false); setDeckPage(1); } }} />}
+    {deleting && <Modal title="Удаление колоды" close={() => setDeleting(null)} className="small-modal"><h2>Удалить «{deleting.name}»?</h2><p>Карты останутся в коллекции.</p><button className="button danger" onClick={() => { deleteDeck(deleting.id); setDeleting(null); setBuilding(false); setPanel('deck'); }}>Удалить колоду</button><button className="button secondary" onClick={() => setDeleting(null)}>Отмена</button></Modal>}
   </section>;
 }

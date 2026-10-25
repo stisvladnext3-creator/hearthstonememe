@@ -7,19 +7,19 @@ const page = await context.newPage(), errors = []; page.setDefaultTimeout(12000)
 page.on('pageerror', e => errors.push(e.message));
 try {
   await page.goto(process.env.CONNECTION_TEST_URL || 'http://127.0.0.1:4173');
-  await page.getByRole('button', { name: 'Выбрать класс для нового боя', exact: true }).click();
-  const picker = page.getByRole('dialog', { name: 'Выбор класса', exact: true });
-  await picker.getByRole('button', { name: 'Воин', exact: true }).click();
+  await page.getByRole('button', { name: 'Выбрать колоду для нового боя', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Выбор колоды', exact: true });
+  await picker.locator('.deck-slot.warrior').first().click();
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport);
-    await expect(picker.getByRole('button', { name: 'Начать бой', exact: true })).toBeVisible();
+    await expect(picker.getByRole('button', { name: 'Играть', exact: true })).toBeVisible();
     await expect.poll(() => picker.evaluate(el => [...el.querySelectorAll('button')].flatMap(button => { const r = button.getBoundingClientRect(); return r.top >= 0 && r.left >= 0 && r.right <= innerWidth + 1 && r.bottom <= innerHeight + 1 ? [] : [{ name: button.getAttribute('aria-label') ?? button.textContent, top: r.top, right: r.right, bottom: r.bottom, width: innerWidth, height: innerHeight }]; })), { timeout: 3000 }).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
   }
   await picker.getByRole('button', { name: 'Закрыть', exact: true }).click();
-  await page.reload(); await expect(page.locator('.wood-class-button')).toContainText('Воин');
+  await page.reload(); await expect(page.locator('.wood-class-button')).toContainText('воин');
   await page.getByRole('button', { name: 'В бой', exact: true }).click();
-  await picker.getByRole('button', { name: 'Начать бой', exact: true }).click();
+  await picker.getByRole('button', { name: 'Играть', exact: true }).click();
   await page.getByRole('button', { name: 'Подтвердить стартовую руку', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
   await expect(page.locator('.own-hero-row .hero-label strong')).toHaveText('Воин');
@@ -38,9 +38,9 @@ try {
   await expect(page.locator('.own-hero-row .hero-armor')).toHaveText('2');
   await expect(power).toHaveAttribute('aria-disabled', 'true');
   await page.getByRole('button', { name: 'Главное меню', exact: true }).click();
-  await page.getByRole('button', { name: 'Выбрать класс для нового боя', exact: true }).click();
-  await picker.getByRole('button', { name: 'Маг', exact: true }).click();
-  await picker.getByRole('button', { name: 'Начать новый бой', exact: true }).click();
+  await page.getByRole('button', { name: 'Выбрать колоду для нового боя', exact: true }).click();
+  await picker.locator('.deck-slot.mage').first().click();
+  await picker.getByRole('button', { name: 'Играть', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible();
   await expect(page.locator('.own-power strong')).toHaveText('Искра');
   expect(errors).toEqual([]);

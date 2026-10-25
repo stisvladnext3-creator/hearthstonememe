@@ -29,11 +29,11 @@ for (const [width, height] of [[320, 568], [390, 844], [844, 390], [667, 375]]) 
   await fits(page);
   await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click(); await fits(page);
   for (const card of await page.locator('.album-card-grid .game-card').all()) { const r = await card.boundingBox(); expect(r!.height).toBeGreaterThan(75); }
-  await page.getByRole('tab', { name: /Моя колода/ }).click(); await fits(page);
+  await page.getByRole('tab', { name: /Мои колоды|Колода ·/ }).click(); await fits(page);
   const nextDeck = page.getByRole('button', { name: 'Следующая страница колоды' });
   if (await nextDeck.count()) { await nextDeck.click(); await fits(page); }
-  await page.getByRole('button', { name: 'Изменить колоду' }).click(); await fits(page);
-  await page.getByRole('tab', { name: /Моя колода/ }).click(); await fits(page);
+  await page.getByRole('button', { name: 'Редактировать колоду Твои правила' }).click(); await fits(page);
+  await page.getByRole('tab', { name: /Мои колоды|Колода ·/ }).click(); await fits(page);
   await page.getByRole('button', { name: 'Стартовая колода', exact: true }).click(); await fits(page);
   await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
   await page.getByRole('button', { name: 'Скрыть сообщение' }).click();
@@ -52,7 +52,7 @@ for (const [width, height] of [[320, 568], [390, 844], [844, 390], [667, 375]]) 
   await expect(page.locator('.room-code-heading strong')).toBeVisible({ timeout: 15000 }); await fits(page);
   await page.getByRole('button', { name: 'Закрыть комнату', exact: true }).click(); await fits(page);
   await page.getByRole('dialog', { name: 'Выйти из комнаты' }).getByRole('button', { name: 'Выйти из комнаты', exact: true }).click();
-  await page.locator('.rooms-back').click(); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click(); await fits(page);
+  await page.locator('.rooms-back').click(); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Играть', exact: true }).click(); await fits(page);
   await expect(page.locator('.mulligan-choice')).toHaveCount(3);
   const confirm = page.getByRole('button', { name: 'Подтвердить стартовую руку' });
   await confirm.focus(); await page.waitForTimeout(450); await expect(confirm).toBeFocused();
@@ -73,7 +73,7 @@ test('landscape room errors keep the room controls on screen', async ({ page }) 
 });
 
 test('all three opening cards can be exchanged and saved choices survive a reload', async ({ page }) => {
-  await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click();
+  await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Играть', exact: true }).click();
   const before = await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!));
   for (const card of await page.locator('.mulligan-choice .game-card').all()) await card.click();
   await expect(page.locator('.mulligan-choice.replace')).toHaveCount(3);
@@ -89,7 +89,7 @@ test('all three opening cards can be exchanged and saved choices survive a reloa
 });
 
 test('the original thirty-second deadline expires automatically and starts only once', async ({ page }) => {
-  await page.clock.install(); await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click();
+  await page.clock.install(); await page.goto('/'); await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Играть', exact: true }).click();
   await page.locator('.mulligan-choice .game-card').first().click();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')!).mulligan.selected.player.length)).toBe(1);
   await page.clock.fastForward(30_100); await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
@@ -101,12 +101,12 @@ test('the original thirty-second deadline expires automatically and starts only 
 test('Volunteer Boss remains inspectable but has no deck button and old decks migrate', async ({ page }) => {
   const g = createGame(); const oldDeck = [...g.player.hand.map(c => c.id), ...g.player.deck]; oldDeck[0] = 'volunteer';
   await page.addInitScript(deck => localStorage.setItem('memestone.v1.deck', JSON.stringify(deck)), oldDeck);
-  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click(); await page.getByRole('button', { name: 'Изменить колоду' }).click();
+  await page.goto('/'); await page.getByRole('button', { name: 'Моя коллекция', exact: true }).click(); await page.getByRole('button', { name: 'Редактировать колоду Твои правила' }).click();
   await page.getByLabel('Поиск карт').fill('Волонтер-босс'); await expect(page.locator('[data-card-id="volunteer"]').locator('..').locator('.album-owned')).toHaveText('Награда за задачу');
   await expect(page.getByRole('button', { name: `Добавить ${CARD.volunteer.name}`, exact: true })).toHaveCount(0);
   await page.locator('.album-card-grid [data-card-id="volunteer"]').click(); await expect(page.locator('.detail-tags')).toContainText('Награда за задачу');
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Сохранить колоду' }).click();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.deck')!).includes('volunteer'))).toBe(false);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.decks')!).decks.some((d: { cards: string[] }) => d.cards.includes('volunteer')))).toBe(false);
 });
 
 test('drawing multiple cards animates from the actual deck and respects reduced motion', async ({ page }) => {

@@ -12,6 +12,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 const errors = [];
 const withCustomCards = process.env.CUSTOM_CARDS === '1';
 const withWarrior = process.env.WARRIOR === '1';
+const withDecks = process.env.CLASS_DECKS === '1';
 const starter = [...readFileSync(new URL('../src/game/cards.ts', import.meta.url), 'utf8').match(/export const STARTER_DECK = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
 async function participant(viewport, role) {
   const context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
@@ -48,12 +49,12 @@ async function lobby(page, name, heroClass = 'mage') {
   await page.goto(origin);
   await page.getByRole('button', { name: 'Комнаты', exact: true }).click();
   await page.getByLabel('Имя игрока').fill(name);
-  if (heroClass === 'warrior') {
-    await page.getByRole('button', { name: 'Выбрать класс', exact: true }).click();
-    const picker = page.getByRole('dialog', { name: 'Выбор класса', exact: true });
-    await picker.getByRole('button', { name: 'Воин', exact: true }).click();
-    await picker.getByRole('button', { name: 'Выбрать класс', exact: true }).click();
-    await expect(page.locator('.room-class-button')).toHaveText('Воин');
+  if (heroClass !== 'mage') {
+    await page.getByRole('button', { name: 'Выбрать колоду', exact: true }).click();
+    const picker = page.getByRole('dialog', { name: 'Выбор колоды', exact: true });
+    await picker.locator('.deck-slot.' + heroClass).first().click();
+    await picker.getByRole('button', { name: 'Выбрать колоду', exact: true }).click();
+    await expect(page.locator('.room-deck-note')).toContainText(heroClass === 'warrior' ? 'Воин' : 'Чернокнижник');
   }
   if (withWarrior && page.viewportSize().width <= 960) await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
 }
@@ -73,15 +74,16 @@ async function findRoom(page, code) {
 }
 async function flow(listed) {
   const host = await participant({ width: 1440, height: 900 }, 'host');
-  const guest = await participant(withWarrior && listed ? { width: 844, height: 390 } : { width: 390, height: 844 }, 'guest');
+  const guest = await participant((withWarrior || withDecks) && listed ? { width: 844, height: 390 } : { width: 390, height: 844 }, 'guest');
   const name = `Проверка-${crypto.randomUUID().slice(0, 5)}`;
   try {
-    await lobby(host.page, name, withWarrior && !listed ? 'warrior' : 'mage');
+    await lobby(host.page, name, !listed && (withWarrior || withDecks) ? withDecks ? 'warlock' : 'warrior' : 'mage');
     await host.page.getByLabel('Показывать в списке комнат', { exact: true }).setChecked(listed);
     await host.page.getByRole('button', { name: 'Создать комнату', exact: true }).click();
+    await host.page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Создать комнату', exact: true }).click();
     await expect(host.page.locator('.room-code-heading strong')).toBeVisible({ timeout: 25_000 });
     const code = (await host.page.locator('.room-code-heading strong').innerText()).trim();
-    await lobby(guest.page, 'Гость-проверка', withWarrior && listed ? 'warrior' : 'mage');
+    await lobby(guest.page, 'Гость-проверка', listed && (withWarrior || withDecks) ? withDecks ? 'warlock' : 'warrior' : 'mage');
     if (listed) {
       const row = await findRoom(guest.page, code);
       await row.getByRole('button', { name: `Войти в комнату ${name}`, exact: true }).click();
@@ -89,6 +91,7 @@ async function flow(listed) {
       await guest.page.getByLabel('Код комнаты', { exact: true }).fill(code);
       await guest.page.getByRole('button', { name: 'Войти по коду', exact: true }).click();
     }
+    await guest.page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Войти в комнату', exact: true }).click();
     await expect(host.page.getByRole('button', { name: 'Начать бой', exact: true })).toBeEnabled({ timeout: 25_000 });
     console.log(`${listed ? 'Public list' : 'Room code'}: two players connected`);
     await host.page.getByRole('button', { name: 'Начать бой', exact: true }).click();
@@ -137,7 +140,20 @@ async function flow(listed) {
       await expect(power).toHaveAttribute('aria-disabled', 'true');
       console.log((listed ? 'Guest' : 'Host') + ' warrior: independent classes, power visibility, 2 armor and 2 mana synchronized');
     }
-    if (!listed || withWarrior) {
+    if (withDecks) {
+      const warlock = listed ? guest.page : host.page, opponent = listed ? host.page : guest.page;
+      await expect(warlock.locator('.own-power strong')).toHaveText('Жизнеотвод');
+      await expect(opponent.locator('.enemy-power strong')).toHaveText('Жизнеотвод');
+      if (warlock !== first) { await first.getByRole('button', { name: 'Завершить', exact: true }).click(); await expect(warlock.locator('.end-turn')).toBeEnabled(); }
+      const handCount = await warlock.locator('.player-hand .hand-card-button').count();
+      await warlock.getByRole('button', { name: 'Сила героя Жизнеотвод, 2 маны', exact: true }).click();
+      await expect(warlock.locator('.own-hero-row .hero-hp')).toContainText('28');
+      await expect(opponent.locator('.enemy-hero-row .hero-hp')).toContainText('28');
+      await expect(warlock.locator('.player-hand .hand-card-button')).toHaveCount(handCount + 1);
+      await expect(warlock.locator('.arena-bottom .mana-bar strong')).toHaveText('0/2');
+      console.log((listed ? 'Guest' : 'Host') + ' warlock: deck class, self damage, draw, enemy power and mana synchronized');
+    }
+    if (!listed || withWarrior || withDecks) {
       if (withWarrior) await guest.page.evaluate(() => localStorage.setItem('memestone.v1.hero-class', JSON.stringify('mage')));
       await guest.page.reload();
       if (await guest.page.getByRole('button', { name: 'Комнаты', exact: true }).isVisible()) await guest.page.getByRole('button', { name: 'Комнаты', exact: true }).click();
@@ -146,6 +162,21 @@ async function flow(listed) {
       for (const { page } of [host, guest]) await expect(page.locator('.online-notice')).toHaveCount(0, { timeout: 20_000 });
       if (withWarrior) await expect(guest.page.locator(listed ? '.own-hero-row .hero-armor' : '.enemy-hero-row .hero-armor')).toHaveText('2');
       console.log('Room code: guest reconnected to the same match after reload');
+    }
+    if (withDecks) {
+      await host.page.getByRole('button', { name: 'Сдаться', exact: true }).click();
+      await host.page.getByRole('dialog', { name: 'Сдаться', exact: true }).getByRole('button', { name: 'Сдаться', exact: true }).click();
+      for (const [participant, nextClass] of [[host, listed ? 'warlock' : 'warrior'], [guest, listed ? 'warrior' : 'warlock']]) {
+        await participant.page.getByRole('dialog', { name: 'Результат боя', exact: true }).getByRole('button', { name: 'Ещё одна партия', exact: true }).click();
+        const picker = participant.page.getByRole('dialog', { name: 'Выбор колоды', exact: true });
+        await picker.locator('.deck-slot.' + nextClass).first().click();
+        await picker.getByRole('button', { name: 'Играть ещё', exact: true }).click();
+      }
+      for (const participant of [host, guest]) { await expect(participant.page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible(); await participant.page.getByRole('button', { name: 'Подтвердить стартовую руку' }).click(); }
+      for (const participant of [host, guest]) await expect(participant.page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
+      await expect(host.page.locator('.own-power strong')).toHaveText(listed ? 'Жизнеотвод' : 'Поднять щит!');
+      await expect(guest.page.locator('.own-power strong')).toHaveText(listed ? 'Поднять щит!' : 'Жизнеотвод');
+      console.log('Rematch: both players selected different class decks and started a new match in the same room');
     }
     // Close normally to clear this test room from the real public directory.
     await host.page.getByRole('button', { name: `Комната ${code}`, exact: true }).click();

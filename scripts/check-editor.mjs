@@ -41,13 +41,13 @@ try {
   await expect(page.locator('.workshop-library [data-card-id]')).toHaveCount(1);
   console.log('Editor: created a spell with real damage, two tags and a guaranteed opening draw; survived reload');
   await page.getByRole('button', { name: 'Коллекция', exact: true }).click();
-  await page.getByRole('button', { name: 'Изменить колоду', exact: true }).click();
+  await page.getByRole('button', { name: 'Редактировать колоду Твои правила', exact: true }).click();
   await page.getByRole('button', { name: 'Убрать Козиныч', exact: true }).click();
   await page.getByLabel('Поиск карт').fill('Проверочная молния');
   await page.getByRole('button', { name: 'Добавить Проверочная молния', exact: true }).click();
   await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
   await page.getByRole('button', { name: 'В главное меню', exact: true }).click();
-  await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор класса', exact: true }).getByRole('button', { name: 'Начать бой', exact: true }).click();
+  await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Играть', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toBeVisible();
   await expect(page.locator('.mulligan-choice [data-card-id="' + saved[0].id + '"]')).toHaveCount(1);
   await page.getByRole('button', { name: 'Подтвердить стартовую руку', exact: true }).click();

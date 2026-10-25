@@ -25,10 +25,10 @@ try {
   await page.goto(process.env.CONNECTION_TEST_URL || 'http://127.0.0.1:4173');
   await centeredMenu();
   await page.getByRole('button', { name: 'В бой', exact: true }).click();
-  const picker = page.getByRole('dialog', { name: 'Выбор класса', exact: true });
-  await expect(picker.locator('.hero-class-choice.warrior .portrait-art')).toHaveAttribute('style', /warrior.webp/);
-  await picker.getByRole('button', { name: 'Воин', exact: true }).click();
-  await picker.getByRole('button', { name: 'Начать бой', exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Выбор колоды', exact: true });
+  await expect(picker.locator('.deck-slot.warrior .portrait-art')).toHaveAttribute('style', /warrior.webp/);
+  await picker.locator('.deck-slot.warrior').first().click();
+  await picker.getByRole('button', { name: 'Играть', exact: true }).click();
   await page.getByRole('button', { name: 'Подтвердить стартовую руку', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Стартовая рука' })).toHaveCount(0);
   const template = await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.game')));

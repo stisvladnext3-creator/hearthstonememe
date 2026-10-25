@@ -1,6 +1,6 @@
 import { phoneScreen, useViewport } from '../useViewport';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, Copy, DoorOpen, Globe, Link, LoaderCircle, Play, RefreshCw, Shield, Swords, Users, Wifi, WifiOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Check, Copy, DoorOpen, Globe, Layers3, Link, LoaderCircle, Play, RefreshCw, Swords, Users, Wifi, WifiOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import Battle from './Battle';
 import Modal from './Modal';
 import { PeerRoom, inviteLink, savedRoom } from '../online/room';
@@ -9,12 +9,13 @@ import { EMPTY_DIRECTORY, RoomDirectory, type DirectoryState } from '../online/d
 import type { Inspect } from '../inspection';
 import type { BattlegroundId } from '../battlegrounds';
 import { read, write } from '../storage';
-import { HERO_CLASSES, type HeroClass } from '../game/classes';
+import { HERO_CLASSES } from '../game/classes';
+import { readyDeck, type SavedDeck } from '../decks';
 
-export default function Online({ active, deck, board, animations, overlayOpen, inspect, settings, help, chooseBoard, home, battleChanged, heroClass, chooseClass }: {
-  active: boolean; deck: string[]; board: BattlegroundId; animations: boolean; overlayOpen: boolean; inspect: Inspect;
+export default function Online({ active, board, animations, overlayOpen, inspect, settings, help, chooseBoard, home, battleChanged, selectedDeck, chooseDeck }: {
+  active: boolean; board: BattlegroundId; animations: boolean; overlayOpen: boolean; inspect: Inspect;
   settings: () => void; help: () => void; chooseBoard: () => void; home: () => void; battleChanged: (value: boolean) => void;
-  heroClass: HeroClass; chooseClass: () => void;
+  selectedDeck: SavedDeck | null; chooseDeck: (done?: (deck: SavedDeck) => void, label?: string) => void;
 }) {
   const viewport = useViewport();
   const [roomCapacity, setRoomCapacity] = useState(3);
@@ -46,7 +47,9 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
   useEffect(() => () => {
     controller.current?.close(); directoryController.current?.close(); directoryController.current = null;
   }, []);
-  const open = (role: 'host' | 'guest', restore = false, destination?: string) => {
+  const open = (role: 'host' | 'guest', restore = false, destination?: string, chosen?: SavedDeck) => {
+    if (!restore && !chosen) { chooseDeck(deck => open(role, false, destination, deck), role === 'host' ? 'Создать комнату' : 'Войти в комнату'); return; }
+    if (!restore && (!chosen || !readyDeck(chosen))) return;
     controller.current?.close();
     const next = new PeerRoom(state => {
       if (controller.current !== next) return;
@@ -56,7 +59,7 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
     controller.current = next; write('online-name', cleanName(name));
     const saved = restore ? savedRoom() : undefined;
     if (destination) setCode(destination);
-    void next.open(saved?.role ?? role, name, deck, saved?.code ?? destination ?? code, saved ?? undefined, listed, heroClass);
+    void next.open(saved?.role ?? role, name, chosen?.cards ?? selectedDeck?.cards ?? [], saved?.code ?? destination ?? code, saved ?? undefined, listed, chosen?.heroClass ?? selectedDeck?.heroClass ?? 'mage');
   };
   const leave = () => {
     controller.current?.close(true); controller.current = null; setRoom({ ...EMPTY_ROOM });
@@ -69,7 +72,7 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
   if (!active) return null;
   if (inBattle) return <Battle game={room.game!} board={board} animations={animations} overlayOpen={overlayOpen}
     dispatch={action => controller.current?.action(action)} inspect={inspect} settings={settings} help={help} chooseBoard={chooseBoard}
-    back={() => setShowLobby(true)} rematch={() => controller.current?.rematch()}
+    back={() => setShowLobby(true)} rematch={() => chooseDeck(deck => controller.current?.rematch(deck.cards, deck.heroClass), 'Играть ещё')}
     multiplayer={{ code: room.code, opponent: room.opponent, connected: room.connected,
       blocked: !room.connected ? 'Ждём соединения с соперником…' : room.pending ? 'Ожидаем подтверждения хода…' : '',
       notice: room.error, rematchSelf: room.rematchSelf, rematchOpponent: room.rematchOpponent }} />;
@@ -80,8 +83,8 @@ export default function Online({ active, deck, board, animations, overlayOpen, i
     <div className="rooms-heading"><span className="eyebrow"><Users size={17} /> СВОЯ КОМПАНИЯ</span><h1>Игровые комнаты</h1><p>Выбери открытую комнату, создай свою или зайди по коду.</p></div>
     {room.error && <div className="room-error" role="alert"><WifiOff size={18} />{room.error}</div>}
     {!entered && <div className="room-entry-panel">
-      <div className="room-player-setup"><label className="room-name-label">Твоё имя<input aria-label="Имя игрока" maxLength={20} value={name} onChange={e => setName(e.target.value)} disabled={connecting} /></label><button className="room-class-button" aria-label="Выбрать класс" onClick={chooseClass} disabled={connecting}><Shield size={16} />{HERO_CLASSES[heroClass].name}</button></div>
-      <p className="room-deck-note">В бой пойдёт твоя сохранённая колода: {deck.length} карт. Её можно изменить в коллекции.</p>
+      <div className="room-player-setup"><label className="room-name-label">Твоё имя<input aria-label="Имя игрока" maxLength={20} value={name} onChange={e => setName(e.target.value)} disabled={connecting} /></label><button className="room-class-button" aria-label="Выбрать колоду" onClick={() => chooseDeck()} disabled={connecting}><Layers3 size={16} /><span>{selectedDeck?.name ?? 'Выбери колоду'}</span></button></div>
+      <p className="room-deck-note">{selectedDeck ? `${HERO_CLASSES[selectedDeck.heroClass].name} · ${selectedDeck.cards.length}/30 карт. Колоду можно выбрать перед входом в комнату.` : 'Сначала создай колоду в коллекции.'}</p>
       <section className="public-rooms" aria-label="Список открытых комнат">
         <div className="public-rooms-heading"><h2><Globe size={21} />Открытые комнаты <span>{directory.rooms.length}</span></h2><button className="icon-button" aria-label="Обновить список комнат" onClick={() => directoryController.current?.refresh()}><RefreshCw size={18} className={directory.status === 'connecting' ? 'spinning' : ''} /></button></div>
         {directory.status !== 'ready' ? <p className="public-rooms-empty" role="status">{directory.status === 'connecting' ? 'Ищем открытые комнаты…' : 'Восстанавливаем список комнат. По коду можно войти сразу.'}</p>

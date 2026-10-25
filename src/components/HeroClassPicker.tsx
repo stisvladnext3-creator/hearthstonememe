@@ -1,21 +1,25 @@
-import { Check, Shield, Sparkles, Swords } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 import { Art } from './Card';
+import { ClassSymbol } from './DeckPicker';
 import Modal from './Modal';
 
-export default function HeroClassPicker({ value, change, confirm, close, start = false, replace = false }: {
-  value: HeroClass; change: (value: HeroClass) => void; confirm: () => void; close: () => void; start?: boolean; replace?: boolean;
+export default function HeroClassPicker({ value, change, confirm, close, name, changeName, starter, changeStarter }: {
+  value: HeroClass; change: (value: HeroClass) => void; confirm: () => void; close: () => void;
+  name: string; changeName: (value: string) => void; starter: boolean; changeStarter: (value: boolean) => void;
 }) {
-  return <Modal title="Выбор класса" close={close} className="hero-class-modal">
-    <span className="eyebrow">ТВОЙ ГЕРОЙ</span><h2>Выбери свой класс</h2>
-    <div className="hero-class-choices" aria-label="Доступные классы">{(Object.keys(HERO_CLASSES) as HeroClass[]).map(id => {
-      const option = HERO_CLASSES[id], warrior = id === 'warrior';
+  return <Modal title="Создание колоды" close={close} className="hero-class-modal new-deck-modal">
+    <div className="new-deck-header"><h2>Новая колода</h2><label>Название<input autoComplete="off" aria-label="Название новой колоды" maxLength={32} value={name} onChange={e => changeName(e.target.value)} /></label></div>
+    <div className="hero-class-choices" aria-label="Класс новой колоды">{(Object.keys(HERO_CLASSES) as HeroClass[]).map(id => {
+      const option = HERO_CLASSES[id];
       return <button key={id} className={'hero-class-choice ' + id + (value === id ? ' selected' : '')} aria-label={option.name} aria-pressed={value === id} onClick={() => change(id)}>
-        <span className="class-portrait"><Art index={option.art} cardId={option.hero} />{warrior ? <Shield /> : <Sparkles />}</span>
-        <strong>{option.name}</strong><span className="class-power-name">{option.powerName}</span><p>{option.description}</p><span className="class-power-cost">{option.cost} маны · раз за ход</span>{value === id && <Check className="class-selected-mark" size={19} />}
+        <span className="class-portrait"><Art index={option.art} cardId={option.hero} /><ClassSymbol heroClass={id} /></span>
+        <strong>{option.name}</strong><span className="class-power-name">{option.powerName}</span><span className="class-power-cost">{option.cost} маны · раз за ход</span>{value === id && <Check className="class-selected-mark" size={19} />}
       </button>;
     })}</div>
-    <p className="class-picker-note">{start ? 'Класс и колода будут использованы в новом бою.' : 'Выбранный класс будет использован при создании комнаты или входе в неё.'}</p>
-    <button className="button primary window-done" onClick={confirm}>{start ? <Swords size={17} /> : <Check size={17} />}{start ? replace ? 'Начать новый бой' : 'Начать бой' : 'Выбрать класс'}</button>
+    <p className="new-deck-power-description"><strong>{HERO_CLASSES[value].powerName}.</strong> {HERO_CLASSES[value].description}</p>
+    <label className="starter-deck-option"><input type="checkbox" checked={starter} onChange={e => changeStarter(e.target.checked)} />Начать со стартовой колоды из 30 карт</label>
+    <p className="class-picker-note">Класс закрепляется за колодой. Карты общей коллекции доступны всем классам.</p>
+    <button className="button primary window-done" disabled={!name.trim()} onClick={confirm}><Check size={17} />Создать колоду</button>
   </Modal>;
 }

@@ -16,6 +16,7 @@ import './phone.css';
 import './card-editor.css';
 import './hero-classes.css';
 import './hero-effects.css';
+import './decks.css';
 
 restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(

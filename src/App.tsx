@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Check, Menu, Settings2, Sparkles, X } from 'lucide-react';
-import { CARDS, type CardDef, deckError } from './game/cards';
+import { CARDS, type CardDef } from './game/cards';
 import { act, chooseBotAction, createGame, expireMulligan, type Action } from './game/engine';
-import { loadDeck, loadGame, loadStats, read, write } from './storage';
+import { loadGame, loadStats, read, write } from './storage';
 import { Art } from './components/Card';
 import Collection from './components/Collection';
 import Battle from './components/Battle';
@@ -18,8 +18,9 @@ import CardDetails from './components/CardDetails';
 import HelpDialog from './components/HelpDialog';
 import SettingsDialog from './components/SettingsDialog';
 import CardWorkshop from './components/CardWorkshop';
-import HeroClassPicker from './components/HeroClassPicker';
-import { validHeroClass, type HeroClass } from './game/classes';
+import DeckPicker from './components/DeckPicker';
+import type { HeroClass } from './game/classes';
+import { createDeck, DECK_LIMIT, deckName, draftError, loadDeckBook, readyDeck, saveDeckBook, type SavedDeck } from './decks';
 
 type Page = 'home' | 'collection' | 'battle' | 'rooms' | 'editor';
 type Settings = { sound: boolean; motion: boolean; board: BattlegroundId };
@@ -31,13 +32,16 @@ export default function App() {
   useEffect(() => { document.documentElement.style.setProperty('--app-height', `${viewport.height}px`); }, [viewport.height]);
   const [page, setPage] = useState<Page>(() => new URLSearchParams(location.search).has('room') ? 'rooms' : 'home');
   const [onlineBattle, setOnlineBattle] = useState(false);
-  const [deck, setDeck] = useState(loadDeck);
+  const [deckBook, setDeckBook] = useState(loadDeckBook);
+  const selectedDeck = deckBook.decks.find(d => d.id === deckBook.selectedId) ?? null;
+  const deck = selectedDeck?.cards ?? [];
+  const [collectionPanel, setCollectionPanel] = useState('cards');
   const [cardRevision, setCardRevision] = useState(0);
   const [game, setGame] = useState(loadGame);
   const [stats, setStats] = useState(loadStats);
-  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'fields' | 'class' | null>(null);
-  const [heroClass, setHeroClass] = useState<HeroClass>(() => { const value = read<unknown>('hero-class', 'mage'); return validHeroClass(value) ? value : 'mage'; });
-  const [classPickerMode, setClassPickerMode] = useState<'start' | 'select'>('start');
+  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'fields' | 'decks' | null>(null);
+  const [deckPickerLabel, setDeckPickerLabel] = useState('Играть');
+  const deckRequest = useRef<((deck: SavedDeck) => void) | null>(null);
   const [inspected, setInspected] = useState<CardDef | null>(null);
   const [inspectInfo, setInspectInfo] = useState<InspectionInfo | undefined>(undefined);
   const [toast, setToast] = useState('');
@@ -62,7 +66,7 @@ export default function App() {
   }, [settings.sound]);
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(''), 4000); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { write('settings', settings); document.documentElement.classList.toggle('reduce-motion', !settings.motion); }, [settings]);
-  useEffect(() => { write('hero-class', heroClass); }, [heroClass]);
+  useEffect(() => { if (!saveDeckBook(deckBook)) notify('Браузер не разрешил сохранение колод. Они доступны до закрытия вкладки.'); }, [deckBook, notify]);
   useEffect(() => {
     if (!game) return;
     write('game', game.winner ? null : game);
@@ -90,10 +94,10 @@ export default function App() {
     return () => clearInterval(timer);
   }, [game?.mulligan?.deadline]);
   const navigate = (next: Page) => { sound(); setPage(next); setMobileNav(false); window.scrollTo({ top: 0 }); };
-  const newMatch = () => createGame(deck, Date.now(), undefined, Date.now() + 30_000, { player: heroClass });
-  const chooseClass = (mode: 'start' | 'select') => { setClassPickerMode(mode); setModal('class'); };
-  const start = () => { if (!game || game.winner) chooseClass('start'); else navigate('battle'); };
-  const rematch = () => { setGame(newMatch()); sound(); };
+  const newMatch = (chosen: SavedDeck) => { setGame(createGame(chosen.cards, Date.now(), undefined, Date.now() + 30_000, { player: chosen.heroClass })); navigate('battle'); };
+  const chooseDeck = (done?: (chosen: SavedDeck) => void, label = 'Выбрать колоду') => { deckRequest.current = done ?? null; setDeckPickerLabel(label); setModal('decks'); };
+  const start = () => { if (!game || game.winner) chooseDeck(newMatch, 'Играть'); else navigate('battle'); };
+  const rematch = () => chooseDeck(newMatch, 'Новый бой');
   const dispatch = (action: Action) => {
     if (!game) return;
     const current = expireMulligan(game);
@@ -102,32 +106,38 @@ export default function App() {
     if (result.error) notify(result.error);
     else { setGame(result.state); sound(); }
   };
-  const saveDeck = (ids: string[]) => {
-    if (deckError(ids)) { notify(deckError(ids)!); return; }
-    if (!write('deck', ids)) { notify('Браузер не разрешил сохранение. Колода доступна до закрытия вкладки.'); }
-    setDeck([...ids]);
+  const saveDeck = (ids: string[], name?: string) => {
+    const error = draftError(ids); if (error) { notify(error); return; }
+    setDeckBook(book => ({ ...book, decks: book.decks.map(d => d.id === book.selectedId ? { ...d, cards: [...ids], name: name === undefined ? d.name : deckName(name) } : d) }));
   };
+  const selectDeck = (id: string) => setDeckBook(book => book.decks.some(d => d.id === id) ? { ...book, selectedId: id } : book);
+  const addDeck = (heroClass: HeroClass, name: string, starter: boolean) => {
+    if (deckBook.decks.length >= DECK_LIMIT) { notify(`Можно сохранить до ${DECK_LIMIT} колод. Удали ненужную колоду, чтобы создать новую.`); return null; }
+    const created = createDeck(heroClass, name, starter);
+    setDeckBook(book => ({ ...book, decks: [...book.decks, created], selectedId: created.id })); return created;
+  };
+  const deleteDeck = (id: string) => setDeckBook(book => { const decks = book.decks.filter(d => d.id !== id); return { ...book, decks, selectedId: book.selectedId === id ? decks[0]?.id ?? null : book.selectedId }; });
   const inspect: Inspect = useCallback((c: CardDef, info?: InspectionInfo) => { setInspected(c); setInspectInfo(info); }, []);
   const closeModal = useCallback(() => setModal(null), []);
   const closeCard = useCallback(() => { setInspected(null); setInspectInfo(undefined); }, []);
   return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : 'parchment-view'}`}>
     <header className="site-header"><div className="header-inner"><button className="logo-button" onClick={() => navigate('home')} aria-label="Memestone — главная"><Logo /></button>
       <nav className={mobileNav ? 'open' : ''} aria-label="Главная навигация"><button className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>Главная</button><button className={page === 'collection' ? 'active' : ''} onClick={() => navigate('collection')}>Коллекция<span className="nav-count">{CARDS.length}</span></button><button onClick={() => { setModal('help'); setMobileNav(false); }}>Как играть <ArrowUpRight size={13} /></button>{game && !game.winner && <button className={page === 'battle' ? 'active' : ''} onClick={() => navigate('battle')}>Текущий бой<span className="live-dot" /></button>}</nav>
-      <div className="header-actions"><span className="alpha-tag">ALPHA 0.12.1</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings2 size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
+      <div className="header-actions"><span className="alpha-tag">ALPHA 0.13.0</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings2 size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
     </div></header>
     <main className="main-container">
-      {page === 'home' && <WoodMenu heroClass={heroClass} chooseClass={() => chooseClass('start')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => navigate('collection')} help={() => setModal('help')} settings={() => setModal('settings')} profile={() => setModal('about')} wins={stats.wins} />}
-      {page === 'collection' && <Collection deck={deck} saveDeck={saveDeck} inspect={inspect} back={() => navigate('home')} notify={notify} editCards={() => navigate('editor')} revision={cardRevision} />}
-      {page === 'editor' && <CardWorkshop back={() => navigate('collection')} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deck} />}
+      {page === 'home' && <WoodMenu deckName={selectedDeck?.name ?? 'Нет колоды'} chooseDeck={() => chooseDeck(newMatch, 'Играть')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => { setCollectionPanel('cards'); navigate('collection'); }} help={() => setModal('help')} settings={() => setModal('settings')} profile={() => setModal('about')} wins={stats.wins} />}
+      {page === 'collection' && <Collection deckInfo={selectedDeck} decks={deckBook.decks} selectDeck={selectDeck} createDeck={addDeck} deleteDeck={deleteDeck} initialPanel={collectionPanel} saveDeck={saveDeck} inspect={inspect} back={() => navigate('home')} notify={notify} editCards={() => navigate('editor')} revision={cardRevision} />}
+      {page === 'editor' && <CardWorkshop back={() => navigate('collection')} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deckBook.decks.flatMap(d => d.cards)} />}
       {page === 'battle' && game && <Battle settings={() => setModal('settings')} board={settings.board} chooseBoard={() => setModal('fields')} overlayOpen={!!modal || !!inspected} animations={settings.motion} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} help={() => setModal('help')} />}
-      <Online heroClass={heroClass} chooseClass={() => chooseClass('select')} active={page === 'rooms'} deck={deck} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={() => setModal('settings')} help={() => setModal('help')} chooseBoard={() => setModal('fields')} home={() => navigate('home')} battleChanged={setOnlineBattle} />
+      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={() => setModal('settings')} help={() => setModal('help')} chooseBoard={() => setModal('fields')} home={() => navigate('home')} battleChanged={setOnlineBattle} />
     </main>
     <footer className="site-footer"><div><Logo small /><span>Создано для своих.</span></div><p>Независимый фан-проект. Не связан с Blizzard Entertainment.</p><button className="text-button" onClick={() => setModal('about')}>О проекте <ArrowUpRight size={13} /></button></footer>
     {toast && <div className="toast" role="status"><Sparkles size={18} /><span>{toast}</span><button className="icon-button" aria-label="Скрыть сообщение" onClick={() => setToast('')}><X size={15} /></button></div>}
     {inspected && <CardDetails card={inspected} info={inspectInfo} close={closeCard} notify={notify} />}
     {modal === 'help' && <HelpDialog close={closeModal} />}
     {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} />}
-    {modal === 'class' && <HeroClassPicker value={heroClass} change={setHeroClass} close={closeModal} start={classPickerMode === 'start'} replace={!!game && !game.winner} confirm={() => { closeModal(); if (classPickerMode === 'start') { setGame(newMatch()); navigate('battle'); } }} />}
+    {modal === 'decks' && <DeckPicker decks={deckBook.decks} selectedId={deckBook.selectedId} select={selectDeck} close={() => { deckRequest.current = null; closeModal(); }} actionLabel={deckPickerLabel} confirm={chosen => { if (!readyDeck(chosen)) return; const done = deckRequest.current; deckRequest.current = null; closeModal(); done?.(chosen); }} manage={() => { deckRequest.current = null; closeModal(); setCollectionPanel('deck'); navigate('collection'); }} />}
     {modal === 'fields' && <Modal title="Выбор игрового поля" close={closeModal} className="fields-modal"><span className="eyebrow">ТВОЯ АРЕНА</span><h2>Выбери место для боя</h2><BoardPicker value={settings.board} change={board => setSettings({ ...settings, board })} /><button className="button primary" onClick={closeModal}>Вернуться в бой <Check size={16} /></button></Modal>}
     {modal === 'about' && <AboutDialog stats={stats} deckSize={deck.length} close={closeModal} help={() => { closeModal(); setModal('help'); }} />}
   </div>;

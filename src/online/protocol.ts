@@ -5,7 +5,7 @@ import type { HistoryEntity } from '../game/history';
 import { HEROES, knownPower } from '../game/presentation';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
-export const ROOM_PROTOCOL = 5;
+export const ROOM_PROTOCOL = 6;
 export const ROOM_PREFIX = 'memestone-v08-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
@@ -156,7 +156,7 @@ export const EMPTY_ROOM: RoomState = { phase: 'idle', role: null, code: '', name
 export type ClientMessage =
   | { type: 'hello'; protocol: number; name: string; deck: string[]; token: string; cards?: CardDef[]; heroClass?: HeroClass }
   | { type: 'action'; action: Action; revision: number; requestId: string }
-  | { type: 'rematch' }
+  | { type: 'rematch'; deck?: string[]; cards?: CardDef[]; heroClass?: HeroClass }
   | { type: 'leave' };
 export type HostMessage =
   | { type: 'snapshot'; protocol: number; code: string; name: string; opponent: string; game: Game | null; revision: number; rematchSelf: boolean; rematchOpponent: boolean; heroClass?: HeroClass; opponentClass?: HeroClass }

@@ -74,7 +74,7 @@
   .wood-main-button { width: 100%; height: 100%; min-height: 0; }.wood-main-button > span { font-size: clamp(16px,4.6vw,23px); }
   .wood-flourish,.wood-bot-label { display: none; }
   .wood-side-button { height: 39px; width: 43%; }.wood-side-caption { font-size: 17px; }.wood-emblem { width: 44px; height: 44px; }.wood-emblem svg { width: 21px; height: 21px; }
-  .wood-side-button.profile,.wood-side-button.collection { bottom: 78px; top: auto; }.wood-side-button.rules,.wood-side-button.settings { bottom: 28px; top: auto; }
+  .wood-side-button.profile,.wood-side-button.packs { bottom: 78px; top: auto; }.wood-side-button.rules,.wood-side-button.collection { bottom: 28px; top: auto; }
   .wood-bottom-note { bottom: 5px; font-size: 7px; }.wood-bottom-note span:last-child { display: none; }
   #root .collection-page.collection-album { width: 100%; max-width: none; height: 100%; min-height: 0; padding: 4px; margin: 0; display: flex; flex-direction: column; gap: 4px; }
   .collection-panel-tabs { display: flex; gap: 4px; flex-shrink: 0; height: 30px; }
@@ -150,7 +150,7 @@
 }
 @media(max-width:960px) and (orientation:landscape), (max-height:600px) and (min-width:601px) and (max-width:1180px) {
   .wood-medallion { width: 82dvh; height: 82dvh; top: 49%; }.wood-title h1 { font-size: 27px; }.wood-subtitle { font-size: 6px; }.wood-main-button > span { font-size: 17px; }
-  .wood-side-button { width: 27%; height: 35px; }.wood-side-button.profile,.wood-side-button.collection { bottom: 26%; }.wood-side-button.rules,.wood-side-button.settings { bottom: 11%; }.wood-emblem { width: 38px; height: 38px; }.wood-side-caption { font-size: 15px; }
+  .wood-side-button { width: 27%; height: 35px; }.wood-side-button.profile,.wood-side-button.packs { bottom: 26%; }.wood-side-button.rules,.wood-side-button.collection { bottom: 11%; }.wood-emblem { width: 38px; height: 38px; }.wood-side-caption { font-size: 15px; }
   .card-grid.album-card-grid { grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: minmax(0,1fr); gap: 8px; }
   .book-controls { flex-direction: row; height: 36px; align-items: center; }.book-controls .search-box { flex: 1; width: auto; }.album-caption { display: none; }.book-heading { height: 24px; }.book-heading h1 { font-size: 15px; }.book-tabs { height: 25px; }.book-tab { height: 25px; }.book-paper { padding: 3px; }
   .album-deck-sidebar { display: grid; grid-template-columns: minmax(0,1fr) minmax(160px,.8fr); grid-template-rows: 26px 35px 1fr 27px; gap: 5px 12px; }.album-deck-sidebar h2 { grid-column: 1 / -1; font-size: 18px; }.album-deck-sidebar .album-deck-banner { min-height: 35px; height: 35px; grid-column: 1; }.album-deck-sidebar .deck-list { grid-column: 1; grid-row: 3; }.album-deck-sidebar .deck-pagination { grid-column: 1; grid-row: 4; }.album-deck-sidebar .deck-rule { grid-column: 2; grid-row: 2; }.album-deck-sidebar .deck-save { grid-column: 2; grid-row: 3; align-self: start; }.album-deck-sidebar .deck-reset { grid-column: 2; grid-row: 3; align-self: center; }.album-deck-sidebar .deck-reset + .deck-reset { align-self: end; }.album-deck-sidebar .album-back { grid-column: 2; grid-row: 4; }

@@ -1,4 +1,4 @@
-import { BookOpen, Crown, Layers3, Maximize, Settings2, Trophy, Users } from 'lucide-react';
+import { BookOpen, Crown, Layers3, Maximize, PackageOpen, Settings, Trophy, Users } from 'lucide-react';
 import { CARDS } from '../game/cards';
 
 export default function WoodMenu({ resume, start, collection, help, settings, profile, wins, rooms, deckName, chooseDeck }: {
@@ -8,7 +8,7 @@ export default function WoodMenu({ resume, start, collection, help, settings, pr
   return <section className="wood-menu page-enter" aria-label="Главное меню Memestone">
     <div className="wood-menu-background" /><div className="wood-menu-light" />
     <div className="wood-topbar"><div className="wood-player-controls"><button className="wood-counter" onClick={collection} aria-label="Открыть коллекцию"><Layers3 size={25} /><strong>{CARDS.length}</strong></button><button className="wood-class-button" aria-label="Выбрать колоду для нового боя" onClick={chooseDeck}><Layers3 size={18} /><span><small>Колода: </small><b>{deckName}</b></span></button></div>
-      <div><button className="wood-counter wins" onClick={profile} aria-label="Статистика побед"><strong>{wins}</strong><Trophy size={26} /></button>{document.fullscreenEnabled && <button className="wood-small-button" aria-label="На весь экран" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen().catch(() => {}); }}><Maximize size={23} /></button>}<button className="wood-small-button" aria-label="Настройки" onClick={settings}><Settings2 size={29} /></button></div>
+      <div><button className="wood-counter wins" onClick={profile} aria-label="Статистика побед"><strong>{wins}</strong><Trophy size={26} /></button>{document.fullscreenEnabled && <button className="wood-small-button" aria-label="На весь экран" onClick={() => { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen().catch(() => {}); }}><Maximize size={23} /></button>}<button className="wood-small-button" aria-label="Настройки" title="Настройки" onClick={settings}><Settings size={29} /></button></div>
     </div>
     <div className="wood-medallion"><div className="wood-title"><span>◆</span><h1>Memestone</h1><span>◆</span></div><span className="wood-subtitle">ТВОИ КАРТЫ. ТВОИ ПРАВИЛА.</span>
       <div className="wood-buttons"><button className="wood-main-button" onClick={start} aria-label={resume ? 'Продолжить бой' : 'В бой'}><span>{resume ? 'Продолжить' : 'Играть'}</span></button><button className="wood-main-button" onClick={collection}><span>Моя коллекция</span></button><button className="wood-main-button" onClick={help}><span>Как играть</span></button><button className="wood-main-button wood-rooms-button" onClick={rooms}><span><Users size={22} />Комнаты</span></button></div>
@@ -16,9 +16,9 @@ export default function WoodMenu({ resume, start, collection, help, settings, pr
       <p className="wood-bot-label">Трактирщик Борис уже сдаёт карты</p>
     </div>
     <button className="wood-side-button profile" onClick={profile}><span className="wood-side-caption">Профиль</span><span className="wood-emblem"><Crown /></span></button>
-    <button className="wood-side-button collection" onClick={collection}><span className="wood-emblem"><Layers3 /></span><span className="wood-side-caption">Коллекция</span></button>
+    <button className="wood-side-button packs" disabled aria-label="Открыть наборы — скоро" title="Открыть наборы — скоро"><span className="wood-emblem"><PackageOpen /></span><span className="wood-side-caption"><span>Открыть наборы</span><small>Скоро</small></span></button>
     <button className="wood-side-button rules" onClick={help}><span className="wood-side-caption">Правила</span><span className="wood-emblem"><BookOpen /></span></button>
-    <button className="wood-side-button settings" onClick={settings}><span className="wood-emblem"><Settings2 /></span><span className="wood-side-caption">Настройки</span></button>
-    <div className="wood-bottom-note"><span>MEMESTONE · ТЕСТОВАЯ ВЕРСИЯ 0.16.1</span><span>СДЕЛАНО ДЛЯ СВОИХ</span></div>
+    <button className="wood-side-button collection" onClick={collection}><span className="wood-emblem"><Layers3 /></span><span className="wood-side-caption">Коллекция</span></button>
+    <div className="wood-bottom-note"><span>MEMESTONE · ТЕСТОВАЯ ВЕРСИЯ 0.16.2</span><span>СДЕЛАНО ДЛЯ СВОИХ</span></div>
   </section>;
 }

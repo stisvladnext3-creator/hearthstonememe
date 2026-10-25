@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Menu, Settings2, Sparkles, X } from 'lucide-react';
+import { ArrowUpRight, Check, Menu, Settings, Sparkles, X } from 'lucide-react';
 import { CARDS, type CardDef } from './game/cards';
 import { act, chooseBotAction, createGame, expireMulligan, type Action } from './game/engine';
 import { loadGame, loadStats, read, write } from './storage';
@@ -122,7 +122,7 @@ export default function App() {
   return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : page === 'collection' ? 'collection-home' : 'parchment-view'}`}>
     <header className="site-header"><div className="header-inner"><button className="logo-button" onClick={() => navigate('home')} aria-label="Memestone — главная"><Logo /></button>
       <nav className={mobileNav ? 'open' : ''} aria-label="Главная навигация"><button className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>Главная</button><button className={page === 'collection' ? 'active' : ''} onClick={() => navigate('collection')}>Коллекция<span className="nav-count">{CARDS.length}</span></button><button onClick={() => { setModal('help'); setMobileNav(false); }}>Как играть <ArrowUpRight size={13} /></button>{game && !game.winner && <button className={page === 'battle' ? 'active' : ''} onClick={() => navigate('battle')}>Текущий бой<span className="live-dot" /></button>}</nav>
-      <div className="header-actions"><span className="alpha-tag">ALPHA 0.16.1</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings2 size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
+      <div className="header-actions"><span className="alpha-tag">ALPHA 0.16.2</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
     </div></header>
     <main className="main-container">
       {page === 'home' && <WoodMenu deckName={selectedDeck?.name ?? 'Нет колоды'} chooseDeck={() => chooseDeck(newMatch, 'Играть')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => { navigate('collection'); }} help={() => setModal('help')} settings={() => setModal('settings')} profile={() => setModal('about')} wins={stats.wins} />}

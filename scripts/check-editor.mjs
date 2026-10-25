@@ -44,7 +44,7 @@ try {
   await page.getByRole('button', { name: 'Редактировать колоду Твои правила', exact: true }).click();
   await page.getByRole('button', { name: 'Убрать Козиныч', exact: true }).click();
   await page.getByLabel('Поиск карт').fill('Проверочная молния');
-  await page.getByRole('button', { name: 'Добавить Проверочная молния', exact: true }).click();
+  await page.getByRole('button', { name: /^Проверочная молния, / }).click();
   await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
   await page.getByRole('button', { name: 'Назад', exact: true }).click();
   await page.getByRole('button', { name: 'В бой', exact: true }).click(); await page.getByRole('dialog', { name: 'Выбор колоды', exact: true }).getByRole('button', { name: 'Играть', exact: true }).click();

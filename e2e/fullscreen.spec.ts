@@ -38,7 +38,6 @@ for (const [width, height] of [[320, 568], [390, 844], [844, 390], [667, 375]]) 
   await page.getByRole('button', { name: 'Сохранить колоду', exact: true }).click();
   await page.getByRole('button', { name: 'Скрыть сообщение' }).click();
   await page.getByRole('button', { name: 'Настройки', exact: true }).click(); await fits(page);
-  await page.getByRole('tab', { name: 'Игровое поле', exact: true }).click(); await fits(page);
   await page.getByRole('radio', { name: /Огненная кузница/ }).check(); await page.keyboard.press('Escape');
   await page.getByLabel('Поиск карт').fill('Масик'); await page.locator('.album-card-grid .game-card').click();
   await fits(page);

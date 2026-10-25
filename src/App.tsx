@@ -10,20 +10,19 @@ import Modal from './components/Modal';
 import WoodMenu from './components/WoodMenu';
 import BoardPicker from './components/BoardPicker';
 import Online from './components/Online';
-import { battleground, type BattlegroundId } from './battlegrounds';
+import { battleground } from './battlegrounds';
 import { useViewport } from './useViewport';
 import type { InspectionInfo, Inspect } from './inspection';
 import AboutDialog from './components/AboutDialog';
 import CardDetails from './components/CardDetails';
 import HelpDialog from './components/HelpDialog';
-import SettingsDialog from './components/SettingsDialog';
+import SettingsDialog, { type Settings as GameSettings } from './components/SettingsDialog';
 import CardWorkshop from './components/CardWorkshop';
 import DeckPicker from './components/DeckPicker';
 import type { HeroClass } from './game/classes';
 import { createDeck, DECK_LIMIT, deckName, draftError, loadDeckBook, readyDeck, saveDeckBook, type SavedDeck } from './decks';
 
 type Page = 'home' | 'collection' | 'battle' | 'rooms' | 'editor';
-type Settings = { sound: boolean; motion: boolean; board: BattlegroundId };
 function Logo({ small = false }: { small?: boolean }) {
   return <span className={`brand ${small ? 'small' : ''}`}><span className="brand-gem"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="m20 3 15 9v17l-15 9-15-9V12Z" /><path d="m21 10 8 5-1 12-11 4-7-9 4-9 9-1 4 7-5 5-5-4 3-4 2 2" /></svg></span><span>MEME<span>STONE</span><small>ТВОИ КАРТЫ. ТВОИ ПРАВИЛА.</small></span></span>;
 }
@@ -45,12 +44,12 @@ export default function App() {
   const [inspectInfo, setInspectInfo] = useState<InspectionInfo | undefined>(undefined);
   const [toast, setToast] = useState('');
   const [mobileNav, setMobileNav] = useState(false);
-  const [settings, setSettings] = useState<Settings>(() => { const s = read<Settings | null>('settings', null); return { sound: s?.sound === true, motion: s?.motion !== false, board: battleground(s?.board).id }; });
+  const [settings, setSettings] = useState<GameSettings>(() => { const s = read<Partial<GameSettings> | null>('settings', null); return { sound: s?.sound === true, volume: typeof s?.volume === 'number' && Number.isFinite(s.volume) ? Math.max(0, Math.min(100, s.volume)) : 100, motion: s?.motion !== false, board: battleground(s?.board).id }; });
   const audio = useRef<AudioContext | null>(null);
   const botBudget = useRef({ turn: '', actions: 0 });
   const notify = useCallback((text: string) => setToast(text), []);
   const sound = useCallback(() => {
-    if (!settings.sound) return;
+    if (!settings.sound || settings.volume === 0) return;
     try {
       audio.current ??= new AudioContext();
       void audio.current.resume();
@@ -58,11 +57,11 @@ export default function App() {
       osc.connect(gain); gain.connect(audio.current.destination);
       osc.type = 'sine'; osc.frequency.setValueAtTime(520, audio.current.currentTime);
       osc.frequency.exponentialRampToValueAtTime(260, audio.current.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.07, audio.current.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audio.current.currentTime + 0.18);
+      gain.gain.setValueAtTime(0.07 * settings.volume / 100, audio.current.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001 * settings.volume / 100, audio.current.currentTime + 0.18);
       osc.start(); osc.stop(audio.current.currentTime + 0.19);
     } catch { /* Sound is optional in browsers without Web Audio. */ }
-  }, [settings.sound]);
+  }, [settings.sound, settings.volume]);
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(''), 4000); return () => clearTimeout(timer); }, [toast]);
   useEffect(() => { write('settings', settings); document.documentElement.classList.toggle('reduce-motion', !settings.motion); }, [settings]);
   useEffect(() => { if (!saveDeckBook(deckBook)) notify('Браузер не разрешил сохранение колод. Они доступны до закрытия вкладки.'); }, [deckBook, notify]);
@@ -122,7 +121,7 @@ export default function App() {
   return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : page === 'collection' ? 'collection-home' : 'parchment-view'}`}>
     <header className="site-header"><div className="header-inner"><button className="logo-button" onClick={() => navigate('home')} aria-label="Memestone — главная"><Logo /></button>
       <nav className={mobileNav ? 'open' : ''} aria-label="Главная навигация"><button className={page === 'home' ? 'active' : ''} onClick={() => navigate('home')}>Главная</button><button className={page === 'collection' ? 'active' : ''} onClick={() => navigate('collection')}>Коллекция<span className="nav-count">{CARDS.length}</span></button><button onClick={() => { setModal('help'); setMobileNav(false); }}>Как играть <ArrowUpRight size={13} /></button>{game && !game.winner && <button className={page === 'battle' ? 'active' : ''} onClick={() => navigate('battle')}>Текущий бой<span className="live-dot" /></button>}</nav>
-      <div className="header-actions"><span className="alpha-tag">ALPHA 0.16.3</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
+      <div className="header-actions"><span className="alpha-tag">ALPHA 0.17.0</span><span className="header-divider" /><button className="icon-button" onClick={() => setModal('settings')} aria-label="Настройки"><Settings size={20} /></button><button className="avatar-button" onClick={() => setModal('about')} aria-label="Профиль игрока"><Art index={10} /><span /></button><button className="icon-button mobile-menu-toggle" onClick={() => setMobileNav(!mobileNav)} aria-label="Открыть навигацию">{mobileNav ? <X size={22} /> : <Menu size={22} />}</button></div>
     </div></header>
     <main className="main-container">
       {page === 'home' && <WoodMenu deckName={selectedDeck?.name ?? 'Нет колоды'} chooseDeck={() => chooseDeck(newMatch, 'Играть')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => { navigate('collection'); }} help={() => setModal('help')} settings={() => setModal('settings')} profile={() => setModal('about')} wins={stats.wins} />}
@@ -135,7 +134,7 @@ export default function App() {
     {toast && <div className="toast" role="status"><Sparkles size={18} /><span>{toast}</span><button className="icon-button" aria-label="Скрыть сообщение" onClick={() => setToast('')}><X size={15} /></button></div>}
     {inspected && <CardDetails card={inspected} info={inspectInfo} close={closeCard} notify={notify} />}
     {modal === 'help' && <HelpDialog close={closeModal} />}
-    {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} />}
+    {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} help={() => setModal('help')} about={() => setModal('about')} previewSound={sound} />}
     {modal === 'decks' && <DeckPicker decks={deckBook.decks} selectedId={deckBook.selectedId} select={selectDeck} close={() => { deckRequest.current = null; closeModal(); }} actionLabel={deckPickerLabel} confirm={chosen => { if (!readyDeck(chosen)) return; const done = deckRequest.current; deckRequest.current = null; closeModal(); done?.(chosen); }} manage={() => { deckRequest.current = null; closeModal(); navigate('collection'); }} />}
     {modal === 'fields' && <Modal title="Выбор игрового поля" close={closeModal} className="fields-modal"><span className="eyebrow">ТВОЯ АРЕНА</span><h2>Выбери место для боя</h2><BoardPicker value={settings.board} change={board => setSettings({ ...settings, board })} /><button className="button primary" onClick={closeModal}>Вернуться в бой <Check size={16} /></button></Modal>}
     {modal === 'about' && <AboutDialog stats={stats} deckSize={deck.length} close={closeModal} help={() => { closeModal(); setModal('help'); }} />}

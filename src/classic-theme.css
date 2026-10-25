@@ -1,0 +1,109 @@
+/* Shared tavern materials for every window; card frames keep their class colors. */
+.app { --tavern-serif: 'Menu Alegreya', Georgia, serif; }
+.app.parchment-view { background: linear-gradient(#26140870,#24120bc0),url('/art/wood-menu.png') center / cover fixed; }
+.parchment-view .site-header { background: linear-gradient(#281c15b0,#1e120fe8),url('/art/wood-menu.png') center / cover; border-bottom-color: #ba9153; box-shadow: 0 2px 5px #110b08; }
+.site-header nav > button { color: #e3c891; }.site-header nav > button.active { color: #fff1bf; }
+.app .button {
+  border: 2px ridge #b49c68; border-radius: 5px;
+  background: linear-gradient(#ffe9ac,#d5b16d 45%,#bb8c45 72%,#e7c989);
+  color: #4c3018; box-shadow: inset 0 0 0 1px #f6dfa4,0 2px 2px #1c110b60;
+  font-family: var(--tavern-serif); font-weight: 800; text-shadow: 0 1px #ffedbc;
+}
+.app .button.secondary { background: linear-gradient(#e8d9b5,#b39d70 60%,#cdbc8d); color: #42321d; }
+.app .button.danger { background: linear-gradient(#c77b4b,#823d27); color: #ffe6b5; border-color: #b28d50; text-shadow: 0 1px #492314; }
+.app .button:hover { filter: brightness(1.1); }.app .button:disabled { filter: saturate(.45); }
+.modal:not(.hearth-options) {
+  isolation: isolate; border-color: #a48550; border-radius: 7px; color: #48311e;
+  background: linear-gradient(#e5c895,#c19a62); box-shadow: 0 10px 35px #000b,inset 0 0 0 3px #8d6f46;
+}
+.modal:not(.hearth-options):not(.deck-picker-modal)::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border: 14px solid transparent; border-image: url('/art/generated/options-frame.webp') 144 fill / 14px;
+}
+.modal:not(.hearth-options) > h2, .new-deck-header h2 { color: #50351e; font-family: var(--tavern-serif); font-weight: 800; text-shadow: 0 1px #fff1bf; }
+.modal:not(.hearth-options) > p, .modal:not(.hearth-options) > small { color: #533b22; }
+.modal:not(.hearth-options) .modal-close { border: 2px ridge #a7a17f; border-radius: 3px; color: #f4e2b5; background: linear-gradient(#616354,#30382c); }
+.window-tabs button, .card-editor .window-tabs button {
+  background: linear-gradient(#666650,#32382c); border-color: #b2a477; border-radius: 4px; color: #fff0c7;
+  box-shadow: inset 0 0 0 1px #252b22,0 1px 2px #20160c; font-family: var(--tavern-serif); font-weight: 800;
+}
+.window-tabs button[aria-selected="true"], .card-editor .window-tabs button[aria-selected="true"] { background: linear-gradient(#f7df9b,#b99350); border-color: #f5d997; color: #4e331a; text-shadow: 0 1px #fff0b8; }
+.help-modal .rules-grid > div { border: 3px double #9d7949; border-radius: 5px; background: #e6c78b70; }
+.help-modal .rules-grid h3 { color: #53371f; font-family: var(--tavern-serif); font-weight: 800; }
+.help-modal .rules-grid p, .about-modal .window-panel p, .about-modal .profile-stats, .about-modal .profile-stats strong { color: #513a23; }
+.about-modal .profile-stats { border-color: #967442; }.about-modal .profile-stats svg { color: #81511f; }
+.card-detail-copy h2, .card-detail-copy .detail-stats strong { color: #4a3019; }
+.card-detail-copy h2 { font-family: var(--tavern-serif); font-weight: 800; }
+.card-detail-copy .detail-tags > span { background: #f1dca270; border-color: #947445; color: #624724; }
+.card-detail-copy .effect-description, .inspection-context { color: #43321f; background: #ffe9b570; border-color: #a2824e; }
+.card-detail-copy .flavor-text, .card-detail-copy .owned-label, .card-detail-copy .detail-stats, .custom-card-rules { color: #5e472c; }
+.artwork-layout, .artwork-upload, .card-appearance-picker legend { color: #543b23; }
+.card-appearance-picker button { color: #4c351e; border-color: #a3814b; background: #e3c88d; }
+.card-appearance-picker button[aria-pressed="true"] { background: #c19a51; color: #38230f; border-color: #76501e; }
+.mulligan-modal h2, .discover-modal h2, .small-modal h2, .result-modal h2 { color: #50341c; font-family: var(--tavern-serif); font-weight: 800; }
+.mulligan-modal .mulligan-card-label, .mulligan-modal > p, .discover-modal > p, .discover-modal > small { color: #593d23; }
+.mulligan-modal .mulligan-timer, .mulligan-modal .text-button, .discover-modal .text-button, .small-modal .text-button, .result-modal .text-button { color: #734b20; }
+.modal.deck-picker-modal { background: linear-gradient(#21140e60,#24130cbb),url('/art/wood-menu.png') center / cover; color: #ffe9b5; }
+.deck-picker-heading h2 { font-family: var(--tavern-serif); color: #ffe9ae; text-shadow: 0 2px #251409; }
+.deck-cabinet, .deck-hero-preview { border-color: #a7864f; box-shadow: inset 0 0 0 2px #3b2016,0 2px 4px #160d09; }
+.deck-slot-banner { border-color: #c3a160; }.deck-slot-banner > strong { font-family: var(--tavern-serif); font-weight: 800; }
+.new-deck-header input { border: 2px ridge #a68a53; background: #f1dfb1; color: #48321b; }
+.new-deck-power-description, .starter-deck-option, .class-picker-note { color: #573f24; }
+.rooms-page { color: #f9e7b8; background: linear-gradient(#28160ca0,#1a0f0ac0),url('/art/wood-menu.png') center / cover; box-shadow: inset 0 0 0 3px #956f3c; }
+.rooms-heading h1, .public-rooms-heading h2 { font-family: var(--tavern-serif); font-weight: 800; color: #f4d99b; }
+.rooms-heading p, .rooms-footnote { color: #e6c996; }
+.room-entry-grid > div, .room-entry-grid > form, .room-waiting-panel { background: linear-gradient(#e8c88c,#b58b50); border-color: #b99558; box-shadow: inset 0 0 0 2px #8b673c; color: #4f341d; }
+.room-entry-grid h2, .room-entry-grid p, .room-entry-grid label, .room-public-option, .room-waiting-panel label { color: #573a20; }
+.room-entry-grid input:not([type="checkbox"]), .room-name-label input { border-color: #a5844b; background: #f8e8bd; color: #402b19; }
+.public-rooms { background: #30120ee0; border-color: #a78449; }
+.public-rooms-empty { color: #eed7a7; }.public-rooms li { background: linear-gradient(#513324,#2f1e18); border-color: #ad8c50; }
+.room-sharing .text-button, .room-waiting-panel .text-button { color: #6a401f; }
+.room-members > div { background: #f5dfad70; border-color: #967343; color: #51371f; }
+.room-code-heading > strong { color: #54361e; }.room-members small { color: #745434; }
+.room-error { background: #7c3325; border-color: #bd8d55; color: #ffe4b8; }
+.card-workshop, .card-editor { color: #f1dbac; }
+.workshop-heading h1, .editor-heading h1 { font-family: var(--tavern-serif); font-weight: 800; color: #ffe2a6; text-shadow: 0 2px #301b0d; }
+.workshop-heading .eyebrow, .workshop-heading p { color: #e6c78d; }
+.workshop-library, .card-editor .window-panel { color: #4f351e; border-color: #a8844d; background: linear-gradient(#f6e2b2a0,#cda36d70),url('/art/generated/options-frame.webp') center / 400% 400%; box-shadow: inset 0 0 0 2px #d3b67b; }
+.workshop-empty h2, .workshop-empty p { color: #50371e; }
+.editor-field input, .editor-field select, .editor-field textarea { border: 2px ridge #b4965d; border-radius: 3px; background: #fff0c9; color: #3e2b19; }
+.editor-rule-toolbar button, .editor-rule-tabs button, .workshop-footer button { background: linear-gradient(#e8ce92,#c39c57); color: #4e3219; border-color: #9d7c44; }
+.editor-keywords input, .editor-check input, .starter-deck-option input { accent-color: #9a6e25; }
+.editor-legacy { border-color: #af9159; background: #d2af7360; color: #51371f; }
+.battle-topbar { background: linear-gradient(#23150c50,#22120fe0),url('/art/wood-menu.png') center / cover; border-bottom-color: #b58f4e; }
+.battle-topbar .icon-button, .parchment-view .site-header .icon-button { background: linear-gradient(#646454,#303a2e); border: 2px ridge #a8a17b; border-radius: 4px; color: #eddbaf; }
+.battle-topbar .text-button { color: #ecd5a1; }
+.turn-control .end-turn { border: 3px ridge #c5a467; border-radius: 5px; background: linear-gradient(#f9e0a0,#be9651); color: #4b321a; box-shadow: inset 0 0 0 1px #ffe6b1,0 3px 4px #20120c; font-family: var(--tavern-serif); font-weight: 800; }
+.turn-control .end-turn.waiting { background: linear-gradient(#777360,#454b3d); color: #eee0be; border-color: #a5a07e; }
+.illustrated-history { border-color: #9e7e48; background: linear-gradient(#edd4a0eF,#bc955beF); color: #4c331d; box-shadow: 0 4px 18px #211309a0; }
+.illustrated-history h3, .illustrated-history .history-entity-name, .illustrated-history .history-entry > p { color: #4e341e; }
+.illustrated-history .history-entry { border-color: #94724260; }.illustrated-history .history-entry-heading, .illustrated-history .history-tip { color: #79562f; }
+.toast { border: 3px ridge #ac8b4f; border-radius: 5px; background: linear-gradient(#46341feF,#241e15fA); color: #fff0c6; box-shadow: 0 3px 12px #130d08; }
+.battle-arena .battle-hint, .battle-arena .last-action, .battle-arena .briefing-status, .battle-arena .quest-progress { background: linear-gradient(#34291eeb,#221a13f2); border-color: #a3834d; color: #f9e5b6; }
+.battle-arena .last-action > span { color: #dabc7d; }
+.fields-modal .board-picker legend, .fields-modal .board-option > strong { color: #50351e; }
+.fields-modal .board-option { background: #dec18a70; border-color: #a4854e; }
+.fields-modal .board-option.chosen { background: #c7a260; border-color: #765120; }
+.fields-modal .board-option > small, .fields-modal .board-picker > p, .artwork-upload p, .artwork-upload small { color: #684b2b; }
+.artwork-layout select, .artwork-layout input { background: #f9e7b9; color: #4d331c; border-color: #a78850; }
+.room-members strong { color: #51371f; }
+.rooms-page .room-entry-panel { background: linear-gradient(#38271bf0,#21180fe8); border-color: #a28048; box-shadow: inset 0 0 0 2px #634a2a; }
+.rooms-page .room-entry-grid .room-public-option { color: #4f351c; }
+.card-editor .editor-heading { background: linear-gradient(#55412b,#2d2419); border-color: #ad8b50; }
+.card-editor .editor-heading .text-button { color: #f5dfad; }
+.card-detail-copy .owned-label { color: #48321f; font-weight: 600; }
+.card-detail-copy .detail-stats .mana-mini { color: #294b5a; }
+/* Tapping a card adds it; all the former add-button space now belongs to the art. */
+.collection-v2.collection-building .card-grid.album-card-grid { --album-card-extra: 22px; }
+.collection-v2.collection-building .album-card-grid .game-card { cursor: copy; }
+@media (max-width: 960px), (max-height: 600px) and (max-width: 1180px) {
+  .collection-v2 .card-grid.album-card-grid { grid-template-columns: repeat(2,max-content); grid-template-rows: repeat(2,max-content); --album-card-extra: 18px; }
+  .collection-v2.collection-building .card-grid.album-card-grid { --album-card-extra: 18px; }
+  .collection-v2 .album-card-grid .collection-card-wrap { width: min(calc((100cqw - 4px) / 2),calc((100cqh - 4px - var(--album-card-extra) * 2) * .359946)); }
+  .modal:not(.hearth-options):not(.deck-picker-modal)::before { border-width: 8px; border-image-width: 8px; }
+  .rooms-page { box-shadow: inset 0 0 0 2px #956f3c; }
+}
+@media (max-width: 960px) and (orientation: landscape), (max-height: 600px) and (min-width: 601px) and (max-width: 1180px) {
+  .collection-v2 .card-grid.album-card-grid { grid-template-columns: repeat(4,max-content); grid-template-rows: max-content; }
+  .collection-v2 .album-card-grid .collection-card-wrap { width: min(calc((100cqw - 12px) / 4),calc((100cqh - var(--album-card-extra)) * .719892)); }
+}

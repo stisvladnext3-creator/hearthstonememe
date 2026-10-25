@@ -13,11 +13,11 @@ try{
  await page.goto(process.env.CONNECTION_TEST_URL||'http://127.0.0.1:4173');await page.locator('.wood-side-button.collection').click();await page.waitForLoadState('networkidle');
  for(const size of sizes){
   await page.setViewportSize(size);await page.mouse.move(0,0);await fits(page.locator('.collection-v2'));await expect(page.locator('.album-deck-sidebar')).toBeVisible();await expect(page.locator('.album-main')).toBeVisible();
-  await expect(page.locator('.album-card-grid .game-card')).toHaveCount(8);
+  await expect(page.locator('.album-card-grid .game-card')).toHaveCount(size.width<=960||size.height<=600&&size.width<=1180?4:8);
   await expect.poll(()=>page.locator('.album-card-grid .game-card').evaluateAll(cards=>cards.every(c=>{const r=c.getBoundingClientRect();return Math.abs(r.width/r.height-1064/1478)<.003;}))).toBe(true);
-  await expect.poll(()=>page.locator('.album-card-grid .game-card').evaluateAll(cards=>new Set(cards.map(c=>Math.round(c.getBoundingClientRect().y))).size)).toBe(2);
+  await expect.poll(()=>page.locator('.album-card-grid .game-card').evaluateAll(cards=>new Set(cards.map(c=>Math.round(c.getBoundingClientRect().y))).size)).toBe((size.width<=960&&size.width>size.height||size.height<=600&&size.width>=601&&size.width<=1180)?1:2);
   const layout=await page.locator('.album-card-grid .game-card').evaluateAll(cards=>cards.map(c=>{const r=c.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};}));
-  expect(new Set(layout.map(r=>Math.round(r.y))).size).toBe(2);expect(layout[1].x-layout[0].x-layout[0].w).toBeLessThan(7);
+  expect(new Set(layout.map(r=>Math.round(r.y))).size).toBe((size.width<=960&&size.width>size.height||size.height<=600&&size.width>=601&&size.width<=1180)?1:2);expect(layout[1].x-layout[0].x-layout[0].w).toBeLessThan(7);
   await page.screenshot({path:`/tmp/cat-collection-${size.width}.png`});
  }
  for(const [name,cost,rarity] of [['Маршал Марс',3,'rare'],['Генерал Михалыч',5,'common']]){

@@ -1,0 +1,49 @@
+/* A single cut crystal is shared by the collection and both players' resources. */
+.collection-v2 .book-controls .mana-filters > button {
+  position: relative; isolation: isolate; width: 31px; min-width: 21px; height: 35px;
+  border: 0; padding: 0; clip-path: none; border-radius: 0; background: none; box-shadow: none;
+  color: #fff; font: 400 19px/1 'Russo One',sans-serif; text-shadow: 0 2px 1px #103354; filter: none;
+  display: grid; place-items: center; margin: 0;
+}
+.collection-v2 .book-controls .mana-filters > button::before { content: ''; position: absolute; inset: 0; z-index: -1; background: url('/art/mana-crystal.svg') center / 100% 100% no-repeat; }
+.collection-v2 .book-controls .mana-filters > button.active::before { filter: brightness(1.25) drop-shadow(0 0 4px #9cdfff); }
+.collection-v2 .book-controls .mana-filters > button:hover::before { filter: brightness(1.2); }
+.collection-v2 .book-controls .mana-filters > button > svg { width: 18px; height: 18px; stroke-width: 2; filter: drop-shadow(0 2px #24588c); }
+.collection-v2 .book-controls { border-color: #b28e57; box-shadow: inset 0 1px #efd4a3, inset 0 -2px #1c0b09; background: linear-gradient(#532014,#37100e 55%,#49170f); }
+.collection-v2 .book-controls .search-box { border: 2px solid #d0a35f; border-radius: 7px; background: #23100d; }
+.battle-arena .mana-bar { gap: 3px; padding: 0; background: none; }
+.battle-arena .mana-bar > strong {
+  display: flex; align-items: center; justify-content: center; min-width: 51px; height: 28px; padding: 1px 9px;
+  border: 3px ridge #a99578; border-radius: 50%; background: radial-gradient(ellipse at 50% 40%,#1c526d,#172f48 70%);
+  box-shadow: 0 1px 2px #1c100b; color: #fff; font: 800 18px/1 'Menu Alegreya',Georgia,serif; text-shadow: 0 2px #081b30;
+}
+.battle-arena .mana-bar > strong > span { color: #fff; font: inherit; margin: 0; }
+.battle-arena .mana-bar > div { display: flex; align-items: center; flex-wrap: nowrap; gap: 1px; }
+.battle-arena .mana-bar i { display: block; width: clamp(14px,2.8cqh,22px); height: clamp(19px,3.7cqh,29px); clip-path: none; background: url('/art/mana-crystal.svg') center / 100% 100% no-repeat; box-shadow: none; filter: saturate(.6) brightness(.38); opacity: 1; }
+.battle-arena .mana-bar i.filled { background: url('/art/mana-crystal.svg') center / 100% 100% no-repeat; filter: drop-shadow(0 0 2px #58b5ff80); }
+.battle-arena .mana-bar i.locked { display: none; }
+.battle-arena .player-mana { position: absolute; right: 8.4%; bottom: 1.1%; z-index: 12; max-width: 32%; pointer-events: none; }
+.battle-arena .enemy-status .mana-bar.small > div { display: flex; gap: 0; max-width: none; flex-wrap: nowrap; }
+.battle-arena .enemy-status .mana-bar.small > strong { min-width: 42px; height: 22px; font-size: 14px; border-width: 2px; }
+.battle-arena .mana-bar.small i { width: 12px; height: 17px; }
+.battle-arena .deck-pile { pointer-events: auto; z-index: 13; }
+.deck-pile-button { position: relative; width: 100%; height: 100%; padding: 0; border: 0; background: none; color: #ffedc3; display: block; }
+.deck-pile-button > strong { position: absolute; bottom: 9px; right: -5px; border: 1px solid #ac8b4c; border-radius: 20px; background: #101a1d; padding: 2px 6px; font-size: 14px; }
+.deck-pile-button > small { position: absolute; bottom: -9px; left: -15px; right: -15px; text-align: center; font-size: 10px; text-shadow: 0 1px 2px #000; }
+.deck-pile-tooltip { position: absolute; right: calc(100% + 14px); top: 50%; transform: translateY(-50%); width: max-content; min-width: 155px; max-width: min(230px,58vw); padding: 10px 14px; border: 3px ridge #b69a64; border-radius: 6px; background: linear-gradient(#33291beF,#1b1c19f7); box-shadow: 0 4px 12px #0009; color: #fff0c8; pointer-events: none; }
+.deck-pile-tooltip > b { display: block; font: 800 18px/1.2 'Menu Alegreya',Georgia,serif; margin-bottom: 5px; }
+.deck-pile-tooltip > span { display: flex; justify-content: space-between; gap: 15px; font-size: 14px; line-height: 1.5; }
+.deck-pile-tooltip > em { display: block; color: #ffa68b; font-size: 12px; margin-top: 5px; }
+@media (max-width: 960px), (max-height: 600px) and (max-width: 1180px) {
+  .collection-v2 .book-controls .mana-filters > button { width: 24px; min-width: 17px; height: 26px; font-size: 14px; }
+  .collection-v2 .book-controls .mana-filters > button > svg { width: 14px; height: 14px; }
+  .battle-arena .player-mana { right: 6%; bottom: 1%; max-width: 65%; }
+  .battle-arena .player-mana .mana-bar > strong { min-width: 39px; height: 23px; font-size: 14px; border-width: 2px; padding: 1px 6px; }
+  .battle-arena .player-mana .mana-bar i { width: clamp(11px,3.1cqw,16px); height: clamp(16px,4.2cqw,22px); }
+  .battle-arena .enemy-status .mana-bar.small i { width: 8px; height: 12px; }
+  .battle-arena .enemy-status .mana-bar.small > strong { min-width: 32px; height: 18px; font-size: 12px; }
+  .deck-pile-button > small { display: none; }
+  .deck-pile-button > strong { font-size: 11px; bottom: 8px; padding: 1px 4px; }
+  .deck-pile-tooltip { padding: 7px 10px; min-width: 135px; right: calc(100% + 10px); }
+  .deck-pile-tooltip > b { font-size: 16px; }.deck-pile-tooltip > span { font-size: 12px; }
+}

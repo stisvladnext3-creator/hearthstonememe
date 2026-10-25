@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 82" preserveAspectRatio="none" fill="none">
+ <defs>
+  <linearGradient id="steel" x2="0" y2="82" gradientUnits="userSpaceOnUse"><stop stop-color="#959b89"/><stop offset=".2" stop-color="#4c554b"/><stop offset=".48" stop-color="#333c33"/><stop offset=".7" stop-color="#18201a"/><stop offset=".9" stop-color="#4c5145"/><stop offset="1" stop-color="#161c17"/></linearGradient>
+  <linearGradient id="paper" x2="0" y1="20" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#ffe9ac"/><stop offset=".4" stop-color="#fff0b8"/><stop offset=".8" stop-color="#d9ba76"/><stop offset="1" stop-color="#f8dfa0"/></linearGradient>
+  <radialGradient id="bolt"><stop stop-color="#20261e"/><stop offset=".6" stop-color="#343b2e"/><stop offset=".75" stop-color="#727965"/><stop offset="1" stop-color="#1b211a"/></radialGradient>
+ </defs>
+ <path d="M29 6H691L716 40 696 78H24L4 40Z" fill="#171c16"/>
+ <path d="M31 3H689L713 36 694 72H26L7 36Z" fill="url(#steel)" stroke="#232b23" stroke-width="4"/>
+ <path d="M33 7H687L705 36 691 65H29L15 36Z" stroke="#9da18d" stroke-width="3"/>
+ <path d="M61 19H659L650 54H70Z" fill="#242b21" stroke="#141b14" stroke-width="4"/>
+ <path d="M69 23H651L645 50H75Z" fill="url(#paper)" stroke="#b2a579" stroke-width="2"/>
+ <path d="M76 25H644M79 48H641" stroke="#fff5ca" stroke-width="2" opacity=".65"/>
+ <path d="M29 12L19 35 31 60M691 12L701 35 689 60" stroke="#59604f" stroke-width="6"/>
+ <circle cx="42" cy="35" r="13" fill="url(#bolt)" stroke="#737966" stroke-width="2"/><circle cx="42" cy="35" r="5" fill="#20291e" stroke="#121a13"/>
+ <circle cx="678" cy="35" r="13" fill="url(#bolt)" stroke="#737966" stroke-width="2"/><circle cx="678" cy="35" r="5" fill="#20291e" stroke="#121a13"/>
+ <path d="M47 9H670M31 65H687" stroke="#bbc0a9" opacity=".4"/>
+</svg>

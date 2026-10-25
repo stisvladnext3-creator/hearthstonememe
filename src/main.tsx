@@ -22,6 +22,9 @@ import './cat.css';
 import './class-card-colors.css';
 import './collection-album.css';
 import './menu.css';
+import './options.css';
+import './mana.css';
+import './classic-theme.css';
 
 restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(

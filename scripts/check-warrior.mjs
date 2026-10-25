@@ -29,7 +29,7 @@ try {
   await expect(page.locator('.end-turn')).toBeEnabled({ timeout: 15000 });
   await power.click();
   await expect(page.locator('.own-hero-row .hero-armor')).toHaveText('2');
-  await expect(page.locator('.arena-bottom .mana-bar strong')).toHaveText('0/2');
+  await expect(page.locator('.player-mana .mana-bar strong')).toHaveText('0/2');
   await expect(power).toHaveAttribute('aria-disabled', 'true');
   await expect(page.locator('.own-hero-row .hero-armor')).toHaveText('2');
   await page.getByRole('button', { name: 'История сражения', exact: true }).click();

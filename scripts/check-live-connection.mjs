@@ -146,7 +146,7 @@ async function flow(listed) {
       await power.click();
       await expect(warrior.locator('.own-hero-row .hero-armor')).toHaveText('2');
       await expect(mage.locator('.enemy-hero-row .hero-armor')).toHaveText('2');
-      await expect(warrior.locator('.arena-bottom .mana-bar strong')).toHaveText('0/2');
+      await expect(warrior.locator('.player-mana .mana-bar strong')).toHaveText('0/2');
       await expect(power).toHaveAttribute('aria-disabled', 'true');
       console.log((listed ? 'Guest' : 'Host') + ' warrior: independent classes, power visibility, 2 armor and 2 mana synchronized');
     }
@@ -160,7 +160,7 @@ async function flow(listed) {
       await expect(warlock.locator('.own-hero-row .hero-hp')).toContainText('28');
       await expect(opponent.locator('.enemy-hero-row .hero-hp')).toContainText('28');
       await expect(warlock.locator('.player-hand .hand-card-button')).toHaveCount(handCount + 1);
-      await expect(warlock.locator('.arena-bottom .mana-bar strong')).toHaveText('0/2');
+      await expect(warlock.locator('.player-mana .mana-bar strong')).toHaveText('0/2');
       console.log((listed ? 'Guest' : 'Host') + ' warlock: deck class, self damage, draw, enemy power and mana synchronized');
     }
     if (withStorm) {
@@ -169,7 +169,7 @@ async function flow(listed) {
       await expect(storm.locator('.own-power strong')).toHaveText('Зов бури'); await expect(opponent.locator('.enemy-power strong')).toHaveText('Зов бури');
       await storm.getByRole('button', { name: 'Сила героя Зов бури, 2 маны', exact: true }).click();
       await expect(storm.locator('.player-board .unit-attack')).toHaveText('2'); await expect(storm.locator('.player-board .unit-health')).toHaveText('1');
-      await expect(opponent.locator('.enemy-board .unit-health')).toHaveText('1', { timeout: 25000 }); await expect(storm.locator('.arena-bottom .mana-bar strong')).toHaveText('0/2');
+      await expect(opponent.locator('.enemy-board .unit-health')).toHaveText('1', { timeout: 25000 }); await expect(storm.locator('.player-mana .mana-bar strong')).toHaveText('0/2');
       console.log('Storm summon and class-card pack above 1700 KB synchronized in both browsers');
     }
     if (!listed || withWarrior || withDecks || withStorm) {

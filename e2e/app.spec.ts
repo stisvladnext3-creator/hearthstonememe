@@ -76,7 +76,7 @@ test('deck editor saves an actual changed 30-card deck and survives reload', asy
   await page.getByRole('button', { name: 'Убрать Завсегдатай', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Сохранить колоду' })).toBeEnabled();
   await page.getByLabel('Поиск карт').fill('Искра хаоса');
-  await page.getByRole('button', { name: 'Добавить Искра хаоса', exact: true }).click();
+  await page.locator('.album-card-grid [data-card-id="bolt"]').click();
   await page.getByRole('button', { name: 'Сохранить колоду' }).click();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('memestone.v1.decks')!).decks.find((d: { id: string }) => d.id === JSON.parse(localStorage.getItem('memestone.v1.decks')!).selectedId).cards.filter((id: string) => id === 'bolt').length)).toBe(expectedBolts);
   await page.reload();

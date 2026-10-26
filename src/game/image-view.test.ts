@@ -1,0 +1,12 @@
+import {expect,it} from 'vitest';
+import {clampView,containZoom,imageGeometry,validImageView} from './image-view';
+import {newCustomCard,validateCardPack,registerCardPack} from './custom-cards';
+import {makePublication,validatePublication} from '../community/model';
+import {copyCardTemplate} from './custom-presets';
+
+it('fits both landscape and portrait originals without cutting off their edges',()=>{for(const image of [3,.4,30,.025]){const frame=.75,zoom=containZoom(image,frame);const g=imageGeometry(image,frame,{zoom,x:0,y:0});expect(Math.max(g.width,g.height)).toBeCloseTo(100);expect(g.width/g.height*frame).toBeCloseTo(image);expect(Math.min(g.width,g.height)).toBeLessThanOrEqual(100);}});
+it('keeps image aspect ratio at different frame sizes, zooms and positions',()=>{const a=imageGeometry(2,.8,{zoom:1.8,x:17,y:-23}),b=imageGeometry(2,.8,{zoom:.4,x:0,y:0});expect(a.width/a.height*.8).toBeCloseTo(2);expect(a.left).toBeGreaterThan(50);expect(a.top).toBeLessThan(50);expect(a.width/b.width).toBeCloseTo(4.5);expect(clampView({zoom:99,x:-999,y:999})).toEqual({zoom:4,x:-100,y:100});});
+it('preserves framing in JSON packs, copied cards and publication round trips',()=>{const c=newCustomCard();c.editor!.image='data:image/jpeg;base64,YWJj';c.editor!.imageView={zoom:1.75,x:18.5,y:-32};const pack=validateCardPack(JSON.parse(JSON.stringify([c])));expect(pack[0].editor?.imageView).toEqual(c.editor!.imageView);expect(copyCardTemplate(c).editor?.imageView).toEqual(c.editor!.imageView);registerCardPack(pack);const p=makePublication('a'.repeat(64),{kind:'card',title:c.name,author:'Автор',description:'',roots:[c.id]});expect(validatePublication(JSON.parse(JSON.stringify(p))).cards[0].editor?.imageView).toEqual(c.editor!.imageView);});
+it('accepts old cards without framing and rejects malformed or unsafe geometry',()=>{const c=newCustomCard();expect(validateCardPack([c])[0].editor?.imageView).toBeUndefined();for(const view of [{zoom:Infinity,x:0,y:0},{zoom:NaN,x:0,y:0},{zoom:1,x:'5',y:0},{zoom:0,x:0,y:0},{zoom:1,x:101,y:0},{zoom:1,x:0},'transform:evil']){expect(validImageView(view)).toBe(false);expect(()=>validateCardPack([{...c,editor:{...c.editor,imageView:view}}])).toThrow();}});
+
+it('can pan all the way to both edges of a wide zoomed image',()=>{const left=imageGeometry(4,.75,{zoom:3,x:100,y:0}),right=imageGeometry(4,.75,{zoom:3,x:-100,y:0});expect(left.left-left.width/2).toBeCloseTo(0);expect(right.left+right.width/2).toBeCloseTo(100);});

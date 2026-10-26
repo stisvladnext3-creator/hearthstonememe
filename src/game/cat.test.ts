@@ -48,10 +48,11 @@ describe.each<Side>(['player', 'bot'])('general cat controlled by %s', side => {
   });
 });
 it('lets the bot use the power and choose a non-lethal cost, but avoid it with three health or a full hand', () => {
-  const g = setup('bot'); g.bot.health = 4;
+  const g = setup('bot');
   const r = act(g, 'bot', chooseBotAction(g)).state; expect(r.discovery).toBeDefined();
   const choice = chooseBotAction(r); expect(choice.type).toBe('discover'); if (choice.type === 'discover') expect(CARD[choice.cardId].cost).toBe(3);
-  expect(act(r, 'bot', choice).state.bot.health).toBe(1);
+  expect(act(r, 'bot', choice).state.bot.health).toBe(27);
+  g.bot.health = 4; expect(chooseBotAction(g)).toEqual({ type: 'end' });
   g.bot.health = 3; expect(chooseBotAction(g)).toEqual({ type: 'end' });
 });
 it('copies the power into the editor without losing its discovery or self damage', () => {

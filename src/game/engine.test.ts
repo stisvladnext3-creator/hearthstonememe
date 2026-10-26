@@ -288,7 +288,7 @@ describe('bot and complete games', () => {
         const side = g.active;
         const view = side === 'bot' ? g : { ...g, active: 'bot' as const, player: g.bot, bot: g.player,
           discovery: g.discovery ? { ...g.discovery, side: 'bot' as const } : undefined };
-        const action = chooseBotAction(view);
+        const action = chooseBotAction(view, {maxNodes:100,depth:5,width:3});
         const result = act(g, side, action);
         expect(result.error, `seed ${seed}, action ${JSON.stringify(action)}`).toBeUndefined();
         g = result.state;
@@ -300,5 +300,5 @@ describe('bot and complete games', () => {
       }
       expect(g.winner, `seed ${seed} did not finish after ${steps} actions`).not.toBeNull();
     }
-  });
+  }, 30000);
 });

@@ -1,0 +1,22 @@
+import { BOT_DECK, classDeck } from './cards';
+import type { HeroClass } from './classes';
+
+export type BotStyle = 'balanced' | 'burn' | 'control' | 'combo' | 'swarm';
+export interface TrainingBot {
+  id: string; name: string; heroClass: HeroClass; style: BotStyle;
+  deckName: string; description: string; deck: string[];
+}
+const deck = (...entries: (string | [string, number])[]) => entries.flatMap(e => typeof e === 'string' ? [e] : Array(e[1]).fill(e[0]) as string[]);
+export const TRAINING_BOTS: TrainingBot[] = [
+  { id:'boris', name:'Борис', heroClass:'mage', style:'balanced', deckName:'Хозяин трактира', description:'Существа, провокации и неожиданные легенды. Универсальная колода Бориса.', deck:classDeck(BOT_DECK,'mage') },
+  { id:'iskorka', name:'Искорка', heroClass:'mage', style:'burn', deckName:'Искры и эхо', description:'Урон по герою, добор и повторные розыгрыши Максимки. Берегись завершающей комбинации.', deck:deck(['bolt',3],['dog-spell',2],['draw',3],['echo-maxim',2],['dragonslayer',2],['regular',3],['goblin',3],'vasiliy','masik',['bouncer',3],['slime',3],['silence',2],['mage',2]) },
+  { id:'bastion', name:'Бастион', heroClass:'warrior', style:'control', deckName:'Стальная оборона', description:'Провокации и броня защищают героя, пока задача готовит Т-34 и тяжёлые подкрепления.', deck:deck('incinerate-quest',['slime',3],['bouncer',3],['stegosaurus',3],['guardian',3],['heal',3],['dog-spell',2],['echo-maxim',2],['lizard',2],['dragon',3],'vasiliy','masik',['regular',3]) },
+  { id:'kuznets', name:'Кузнец', heroClass:'warrior', style:'combo', deckName:'Разбудить Руслана', description:'Снимает немотой запрет атаки Руслана и усиливает существ. Броня помогает собрать комбинацию.', deck:deck(['ruslan',3],['silence',3],['echo-maxim',2],['bouncer',3],['slime',3],'vasiliy',['heal',3],['dog-spell',2],['guardian',3],['dragon',3],['regular',3],'masik') },
+  { id:'archivist', name:'Архивариус', heroClass:'warlock', style:'control', deckName:'Дело РДШ', description:'Призывы и хрипы выполняют задачу РДШ, удешевляют Джайну и открывают путь Волонтеру-боссу.', deck:deck('rash-quest','jaina',['jaina-volunteer',3],['jaina-rusher',3],['jaina-instigator',2],['slime',3],['bouncer',3],['echo-maxim',2],'vasiliy','paper-army',['regular',3],['dog-spell',2],['heal',2],['stegosaurus',3]) },
+  { id:'printer', name:'Печатник', heroClass:'warlock', style:'swarm', deckName:'Бумажный переворот', description:'Разворачивает армию бумажек, усиливает её Василием. Массовые размены приближают Т-34.', deck:deck('paper-army','vasiliy','incinerate-quest',['echo-maxim',2],['lizard',2],['bouncer',3],['slime',3],['dog-spell',2],'deathwing','masik',['dragonslayer',2],['guardian',3],['heal',3],['regular',3],['stegosaurus',2]) },
+  { id:'squall', name:'Шквал', heroClass:'storm', style:'swarm', deckName:'Штормовой натиск', description:'Заполняет стол дешёвыми существами и элементалями. Василий превращает их в ударную армию.', deck:deck(['regular',3],['jaina-volunteer',3],['slime',3],['goblin',3],['bouncer',3],['echo-maxim',2],'vasiliy',['jaina-rusher',3],['mage',3],['dog-spell',2],'masik',['dragon',3]) },
+  { id:'thunder', name:'Громовержец', heroClass:'storm', style:'control', deckName:'Гроза над фронтом', description:'Элементали и Ящерка разменивают вражеский стол, выполняют задачу и прикрывают тяжёлых существ.', deck:deck('incinerate-quest',['echo-maxim',2],['stegosaurus',3],['lizard',2],['heal',3],['dog-spell',2],['guardian',3],['bouncer',3],['dragon',3],'vasiliy','deathwing',['regular',3],'masik',['slime',2]) },
+  { id:'barsik', name:'Барсик', heroClass:'cat', style:'burn', deckName:'Ночной налёт', description:'Мяустер скрывается, Марс разменивается, Тигрерра и Драконоборцы добивают героя противника.', deck:deck(['meowster',2],['marshal-mars',3],['tigerra',2],['general-mikhalych',3],'vasiliy','masik',['echo-maxim',2],['regular',3],['goblin',3],['dog-spell',2],['heal',3],['dragonslayer',2],'silence',['stegosaurus',2]) },
+  { id:'mikhalych', name:'Михалыч', heroClass:'cat', style:'control', deckName:'Когти и доспехи', description:'Прячет ценных бойцов за провокациями, бережно использует Ярость когтей и ждёт награду за задачу.', deck:deck('incinerate-quest',['marshal-mars',3],['meowster',2],['tigerra',2],['general-mikhalych',3],['stegosaurus',3],['bouncer',3],['slime',3],['heal',3],['dog-spell',2],'vasiliy',['lizard',2],'masik','regular') },
+];
+export const trainingBot = (id?: string) => TRAINING_BOTS.find(b => b.id === id) ?? TRAINING_BOTS[0];

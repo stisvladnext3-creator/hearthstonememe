@@ -43,7 +43,7 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
       expect(body).toMatchObject({ attack: c.attack! + (c.auraAttack ?? 0), health: c.health, ready: !!(c.charge || c.rush), origin: 'played' });
     }
     if (!c.effect) {
-      expect(p.health).toBe(17); expect(e.health).toBe(28); expect(n.winner).toBeNull();
+      expect(p.health).toBe(17); expect(e.health).toBe(id === 'tigerra' ? 25 : 28); expect(n.winner).toBeNull();
       if (id === 'ruslan') expect(body?.cannotAttack).toBe(true);
       if (c.taunt) expect(body?.taunt).toBe(true);
     }
@@ -179,14 +179,14 @@ describe.each<Side>(['player', 'bot'])('effect contract for %s', side => {
     const turn3 = act(turn2, other(side), { type: 'end' }).state;
     expect(act(turn3, side, { type: 'attack', uid: target.uid, target: 'hero' }).error).toBeUndefined();
   });
-  it('continues to reject friendly targets for damage spells, attacks and hero power', () => {
+  it('allows friendly damage spells and hero power while keeping attacks hostile', () => {
     const g = setup(side); const friend = creature(g, side, 'mage'); const attacker = creature(g, side, 'dragon');
     for (const id of ['bolt', 'dog-spell']) {
       const uid = g.nextUid++; g[side].hand = [{ id, uid }];
       const result = act(g, side, { type: 'play', uid, target: friend.uid });
-      expect(result.error).toBeTruthy(); expect(result.state).toBe(g);
+      expect(result.error).toBeUndefined();
     }
-    expect(act(g, side, { type: 'power', target: friend.uid }).error).toBeTruthy();
+    expect(act(g, side, { type: 'power', target: friend.uid }).error).toBeUndefined();
     expect(act(g, side, { type: 'attack', uid: attacker.uid, target: friend.uid }).error).toBeTruthy();
     expect(g[side].mana).toBe(10); expect(friend.health).toBe(4);
   });

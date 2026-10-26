@@ -35,6 +35,7 @@ export interface Player {
 export interface Game {
   id: string;
   rashDeaths: number;
+  trainingBotId?: string;
   events: GameEvent[];
   player: Player; bot: Player; active: Side; turn: number;
   winner: Side | 'draw' | null; nextUid: number; rng: number;
@@ -140,7 +141,7 @@ function destroy(g: Game, side: Side, predicate: (m: Minion) => boolean) {
       pending.push({ side, minion: m }); deathrattles.set(g, pending);
     }
     emit(g, { kind: 'death', side, target: { side, uid: m.uid }, cardId: m.id });
-    log(g, `${CARD[m.id].name} (${side === 'player' ? 'ваше существо' : 'существо Бориса'}) погибает.`, side, { kind: 'death', actor: cardEntity(m.id, side, m) });
+    log(g, `${CARD[m.id].name} (${side === 'player' ? 'ваше существо' : 'существо соперника'}) погибает.`, side, { kind: 'death', actor: cardEntity(m.id, side, m) });
     return false;
   });
 }
@@ -338,8 +339,11 @@ export function legalTargets(g: Game, action: 'attack' | 'bolt' | 'silence' | 's
   if (action === 'attack' && attacker?.rush && !attacker.charge && attacker.enteredTurn === g.turn) return enemies.map(m => m.uid);
   return [...(isImmune(g, other(g.active)) ? [] : ['hero' as const]), ...enemies.map(m => m.uid)];
 }
-export function act(input: Game, side: Side, action: Action): Result {
-  registerCardPack(input.customCards ?? [], 'match');
+export function act(input: Game, side: Side, action: Action): Result { return applyAction(input, side, action, false); }
+// Search uses already registered definitions and omits picture bytes from its private copies.
+export function simulateAction(input: Game, side: Side, action: Action): Result { return applyAction(input, side, action, true); }
+function applyAction(input: Game, side: Side, action: Action, simulation: boolean): Result {
+  if (!simulation) registerCardPack(input.customCards ?? [], 'match');
   const fail = (error: string): Result => ({ state: input, error });
   if (input.winner) return fail('Матч уже завершён.');
   if (action.type === 'mulligan') {
@@ -381,7 +385,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     g.winner = enemySide;
     delete g.discovery;
     delete g.mulligan;
-    record(side === 'player' ? 'Вы сдались.' : 'Борис сдался.', { kind: 'finish' });
+    record(side === 'player' ? 'Вы сдались.' : `${p.name ?? 'Соперник'} сдался.`, { kind: 'finish' });
     return { state: g };
   }
   if (action.type === 'discover') {
@@ -445,7 +449,7 @@ export function act(input: Game, side: Side, action: Action): Result {
         emit(g, { kind: 'damage', side, target: { side, uid: 'hero' }, amount: p.health, cardId: c.id });
         p.health = 0;
         g.winner = enemySide;
-        record(`«Хорошая игра.»: ${side === 'bot' ? 'герой Бориса уничтожен. Вы победили.' : 'ваш герой уничтожен. Вы проиграли.'}`, { kind: 'finish', target });
+        record(`«Хорошая игра.»: ${side === 'bot' ? 'герой соперника уничтожен. Вы победили.' : 'ваш герой уничтожен. Вы проиграли.'}`, { kind: 'finish', target });
         break;
       }
       case 'casino': {
@@ -453,7 +457,7 @@ export function act(input: Game, side: Side, action: Action): Result {
           const unlucky = random(g) < 0.5 ? side : enemySide;
           const count = Math.floor(g[unlucky].deck.length / 2);
           g[unlucky].deck.splice(0, count);
-          record(`Козиныч уничтожает ${count} карт ${unlucky === 'player' ? 'вашей колоды' : 'колоды Бориса'}!`, { target: heroEntity(g[unlucky], unlucky), amount: count });
+          record(`Козиныч уничтожает ${count} карт ${unlucky === 'player' ? 'вашей колоды' : 'колоды соперника'}!`, { target: heroEntity(g[unlucky], unlucky), amount: count });
         } else record('Козиныч: ничего не произошло. Сегодня повезло!');
         break;
       }
@@ -485,7 +489,7 @@ export function act(input: Game, side: Side, action: Action): Result {
         destroy(g, enemySide, () => true);
         destroy(g, side, m => m.uid !== body?.uid);
         p.hand = [];
-        record(`Смертокрыл уничтожает остальных существ и сбрасывает ${side === 'player' ? 'вашу руку' : 'руку Бориса'}.`);
+        record(`Смертокрыл уничтожает остальных существ и сбрасывает ${side === 'player' ? 'вашу руку' : 'руку соперника'}.`);
         break;
       case 'dragonslayer': {
         const target = heroEntity(enemy, enemySide);
@@ -498,7 +502,7 @@ export function act(input: Game, side: Side, action: Action): Result {
         const options = shuffled(g, [...new Set(p.deck)]).slice(0, 3);
         if (options.length) {
           g.discovery = { side, sourceId: c.id, options, target: action.target! };
-          record(`Раскопка: ${side === 'player' ? 'вы выбираете' : 'Борис выбирает'} копию одной из ${options.length} карт своей колоды.`, { kind: 'discover' });
+          record(`Раскопка: ${side === 'player' ? 'вы выбираете' : 'соперник выбирает'} копию одной из ${options.length} карт своей колоды.`, { kind: 'discover' });
         } else {
           record('Раскопка: колода пуста, копия карты не получена.');
           const target = targetEntity(action.target!);
@@ -599,7 +603,7 @@ export function act(input: Game, side: Side, action: Action): Result {
     m.attacksThisTurn = attacksUsed(m) + 1;
     m.ready = m.attacksThisTurn < (m.windfury ? 2 : 1);
     m.attackedThisTurn = true;
-    record(`${CARD[m.id].name} → ${defender ? CARD[defender.id].name : side === 'player' ? 'герой Бориса' : 'ваш герой'}: ${dealt} урона.${defender ? ` Ответный удар ${CARD[defender.id].name}: ${returned} урона.` : ''}`, { kind: 'attack', target: victim, amount: dealt, retaliation: returned });
+    record(`${CARD[m.id].name} → ${defender ? CARD[defender.id].name : side === 'player' ? 'герой соперника' : 'ваш герой'}: ${dealt} урона.${defender ? ` Ответный удар ${CARD[defender.id].name}: ${returned} урона.` : ''}`, { kind: 'attack', target: victim, amount: dealt, retaliation: returned });
   } else if (action.type === 'power') {
     const power = activePower(g, side);
     const cost = powerCost(power, g, side);
@@ -692,75 +696,10 @@ export function act(input: Game, side: Side, action: Action): Result {
     custom.record(g, { kind: 'turnStart', side: enemySide });
     resolve(g);
     if (g.winner) return { state: g };
-    log(g, enemySide === 'player' ? 'Ваш ход.' : 'Ход трактирщика Бориса.', 'system');
+    log(g, enemySide === 'player' ? 'Ваш ход.' : `Ход: ${g[enemySide].name ?? 'Борис'}.`, 'system');
     draw(g, enemySide);
   }
   resolve(g);
   return { state: g };
 }
-export function chooseBotAction(g: Game): Action {
-  if (g.mulligan) return { type: 'mulligan', replace: g.bot.hand.filter(c => CARD[c.id].cost > 3 || CARD[c.id].effect === 'concede').map(c => c.uid) };
-
-  if (g.winner || g.active !== 'bot') return { type: 'end' };
-  const p = g.bot;
-  const silenceTarget = g.player.board.find(m => !m.stealth && (m.taunt || !m.silenced && !!CARD[m.id].auraAttack))
-    ?? p.board.find(m => (m.cannotAttack || m.ephemeral) && !m.silenced && !m.taunt && !CARD[m.id].auraAttack);
-  if (g.discovery?.side === 'bot') {
-    const score = (id: string) => {
-      const c = CARD[id];
-      if (CARD[g.discovery!.sourceId].effect === 'clawFury' && c.cost >= p.health + p.armor) return -10000 - c.cost;
-      if (c.effect === 'concede') return -1000;
-      return Math.min(cardCost(g, id), 10) + (c.attack ?? 0) + (c.health ?? 0) / 2
-        + (c.effect === 'dragonslayer' || c.effect === 'discoverBlast' ? 5 : 0)
-        - (c.effect === 'deathwing' && g.player.board.length <= p.board.length ? 15 : 0);
-    };
-    return { type: 'discover', cardId: [...g.discovery.options].sort((a, b) => score(b) - score(a))[0] };
-  }
-  const attacks = p.board.filter(m => m.ready && !m.cannotAttack && m.attack > 0 && legalTargets(g, 'attack', m.uid).length > 0);
-  const faceAttackers = attacks.filter(m => legalTargets(g, 'attack', m.uid).includes('hero'));
-  const totalDamage = faceAttackers.reduce((sum, m) => sum + m.attack, 0);
-  if (totalDamage >= g.player.health + g.player.armor && faceAttackers.length)
-    return { type: 'attack', uid: faceAttackers[0].uid, target: 'hero' };
-  const playable = p.hand.filter(h => {
-    const c = CARD[h.id];
-    if (cardCost(g, c.id) > p.mana || c.effect === 'concede') return false;
-    if (c.kind === 'minion' && p.board.length >= boardLimit(g)) return false;
-    if ((c.effect === 'rashQuest' || cardAbilities(c)?.quest) && p.quest) return false;
-    if (targetNeeded(g, h.uid) && abilityTargets(g, h.uid).length === 0) return false;
-    if (c.effect === 'paperArmy' && p.board.length >= boardLimit(g)) return false;
-    if (c.effect === 'heal' && p.health > 25) return false;
-    if (c.effect === 'silence' && !silenceTarget) return false;
-    if (c.effect === 'deathwing' && g.player.board.length <= p.board.length) return false;
-    return true;
-  }).sort((a, b) => cardCost(g, b.id) - cardCost(g, a.id));
-  const lethal = playable.find(h => {
-    const effect = CARD[h.id].effect;
-    return (effect === 'bolt' ? 3 : effect === 'dragonslayer' || effect === 'discoverBlast' ? 4 : 0) >= g.player.health + g.player.armor;
-  });
-  if (lethal) return { type: 'play', uid: lethal.uid, target: CARD[lethal.id].effect === 'dragonslayer' ? undefined : 'hero' };
-  if (playable.length) {
-    const card = playable[0];
-    const effect = CARD[card.id].effect;
-    let target: Target | undefined;
-    if (effect === 'bolt' || effect === 'discoverBlast') target = [...g.player.board].filter(m => !m.stealth && m.health <= (effect === 'bolt' ? 3 : 4)).sort((a, b) => b.attack - a.attack)[0]?.uid ?? 'hero';
-    if (effect === 'silence') target = silenceTarget!.uid;
-    if (effect === 'masik') target = silenceTarget?.uid ?? 'hero';
-    if (effect === 'echoMaxim') target = [...p.board].sort((a, b) => Number(b.ready && !b.cannotAttack) - Number(a.ready && !a.cannotAttack) || b.health - a.health)[0]?.uid;
-    if (CARD[card.id].editor && targetNeeded(g, card.uid)) target = abilityTargets(g, card.uid).find(t => t === 'hero') ?? abilityTargets(g, card.uid)[0];
-    return { type: 'play', uid: card.uid, target };
-  }
-  if (attacks.length) {
-    const attacker = attacks[0];
-    const targets = legalTargets(g, 'attack', attacker.uid);
-    const favorable = g.player.board.filter(m => targets.includes(m.uid) && m.health <= attacker.attack && m.attack < attacker.health).sort((a, b) => b.attack - a.attack)[0];
-    return { type: 'attack', uid: attacker.uid, target: favorable?.uid ?? (targets.includes('hero') ? 'hero' : targets[0]) };
-  }
-  if (!powerProblem(g, 'bot')) {
-    if (activePower(g, 'bot') === 'lifeTap' && (p.health + p.armor <= 2 + (!p.deck.length ? p.fatigue + 1 : 0) || p.hand.length >= 10)) return { type: 'end' };
-    if (CARD[powerCardId(activePower(g, 'bot'))].effect === 'clawFury' && (p.health + p.armor <= 3 || p.hand.length >= 10)) return { type: 'end' };
-    const weak = g.player.board.find(m => !m.stealth && m.health === 1);
-    if (CARD[powerCardId(activePower(g, 'bot'))].editor) return { type: 'power', target: abilityTargets(g).find(t => t === 'hero') ?? abilityTargets(g)[0] };
-    return { type: 'power', target: weak?.uid ?? 'hero' };
-  }
-  return { type: 'end' };
-}
+export { chooseBotAction } from './bot-ai';

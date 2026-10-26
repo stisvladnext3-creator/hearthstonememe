@@ -1,6 +1,7 @@
 import { COMBAT_KEYWORDS, type CombatKeyword } from './battle-keywords';
 import type { CardDef, Effect } from './cards';
 import { validHeroClass } from './classes';
+import {validImageView,type ImageView} from './image-view';
 
 export const TRIGGERS = { play: 'Розыгрыш / боевой клич', death: 'Предсмертный хрип', summon: 'Когда призвано существо', died: 'Когда погибло существо', played: 'Когда разыграна карта', turnStart: 'В начале хода', turnEnd: 'В конце хода', aura: 'Аура', reveal: 'При выходе из маскировки' } as const;
 export const OPERATIONS = { damage: 'Нанести урон', heal: 'Восстановить здоровье', buff: 'Изменить атаку / здоровье', silence: 'Наложить немоту', destroy: 'Уничтожить', summon: 'Призвать карту', draw: 'Взять карты', addCard: 'Добавить карту в руку', shuffle: 'Замешать карту в колоду', discard: 'Сбросить карты', purgeDeck: 'Удалить карты из колоды', armor: 'Дать броню', mana: 'Восстановить ману', transform: 'Превратить в карту', devolve: 'Превратить в более дешёвое', discover: 'Раскопать копию из колоды', replacePower: 'Заменить силу героя', grantKeyword: 'Дать ключевое слово', briefing: 'Держать в курсе' } as const;
@@ -19,7 +20,7 @@ export interface CustomRule {
   condition?: { zone: 'board' | 'hand' | 'deck' | 'summon' | 'death' | 'play'; minimum: number; filter: CardFilter };
 }
 export interface EditorData {
-  version: 1; tags: string[]; rules: CustomRule[]; image?: string; artSourceId?: string; powerId?: string; startInHand?: boolean; legacyText?: string;
+  version: 1; tags: string[]; rules: CustomRule[]; image?: string; imageView?: ImageView; artSourceId?: string; powerId?: string; startInHand?: boolean; legacyText?: string;
   discount?: { event: 'summon' | 'death' | 'play'; amount: number; filter: CardFilter };
   quest?: { event: 'summon' | 'death' | 'play'; goal: number; rewardId: string; filter: CardFilter };
 }
@@ -50,6 +51,7 @@ export function normalizeCustomCard(raw: unknown): CardDef | null {
   if (creature && (!integer(raw.attack, 0, 99) || !integer(raw.health, 1, 99)) || raw.kind === 'hero' && !integer(raw.armor, 0, 99)) return null;
   if (!Array.isArray(e.tags) || e.tags.length > 8 || !e.tags.every((t: unknown) => text(t, 32) && String(t).trim())
     || !Array.isArray(e.rules) || e.rules.length > 12 || e.image !== undefined && (typeof e.image !== 'string' || e.image.length > 48_000 || !/^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/=]+$/.test(e.image))
+    || e.imageView !== undefined && !validImageView(e.imageView)
     || e.powerId !== undefined && !id(e.powerId) || e.artSourceId !== undefined && !id(e.artSourceId) || e.startInHand !== undefined && typeof e.startInHand !== 'boolean' || e.legacyText !== undefined && !text(e.legacyText, 800)) return null;
   const rules: CustomRule[] = [];
   for (const r of e.rules) {
@@ -71,7 +73,7 @@ export function normalizeCustomCard(raw: unknown): CardDef | null {
       ...(r.cardId ? { cardId: r.cardId } : {}), ...(r.keyword ? { keyword: r.keyword } : {}), ...(r.targetTag ? { targetTag: r.targetTag.trim() } : {}), ...(r.targetCardId ? { targetCardId: r.targetCardId } : {}), ...(condition ? { condition } : {}) });
   }
   const editor: EditorData = { version: 1, tags: [...new Set(e.tags.map((t: string) => t.trim()))] as string[], rules,
-    ...(e.image ? { image: e.image } : {}), ...(e.artSourceId ? { artSourceId: e.artSourceId } : {}), ...(e.powerId ? { powerId: e.powerId } : {}), ...(e.startInHand ? { startInHand: true } : {}), ...(e.legacyText ? { legacyText: e.legacyText } : {}) };
+    ...(e.image ? { image: e.image } : {}), ...(e.imageView ? {imageView:{zoom:e.imageView.zoom,x:e.imageView.x,y:e.imageView.y}} : {}), ...(e.artSourceId ? { artSourceId: e.artSourceId } : {}), ...(e.powerId ? { powerId: e.powerId } : {}), ...(e.startInHand ? { startInHand: true } : {}), ...(e.legacyText ? { legacyText: e.legacyText } : {}) };
   if (e.discount !== undefined) {
     const d = e.discount, f = object(d) ? filter(d.filter) : null;
     if (!f || !['summon', 'death', 'play'].includes(d.event) || !integer(d.amount, 1, 20)) return null;

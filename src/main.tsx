@@ -30,6 +30,8 @@ import './battle-interface.css';
 import './combat-keywords.css';
 import './community.css';
 import './history-interface.css';
+import './training.css';
+import './image-framing.css';
 
 restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(

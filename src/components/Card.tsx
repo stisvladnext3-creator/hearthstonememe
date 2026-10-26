@@ -5,6 +5,8 @@ import { CardFrame, CardName, CardTribe, frameModel } from './CardFrame';
 import { useCardAppearances } from '../card-appearance';
 import { CardRules } from './CardRules';
 import { useArtwork } from '../artwork';
+import FramedArt from './FramedArt';
+import type {ImageView} from '../game/image-view';
 import { useLongPress } from '../useLongPress';
 
 function MagePortrait({ className }: { className: string }) {
@@ -21,12 +23,12 @@ function MagePortrait({ className }: { className: string }) {
   }, []);
   return <div className={`portrait-art mage-portrait ${className}`}><svg ref={ref} viewBox="724 724 362 362" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><image href={import.meta.env.BASE_URL + 'art/portraits.png'} width="1448" height="1086" /></svg></div>;
 }
-export function Art({ index, className = '', cardId, picture, sourceId }: { index: number; className?: string; cardId?: string; picture?: string; sourceId?: string }) {
+export function Art({ index, className = '', cardId, picture, sourceId, view }: { index: number; className?: string; cardId?: string; picture?: string; sourceId?: string; view?:ImageView }) {
   const { images } = useArtwork();
   const image = cardId ? images[cardId] : undefined;
   if (image) return <div className={`portrait-art original-portrait ${image.format} ${className}`} style={{ backgroundImage: `url("${image.url}")`, '--portrait-position': image.position, '--portrait-size': image.size } as CSSProperties} />;
   const customImage = picture ?? (cardId ? CARD[cardId]?.editor?.image : undefined);
-  if (customImage) return <div className={`portrait-art original-portrait portrait ${className}`} style={{ backgroundImage: 'url("' + customImage + '")', backgroundPosition: 'center', backgroundSize: 'cover' }} />;
+  if (customImage) return <FramedArt src={customImage} view={view ?? (cardId ? CARD[cardId]?.editor?.imageView : undefined)} className={className}/>;
   const source = sourceId ?? (cardId ? CARD[cardId]?.editor?.artSourceId : undefined);
   const inherited = source ? images[source] : undefined;
   if (inherited) return <div className={`portrait-art original-portrait ${inherited.format} ${className}`} style={{ backgroundImage: 'url("' + inherited.url + '")', '--portrait-position': inherited.position, '--portrait-size': inherited.size } as CSSProperties} />;
@@ -71,7 +73,7 @@ export function Card({ card, onClick, onInspect, className = '', playable = fals
   const shownCost = cost ?? card.printedCost ?? card.cost;
   const content = <>
     {scanned ? <><span className={`scanned-card ${image.format}`}><img src={image.url} alt={`Оригинальная карта ${card.name}`} draggable="false" /></span><span className="visually-hidden">{card.text}</span></>
-      : <><div className="card-art"><Art index={card.art} cardId={card.id} picture={card.editor?.image} sourceId={card.editor?.artSourceId} /></div><CardFrame card={card} appearance={appearance} />
+      : <><div className="card-art"><Art index={card.art} cardId={card.id} picture={card.editor?.image} view={card.editor?.imageView} sourceId={card.editor?.artSourceId} /></div><CardFrame card={card} appearance={appearance} />
         <div className="card-copy"><CardName card={card} appearance={appearance} /><p><FittedText text={card.text} maximum={spell ? 5.3 : 4.8} rich /></p><CardTribe card={card} appearance={appearance} /></div>
         <div className="card-bottom">{card.attack !== undefined ? <><span className="attack-stat">{card.attack}</span><span className="health-stat">{card.health}</span></> : card.armor ? <span className="armor-stat">{card.armor}</span> : null}</div>
       </>}

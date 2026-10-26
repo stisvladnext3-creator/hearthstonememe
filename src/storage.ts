@@ -60,7 +60,7 @@ export function loadGame(): Game | null {
   if (g && !validCustomCounts(g.customCounts)) return null;
   if (g && g.rashDeaths === undefined) g.rashDeaths = 0;
   if (g && g.events === undefined) g.events = [];
-  if (!g || typeof g.id !== 'string' || !validPlayer(g.player) || !validPlayer(g.bot) || !['player', 'bot'].includes(g.active)
+  if (!g || g.trainingBotId !== undefined && (typeof g.trainingBotId !== 'string' || g.trainingBotId.length > 30) || typeof g.id !== 'string' || !validPlayer(g.player) || !validPlayer(g.bot) || !['player', 'bot'].includes(g.active)
     || g.winner !== null || ![g.turn, g.nextUid, g.rng, g.nextLog, g.rashDeaths].every(finite) || !Number.isSafeInteger(g.rashDeaths) || g.rashDeaths < 0
     || !Array.isArray(g.events) || !g.events.every(e => e && finite(e.id) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune'].includes(e.kind) && ['player', 'bot'].includes(e.side)
       && (!e.cardId || Object.hasOwn(CARD, e.cardId)) && (!e.source || e.source === 'hero' || finite(e.source)) && (!e.target || ['player', 'bot'].includes(e.target.side) && (e.target.uid === 'hero' || finite(e.target.uid))))

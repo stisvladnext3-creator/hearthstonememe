@@ -17,6 +17,8 @@ import SettingsDialog, { type Settings as GameSettings, type BattleSettingsActio
 import CardWorkshop from './components/CardWorkshop';
 import FullscreenButton from './components/FullscreenButton';
 import DeckPicker from './components/DeckPicker';
+import TrainingPicker from './components/TrainingPicker';
+import {trainingBot, type TrainingBot} from './game/training-bots';
 import CommunityCards from './components/CommunityCards';
 import PublishDialog from './components/PublishDialog';
 import { CommunityCatalog, EMPTY_CATALOG } from './community/catalog';
@@ -46,7 +48,7 @@ export default function App() {
   const [cardRevision, setCardRevision] = useState(0);
   const [game, setGame] = useState(loadGame);
   const [stats, setStats] = useState(loadStats);
-  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'decks' | 'publish' | null>(null);
+  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'decks' | 'publish' | 'training' | null>(null);
   const [deckPickerLabel, setDeckPickerLabel] = useState('Играть');
   const deckRequest = useRef<((deck: SavedDeck) => void) | null>(null);
   const [inspected, setInspected] = useState<CardDef | null>(null);
@@ -55,6 +57,9 @@ export default function App() {
   const [battleSettings, setBattleSettings] = useState<BattleSettingsActions | undefined>();
   const [settings, setSettings] = useState<GameSettings>(() => { const s = read<Partial<GameSettings> | null>('settings', null); return { sound: s?.sound === true, volume: typeof s?.volume === 'number' && Number.isFinite(s.volume) ? Math.max(0, Math.min(100, s.volume)) : 100, motion: s?.motion !== false, board: battleground(s?.board).id }; });
   const audio = useRef<AudioContext | null>(null);
+  const [trainingDeck,setTrainingDeck] = useState<SavedDeck | null>(null);
+  const botWorker = useRef<Worker | null>(null), botRequest = useRef(0);
+  useEffect(() => () => botWorker.current?.terminate(), []);
   const botBudget = useRef({ turn: '', actions: 0 });
   const notify = useCallback((text: string) => setToast(text), []);
   const updateStats = useCallback((match: NonNullable<typeof game>) => setStats(recordMatchStats(match)), []);
@@ -87,15 +92,31 @@ export default function App() {
   useEffect(() => {
     if (page !== 'battle' || !game || game.winner || !game.mulligan && (modal || inspected)) return;
     if (game.mulligan ? game.mulligan.ready.bot : game.active !== 'bot') return;
+    let cancelled=false,settled=false;let fallbackTimer:ReturnType<typeof setTimeout>;
     const timeout = window.setTimeout(() => {
       const turn = game.id + ':' + game.turn;
       if (botBudget.current.turn !== turn) botBudget.current = { turn, actions: 0 };
-      const action: Action = !game.mulligan && !game.discovery && botBudget.current.actions++ >= 60 ? { type: 'end' } : chooseBotAction(game);
-      const result = act(game, 'bot', action);
-      if (result.error) { console.error('Bot action failed:', result.error); setGame(act(game, 'bot', { type: 'end' }).state); }
-      else setGame(result.state);
-    }, settings.motion ? 700 : 100);
-    return () => clearTimeout(timeout);
+      const finish=(action:Action)=>{
+        if(cancelled||settled)return;settled=true;clearTimeout(fallbackTimer);
+        if(!game.mulligan&&!game.discovery)botBudget.current.actions++;
+        const result=act(game,'bot',action);
+        if(result.error){console.error('Bot action failed:',result.error);setGame(act(game,'bot',{type:'end'}).state);}
+        else setGame(result.state);
+      };
+      if(!game.mulligan&&!game.discovery&&botBudget.current.actions>=60){finish({type:'end'});return;}
+      if(game.mulligan){finish(chooseBotAction(game));return;}
+      const fallback=()=>{if(!cancelled)finish(chooseBotAction(game,{maxNodes:100,depth:5,width:3}));};
+      try {
+        if(typeof Worker==='undefined'){fallback();return;}
+        botWorker.current??=new Worker(new URL('./game/bot-worker.ts',import.meta.url),{type:'module'});
+        const worker=botWorker.current,request=++botRequest.current;
+        worker.onmessage=event=>{if(cancelled||event.data.request!==request)return;if(event.data.error)fallback();else finish(event.data.action);};
+        worker.onerror=()=>{worker.terminate();if(botWorker.current===worker)botWorker.current=null;fallback();};
+        fallbackTimer=setTimeout(()=>{worker.terminate();if(botWorker.current===worker)botWorker.current=null;fallback();},8000);
+        worker.postMessage({request,game});
+      } catch {fallback();}
+    }, settings.motion ? 350 : 60);
+    return () => {cancelled=true;clearTimeout(timeout);clearTimeout(fallbackTimer);};
   }, [page, game, modal, inspected, settings.motion]);
   useEffect(() => {
     if (!game?.mulligan) return;
@@ -103,7 +124,13 @@ export default function App() {
     return () => clearInterval(timer);
   }, [game?.mulligan?.deadline]);
   const navigate = (next: Page) => { sound(); setPage(next); window.scrollTo({ top: 0 }); };
-  const newMatch = (chosen: SavedDeck) => { setGame(createGame(chosen.cards, Date.now(), undefined, Date.now() + 30_000, { player: chosen.heroClass })); navigate('battle'); };
+  const newMatch = (chosen: SavedDeck) => { setTrainingDeck(chosen);setModal('training'); };
+  const startTraining = (bot:TrainingBot) => {
+    if(!trainingDeck||!readyDeck(trainingDeck))return;
+    const match=createGame(trainingDeck.cards,Date.now(),bot.deck,Date.now()+30_000,{player:trainingDeck.heroClass,bot:bot.heroClass});
+    match.bot.name=bot.name;match.trainingBotId=bot.id;if(bot.id==='boris')match.bot.hero='boris';
+    write('training-bot',bot.id);setGame(match);setModal(null);navigate('battle');
+  };
   const chooseDeck = (done?: (chosen: SavedDeck) => void, label = 'Выбрать колоду') => { deckRequest.current = done ?? null; setDeckPickerLabel(label); setModal('decks'); };
   const start = () => { if (!game || game.winner) chooseDeck(newMatch, 'Играть'); else navigate('battle'); };
   const rematch = () => chooseDeck(newMatch, 'Новый бой');
@@ -150,6 +177,7 @@ export default function App() {
     {modal === 'help' && <HelpDialog close={closeModal} />}
     {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} help={() => setModal('help')} about={() => setModal('about')} previewSound={sound} battle={battleSettings} />}
     {modal === 'decks' && <DeckPicker decks={deckBook.decks} selectedId={deckBook.selectedId} select={selectDeck} close={() => { deckRequest.current = null; closeModal(); }} actionLabel={deckPickerLabel} confirm={chosen => { if (!readyDeck(chosen)) return; const done = deckRequest.current; deckRequest.current = null; closeModal(); done?.(chosen); }} manage={() => { deckRequest.current = null; closeModal(); navigate('collection'); }} />}
+    {modal === 'training' && <TrainingPicker initial={game?.trainingBotId ?? trainingBot(read('training-bot','boris')).id} close={closeModal} confirm={startTraining} />}
     {modal === 'about' && <AboutDialog stats={stats} deckSize={deck.length} close={closeModal} help={() => { closeModal(); setModal('help'); }} />}
   </div>;
 }

@@ -1,0 +1,7 @@
+.board-unit.divine-shield::after { content:'';position:absolute;inset:-6px;border:3px solid #ffe888;border-radius:48% 48% 30% 30%;box-shadow:0 0 12px #ffe459aa,inset 0 0 8px #ffe47966;pointer-events:none; }
+.board-unit.immune-unit { box-shadow:0 0 12px #cdb5ffa0,inset 0 0 12px #dcefff80; }
+.windfury-badge,.poison-badge { position:absolute;z-index:5;top:4%;font:700 17px/1 Arial,sans-serif;text-shadow:0 1px 2px #000; }
+.windfury-badge { right:-5px;color:#bde9ff; }.poison-badge { left:-5px;color:#92e765; }
+.fx-protection { position:fixed;transform:translate(-50%,-50%);width:75px;height:90px;border:3px solid #ffe185;border-radius:50%;box-shadow:0 0 18px #ffe070;display:grid;place-items:center;color:#ffefa5;font-size:60px;animation:protection-flash .7s both; }
+.fx-protection.immune { border-color:#c9b5ff;color:#d9d3ff;box-shadow:0 0 20px #ae9bff; }
+@keyframes protection-flash { from { opacity:1;scale:.8; } to {opacity:0;scale:1.6;} }

@@ -1,8 +1,9 @@
+import type { CombatKeyword } from './battle-keywords';
 import type { EditorData } from './custom-schema';
 import { belongsToClass, HERO_CLASSES, type HeroClass } from './classes';
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
 export type Effect = 'clawFury' | 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'lifeTap' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
-export interface CardDef {
+export interface CardDef extends Partial<Record<CombatKeyword, boolean>> {
   id: string; name: string; cost: number; kind: CardKind;
   attack?: number; health?: number; armor?: number;
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;

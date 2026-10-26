@@ -1,3 +1,4 @@
+import { grantKeyword, isImmune, keywordState, attacksUsed } from './battle-keywords';
 import { CARD, COLLECTIBLE, cardAbilities } from './cards';
 import { powerKey } from './presentation';
 import { matchesCard, type CardFilter, type CustomRule, type RuleTarget } from './custom-schema';
@@ -14,7 +15,7 @@ interface Api {
   random: (g: Game) => number;
   log: (g: Game, text: string, side: Side, details?: HistoryDetails) => void;
   emit: (g: Game, event: Omit<GameEvent, 'id'>) => void;
-  damageHero: (p: Game['player'], n: number) => void;
+  dealDamage: (g: Game, side: Side, target: Anchor, n: number, source?: { uid?: number; cardId?: string; poisonous?: boolean }) => number;
   destroy: (g: Game, side: Side, predicate: (m: Minion) => boolean) => void;
   summon: (g: Game, side: Side, id: string, source?: number | 'hero', creator?: string) => Minion | undefined;
   draw: (g: Game, side: Side, n?: number) => void;
@@ -35,11 +36,11 @@ export function customSelectedTargets(g: Game, side: Side, id: string): Target[]
   if (!rules.length) return null;
   const result = (r: CustomRule): Target[] => {
     const friendly = g[side].board.filter(m => m.health > 0 && matchesCard(CARD[m.id], { tag: r.targetTag, cardId: r.targetCardId })).map(m => m.uid);
-    const enemy = g[foe(side)].board.filter(m => m.health > 0 && !m.stealth && matchesCard(CARD[m.id], { tag: r.targetTag, cardId: r.targetCardId })).map(m => m.uid);
-    const heroes = !r.targetTag && !r.targetCardId && !['buff', 'transform', 'devolve'].includes(r.operation);
-    return r.target === 'selectedEnemy' ? [...(heroes ? ['hero' as const] : []), ...enemy]
+    const enemy = g[foe(side)].board.filter(m => m.health > 0 && !m.stealth && !isImmune(g, foe(side), m) && matchesCard(CARD[m.id], { tag: r.targetTag, cardId: r.targetCardId })).map(m => m.uid);
+    const heroes = !r.targetTag && !r.targetCardId && !['buff', 'transform', 'devolve'].includes(r.operation) && (r.operation !== 'grantKeyword' || ['immuneThisTurn','immuneOnOwnTurn'].includes(r.keyword??''));
+    return r.target === 'selectedEnemy' ? [...(heroes && !isImmune(g, foe(side)) ? ['hero' as const] : []), ...enemy]
       : r.target === 'selectedFriendly' ? [...(heroes ? ['own-hero' as const] : []), ...friendly]
-      : r.target === 'selectedMinion' ? [...friendly, ...enemy] : [...(heroes ? ['hero' as const, 'own-hero' as const] : []), ...friendly, ...enemy];
+      : r.target === 'selectedMinion' ? [...friendly, ...enemy] : [...(heroes ? [...(!isImmune(g, foe(side)) ? ['hero' as const] : []), 'own-hero' as const] : []), ...friendly, ...enemy];
   };
   return result(rules[0]).filter(t => rules.every(r => result(r).includes(t)));
 }
@@ -47,6 +48,8 @@ export function silenceMinion(g: Game, m: Minion) {
   if ((m.charge || m.rush) && !m.silenced && m.enteredTurn === g.turn) m.ready = false;
   m.charge = false; m.rush = false; m.taunt = false; m.cannotAttack = false; m.ephemeral = false; m.silenced = true;
   m.stealth = false;
+  m.divineShield = false; m.windfury = false; m.poisonous = false; m.immuneWhileAttacking = false; m.immuneOnOwnTurn = false; delete m.immuneUntilTurn;
+  if (attacksUsed(m) >= 1) m.ready = false;
   m.attack -= m.attackBuff ?? 0; m.attackBuff = 0;
   const health = m.healthBuff ?? 0; m.maxHealth -= health; m.health = Math.min(m.health, m.maxHealth); m.healthBuff = 0;
 }
@@ -155,9 +158,9 @@ export function createCustomEngine(api: Api) {
           api.emit(g, { kind: 'spell', side: ctx.side, source: ctx.uid ?? 'hero', target, cardId: ctx.id });
         if (r.operation === 'damage') {
           if (n > 0 && ctx.uid !== undefined) api.reveal(g, ctx.side, ctx.uid);
-          if (m) m.health -= n; else api.damageHero(p, n);
-          api.emit(g, { kind: 'damage', side: ctx.side, target, amount: n, cardId: ctx.id });
+          api.dealDamage(g, ctx.side, target, n, { uid: ctx.uid, cardId: ctx.id, poisonous: ctx.dead?.poisonous });
         }
+        if (r.operation === 'grantKeyword' && r.keyword) grantKeyword(g, target.side, target.uid, r.keyword);
         if (r.operation === 'heal') { if (m) m.health = Math.min(m.maxHealth, m.health + n); else p.health = Math.min(30, p.health + n); }
         if (r.operation === 'buff' && m) {
           const before = m.attack; m.attack = Math.max(0, m.attack + r.amount); m.attackBuff = (m.attackBuff ?? 0) + m.attack - before;
@@ -175,7 +178,7 @@ export function createCustomEngine(api: Api) {
           }
           if (!id) continue;
           const c = CARD[id];
-          Object.assign(m, { id, attack: c.attack!, health: c.health!, maxHealth: c.health!, auraBonus: 0, attackBuff: 0, healthBuff: 0,
+          Object.assign(m, { ...keywordState(c, g.turn), id, attack: c.attack!, health: c.health!, maxHealth: c.health!, auraBonus: 0, attackBuff: 0, healthBuff: 0,
             ready: m.ready || !!(c.charge || c.rush) && !m.attackedThisTurn, charge: !!c.charge, rush: !!c.rush, taunt: !!c.taunt, stealth: !!c.stealth, cannotAttack: !!c.cannotAttack,
             silenced: false, ephemeral: c.effect === 'deathwing', origin: 'transformed', createdBy: ctx.id });
           api.emit(g, { kind: 'transform', side: ctx.side, target, cardId: id });

@@ -1,3 +1,4 @@
+import { validKeywordState } from './game/battle-keywords';
 import { CARD, cardAbilities, STARTER_DECK, deckError, migrateRewardDeck } from './game/cards';
 import { clawFuryPool, refreshAuras, type Game, type Minion, type Player } from './game/engine';
 import { HEROES } from './game/presentation';
@@ -35,7 +36,7 @@ function validEntry(entry: HistoryEntry): boolean {
 }
 function validPlayer(p: Player): boolean {
   return !!p && [p.health, p.armor, p.mana, p.maxMana, p.fatigue].every(finite)
-    && (p.metrics === undefined || validMetrics(p.metrics))
+    && validKeywordState(p) && (p.metrics === undefined || validMetrics(p.metrics))
     && p.mana >= 0 && p.maxMana >= 0 && p.maxMana <= 10 && p.mana <= p.maxMana && p.armor >= 0
     && knownPower(p.power) && typeof p.powerUsed === 'boolean' && typeof p.hero === 'string'
     && (p.name === undefined || typeof p.name === 'string' && p.name.length <= 20)
@@ -43,7 +44,7 @@ function validPlayer(p: Player): boolean {
     && (p.quest === undefined || !!CARD[p.quest?.id] && Number.isSafeInteger(p.quest.progress) && p.quest.progress >= 0 && p.quest.progress < (cardAbilities(CARD[p.quest.id])?.quest?.goal ?? 8))
     && Array.isArray(p.deck) && p.deck.every(cardId)
     && Array.isArray(p.hand) && p.hand.length <= 10 && p.hand.every(c => c && cardId(c.id) && finite(c.uid) && (c.expiresTurn === undefined || Number.isSafeInteger(c.expiresTurn) && c.expiresTurn > 0))
-    && Array.isArray(p.board) && p.board.length <= 7 && p.board.every((m: Minion) => m && cardId(m.id)
+    && Array.isArray(p.board) && p.board.length <= 7 && p.board.every((m: Minion) => m && validKeywordState(m) && cardId(m.id)
       && [m.uid, m.attack, m.health, m.maxHealth].every(finite)
       && (m.auraBonus === undefined || finite(m.auraBonus) && m.auraBonus >= 0)
       && (m.attackBuff === undefined || finite(m.attackBuff)) && (m.healthBuff === undefined || finite(m.healthBuff))
@@ -55,13 +56,13 @@ function validPlayer(p: Player): boolean {
 }
 export function loadGame(): Game | null {
   const g = read<Game | null>('game', null);
-  try { if (g) registerCardPack(g.customCards ?? []); } catch { return null; }
+  try { if (g) registerCardPack(g.customCards ?? [], 'match'); } catch { return null; }
   if (g && !validCustomCounts(g.customCounts)) return null;
   if (g && g.rashDeaths === undefined) g.rashDeaths = 0;
   if (g && g.events === undefined) g.events = [];
   if (!g || typeof g.id !== 'string' || !validPlayer(g.player) || !validPlayer(g.bot) || !['player', 'bot'].includes(g.active)
     || g.winner !== null || ![g.turn, g.nextUid, g.rng, g.nextLog, g.rashDeaths].every(finite) || !Number.isSafeInteger(g.rashDeaths) || g.rashDeaths < 0
-    || !Array.isArray(g.events) || !g.events.every(e => e && finite(e.id) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw'].includes(e.kind) && ['player', 'bot'].includes(e.side)
+    || !Array.isArray(g.events) || !g.events.every(e => e && finite(e.id) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune'].includes(e.kind) && ['player', 'bot'].includes(e.side)
       && (!e.cardId || Object.hasOwn(CARD, e.cardId)) && (!e.source || e.source === 'hero' || finite(e.source)) && (!e.target || ['player', 'bot'].includes(e.target.side) && (e.target.uid === 'hero' || finite(e.target.uid))))
     || !Array.isArray(g.log) || !g.log.every(validEntry)) return null;
   if (g.mulligan && (!finite(g.mulligan.deadline) || !g.mulligan.ready || !g.mulligan.selected || !['player', 'bot'].every(s => {

@@ -1,3 +1,4 @@
+import { COMBAT_KEYWORDS } from './battle-keywords';
 import { CARD, CARDS, type CardDef } from './cards';
 import { CUSTOM_LIMIT, PACK_LIMIT, matchesCard, normalizeCustomCard, references, KEYWORDS, OPERATIONS, TARGETS, TRIGGERS, type CustomRule } from './custom-schema';
 
@@ -6,8 +7,9 @@ const BASE_IDS = new Set(CARDS.map(c => c.id));
 let library: CardDef[] = [];
 export const userCards = () => [...library];
 export const isCustomHero = (id: string) => CARD[id]?.kind === 'hero';
-export function validateCardPack(raw: unknown): CardDef[] {
-  if (!Array.isArray(raw) || raw.length > CUSTOM_LIMIT || new TextEncoder().encode(JSON.stringify(raw)).length > PACK_LIMIT) throw new Error('В наборе допустимо до 60 карт и 2000 КБ. Уменьши число карт или размер картинок.');
+export const LIBRARY_LIMIT = 300;
+export function validateCardPack(raw: unknown, scope: 'publication' | 'library' | 'match' = 'publication'): CardDef[] {
+  if (!Array.isArray(raw) || raw.length > (scope === 'library' ? LIBRARY_LIMIT : scope === 'match' ? CUSTOM_LIMIT * 2 : CUSTOM_LIMIT) || new TextEncoder().encode(JSON.stringify(raw)).length > (scope === 'library' ? 8_000_000 : scope === 'match' ? PACK_LIMIT * 2 : PACK_LIMIT)) throw new Error(scope === 'library'?'В личной коллекции допустимо до 300 пользовательских карт. Удали ненужное дополнение или уменьши картинки.':scope === 'match'?'В матче допустимо до 120 пользовательских определений и 4000 КБ. Уменьшите число зависимостей.':'В наборе допустимо до 60 карт и 2000 КБ. Уменьши число карт или размер картинок.');
   const cards = raw.map(normalizeCustomCard);
   if (cards.some(c => !c)) throw new Error('Некорректная карта или правило. Проверь параметры редактора.');
   const result = cards as CardDef[], map = new Map(result.map(c => [c.id, c]));
@@ -37,19 +39,19 @@ export function validateCardPack(raw: unknown): CardDef[] {
   }
   return result;
 }
-export function registerCardPack(raw: unknown): CardDef[] {
-  const cards = validateCardPack(raw);
+export function registerCardPack(raw: unknown, scope: 'publication' | 'match' = 'publication'): CardDef[] {
+  const cards = validateCardPack(raw, scope);
   for (const card of cards) CARD[card.id] = card;
   return cards;
 }
-export function packForCards(ids: string[]): CardDef[] {
+export function packForCards(ids: string[], scope: 'publication' | 'match' = 'publication'): CardDef[] {
   const found = new Map<string, CardDef>();
   const visit = (id: string) => {
     const card = CARD[id]; if (!card?.editor || found.has(id)) return;
     found.set(id, card); for (const reference of references(card)) visit(reference);
   };
   ids.forEach(visit);
-  return validateCardPack([...found.values()]);
+  return validateCardPack([...found.values()], scope);
 }
 function displayLibrary(cards: CardDef[]) {
   library = cards;
@@ -58,14 +60,21 @@ function displayLibrary(cards: CardDef[]) {
 export function restoreCustomCards() {
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]');
-    const cards = registerCardPack(raw); displayLibrary(cards);
+    const cards = validateCardPack(raw, 'library'); for (const c of cards) CARD[c.id] = c; displayLibrary(cards);
   } catch { /* Preserve a damaged import in storage; never execute its contents. */ }
 }
-export function saveCustomLibrary(cards: CardDef[]) {
-  const normalized = validateCardPack(cards);
-  try { localStorage.setItem(KEY, JSON.stringify(normalized)); }
-  catch { throw new Error('Не удалось сохранить карты: в браузере нет места. Уменьши картинки или экспортируй набор.'); }
-  registerCardPack(normalized); displayLibrary(normalized);
+export function saveCustomLibrary(cards: CardDef[], extra: Record<string, unknown> = {}) {
+  const normalized = validateCardPack(cards, 'library');
+  const updates: Record<string, string> = { [KEY]: JSON.stringify(normalized), ...Object.fromEntries(Object.entries(extra).map(([key,value]) => ['memestone.v1.' + key, JSON.stringify(value)])) };
+  const previous = new Map(Object.keys(updates).map(key => [key, localStorage.getItem(key)]));
+  try { for (const [key,value] of Object.entries(updates)) localStorage.setItem(key, value); }
+  catch {
+    for (const key of Object.keys(updates)) localStorage.removeItem(key);
+    for (const [key,value] of previous) if (value !== null) localStorage.setItem(key,value);
+    throw new Error('Не удалось сохранить набор: в браузере нет места. Удали ненужное дополнение или уменьши картинки.');
+  }
+  for (const card of normalized) CARD[card.id] = card;
+  displayLibrary(normalized);
 }
 export function newCustomCard(): CardDef {
   return { id: 'custom-' + crypto.randomUUID(), name: 'Моя карта', cost: 2, kind: 'minion', attack: 2, health: 3, text: '', flavor: '', rarity: 'common', art: 9, custom: true,
@@ -77,7 +86,8 @@ const targetText = (r: CustomRule) => TARGETS[r.target].toLocaleLowerCase() + (r
 export function ruleDescription(r: CustomRule, find: (id: string) => CardDef | undefined = id => CARD[id]): string {
   const card = r.cardId ? find(r.cardId)?.name ?? 'выбранную карту' : '';
   const n = Math.max(0, r.amount);
-  const action = r.operation === 'damage' ? 'Наносит ' + n + ' урона: ' + targetText(r)
+  const action = r.operation === 'grantKeyword' ? 'Даёт «' + COMBAT_KEYWORDS[r.keyword!] + '»: ' + targetText(r)
+    : r.operation === 'damage' ? 'Наносит ' + n + ' урона: ' + targetText(r)
     : r.operation === 'heal' ? 'Восстанавливает ' + n + ' здоровья: ' + targetText(r)
     : r.operation === 'buff' ? 'Даёт ' + (r.amount >= 0 ? '+' : '') + r.amount + '/' + (r.health >= 0 ? '+' : '') + r.health + ': ' + targetText(r)
     : r.operation === 'summon' ? 'Призывает «' + card + '» ×' + r.count + ': ' + targetText(r)
@@ -95,7 +105,7 @@ export function ruleDescription(r: CustomRule, find: (id: string) => CardDef | u
 export function describeCustomCard(card: CardDef, legacyText = card.editor?.legacyText ?? '', find: (id: string) => CardDef | undefined = id => CARD[id]): string {
   const e = card.editor!;
   for (;;) {
-    const next = legacyText.replace(/^(?:Провокация|Рывок|Натиск|Эхо|Не может атаковать)\.\s*/i, '');
+    const next = legacyText.replace(/^(?:Провокация|Рывок|Натиск|Эхо|Не может атаковать|Маскировка|Громоздкий|Божественный щит|Неистовство ветра|Яд|Неуязвимость во время атаки|Неуязвимость в свой ход|Неуязвимость до конца хода)\.\s*/i, '');
     if (next === legacyText) break; legacyText = next;
   }
   legacyText = legacyText.replace(/Начало матча:[^.]*\.?\s*/gi, '').trim();

@@ -17,10 +17,14 @@ import SettingsDialog, { type Settings as GameSettings, type BattleSettingsActio
 import CardWorkshop from './components/CardWorkshop';
 import FullscreenButton from './components/FullscreenButton';
 import DeckPicker from './components/DeckPicker';
+import CommunityCards from './components/CommunityCards';
+import PublishDialog from './components/PublishDialog';
+import { CommunityCatalog, EMPTY_CATALOG } from './community/catalog';
+import type { PublishSeed } from './community/model';
 import type { HeroClass } from './game/classes';
 import { createDeck, DECK_LIMIT, deckName, draftError, loadDeckBook, readyDeck, saveDeckBook, type SavedDeck } from './decks';
 
-type Page = 'home' | 'collection' | 'battle' | 'rooms' | 'editor';
+type Page = 'home' | 'collection' | 'battle' | 'rooms' | 'editor' | 'community';
 function Logo({ small = false }: { small?: boolean }) {
   return <span className={`brand ${small ? 'small' : ''}`}><span className="brand-gem"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="m20 3 15 9v17l-15 9-15-9V12Z" /><path d="m21 10 8 5-1 12-11 4-7-9 4-9 9-1 4 7-5 5-5-4 3-4 2 2" /></svg></span><span>MEME<span>STONE</span><small>ТВОИ КАРТЫ. ТВОИ ПРАВИЛА.</small></span></span>;
 }
@@ -28,6 +32,13 @@ export default function App() {
   const viewport = useViewport();
   useEffect(() => { document.documentElement.style.setProperty('--app-height', `${viewport.height}px`); }, [viewport.height]);
   const [page, setPage] = useState<Page>(() => new URLSearchParams(location.search).has('room') ? 'rooms' : 'home');
+  const [editorBack, setEditorBack] = useState<Page>('collection');
+  const [communityTab, setCommunityTab] = useState('card');
+  const [publishSeed, setPublishSeed] = useState<PublishSeed>({});
+  const [catalogState, setCatalogState] = useState(EMPTY_CATALOG);
+  const catalog = useRef<CommunityCatalog | null>(null);
+  const ensureCatalog = () => catalog.current ??= new CommunityCatalog(setCatalogState);
+  useEffect(() => () => { catalog.current?.close(); catalog.current = null; }, []);
   const [onlineBattle, setOnlineBattle] = useState(false);
   const [deckBook, setDeckBook] = useState(loadDeckBook);
   const selectedDeck = deckBook.decks.find(d => d.id === deckBook.selectedId) ?? null;
@@ -35,7 +46,7 @@ export default function App() {
   const [cardRevision, setCardRevision] = useState(0);
   const [game, setGame] = useState(loadGame);
   const [stats, setStats] = useState(loadStats);
-  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'decks' | null>(null);
+  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'decks' | 'publish' | null>(null);
   const [deckPickerLabel, setDeckPickerLabel] = useState('Играть');
   const deckRequest = useRef<((deck: SavedDeck) => void) | null>(null);
   const [inspected, setInspected] = useState<CardDef | null>(null);
@@ -118,19 +129,24 @@ export default function App() {
   const inspect: Inspect = useCallback((c: CardDef, info?: InspectionInfo) => { setInspected(c); setInspectInfo(info); }, []);
   const closeModal = useCallback(() => setModal(null), []);
   const openSettings = (actions?: BattleSettingsActions) => { setBattleSettings(actions); setModal('settings'); };
+  const openEditor = (from:Page) => { setEditorBack(from); navigate('editor'); };
+  const openCommunity = (tab='card') => { setCommunityTab(tab); ensureCatalog(); navigate('community'); };
+  const openPublish = (seed:PublishSeed={}) => { ensureCatalog(); setPublishSeed(seed); setModal('publish'); };
   const closeCard = useCallback(() => { setInspected(null); setInspectInfo(undefined); }, []);
-  return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : page === 'collection' ? 'collection-home' : page === 'editor' ? 'editor-home parchment-view' : 'parchment-view'}`}>
+  return <div className={`app ${page === 'battle' || page === 'rooms' && onlineBattle ? 'in-battle' : page === 'home' ? 'wood-home' : page === 'collection' || page === 'community' ? 'collection-home' : page === 'editor' ? 'editor-home parchment-view' : 'parchment-view'}`}>
     <FullscreenButton global notify={notify} />
     <main className="main-container">
-      {page === 'home' && <WoodMenu deckName={selectedDeck?.name ?? 'Нет колоды'} chooseDeck={() => chooseDeck(newMatch, 'Играть')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => { navigate('collection'); }} help={() => setModal('help')} settings={() => openSettings()} profile={() => setModal('about')} wins={stats.wins} />}
-      {page === 'collection' && <Collection deckInfo={selectedDeck} decks={deckBook.decks} selectDeck={selectDeck} createDeck={addDeck} deleteDeck={deleteDeck} saveDeck={saveDeck} inspect={inspect} back={() => navigate('home')} notify={notify} editCards={() => navigate('editor')} revision={cardRevision} />}
-      {page === 'editor' && <CardWorkshop back={() => navigate('collection')} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deckBook.decks.flatMap(d => d.cards)} />}
+      {page === 'home' && <WoodMenu deckName={selectedDeck?.name ?? 'Нет колоды'} chooseDeck={() => chooseDeck(newMatch, 'Играть')} rooms={() => navigate('rooms')} resume={!!game && !game.winner} start={start} collection={() => { navigate('collection'); }} help={() => setModal('help')} settings={() => openSettings()} profile={() => setModal('about')} wins={stats.wins} editor={() => openEditor('home')} community={() => openCommunity()} />}
+      {page === 'collection' && <Collection deckInfo={selectedDeck} decks={deckBook.decks} selectDeck={selectDeck} createDeck={addDeck} deleteDeck={deleteDeck} saveDeck={saveDeck} inspect={inspect} back={() => navigate('home')} notify={notify} editCards={() => openEditor('collection')} expansions={() => openCommunity('installed')} revision={cardRevision} />}
+      {page === 'editor' && <CardWorkshop back={() => navigate(editorBack)} backLabel={editorBack === 'home' ? 'Главное меню' : editorBack === 'community' ? 'Пользовательские карты' : 'Коллекция'} publish={openPublish} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deckBook.decks.flatMap(d => d.cards)} />}
+      {page === 'community' && catalog.current && <CommunityCards key={communityTab} initialTab={communityTab} state={catalogState} catalog={catalog.current} book={deckBook} changed={book => { setDeckBook(book); setCardRevision(n=>n+1); }} back={() => navigate('home')} editor={() => openEditor('community')} publish={openPublish} inspect={inspect} notify={notify} overlayOpen={!!modal || !!inspected} />}
       {page === 'battle' && game && <Battle settings={openSettings} board={settings.board} overlayOpen={!!modal || !!inspected} animations={settings.motion} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} />}
       <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={openSettings} home={() => navigate('home')} battleChanged={setOnlineBattle} recordStats={updateStats} />
     </main>
     {page !== 'editor' && <footer className="site-footer"><div><Logo small /><span>Создано для своих.</span></div><p>Независимый фан-проект. Не связан с Blizzard Entertainment.</p><button className="text-button" onClick={() => setModal('about')}>О проекте <ArrowUpRight size={13} /></button></footer>}
     {toast && <div className="toast" role="status"><Sparkles size={18} /><span>{toast}</span><button className="icon-button" aria-label="Скрыть сообщение" onClick={() => setToast('')}><X size={15} /></button></div>}
     {inspected && <CardDetails card={inspected} info={inspectInfo} close={closeCard} notify={notify} />}
+    {modal === 'publish' && catalog.current && <PublishDialog seed={publishSeed} decks={deckBook.decks} catalog={catalog.current} close={closeModal} done={() => {closeModal();notify('Публикация появилась в пользовательских картах.');}} />}
     {modal === 'help' && <HelpDialog close={closeModal} />}
     {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} help={() => setModal('help')} about={() => setModal('about')} previewSound={sound} battle={battleSettings} />}
     {modal === 'decks' && <DeckPicker decks={deckBook.decks} selectedId={deckBook.selectedId} select={selectDeck} close={() => { deckRequest.current = null; closeModal(); }} actionLabel={deckPickerLabel} confirm={chosen => { if (!readyDeck(chosen)) return; const done = deckRequest.current; deckRequest.current = null; closeModal(); done?.(chosen); }} manage={() => { deckRequest.current = null; closeModal(); navigate('collection'); }} />}

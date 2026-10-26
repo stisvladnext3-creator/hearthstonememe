@@ -83,8 +83,8 @@ function nextAction(g: Game): Action {
 }
 async function historyContains(page: Page, text: string) {
   const next = page.getByRole('button', { name: 'Следующая страница истории' });
-  while (!(await page.locator('.battle-log').innerText()).includes(text) && await next.isEnabled()) await next.click();
-  await expect(page.locator('.battle-log')).toContainText(text);
+  while (!(await page.locator('.history-visible').innerText()).includes(text) && await next.isEnabled()) await next.click();
+  await expect(page.locator('.history-visible')).toContainText(text);
 }
 async function roomIsOnAnyPage(page: Page, code: string) {
   const previous = page.getByRole('button', { name: 'Предыдущая страница комнат' });

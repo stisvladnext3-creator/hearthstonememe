@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.18.2",
+  "version": "0.19.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -34,7 +34,8 @@
     "test:card-update-ui": "node scripts/check-card-update.mjs",
     "test:tigerra": "vitest run src/game/tigerra.test.ts",
     "test:tigerra-ui": "node scripts/check-tigerra.mjs",
-    "test:profile": "vitest run src/game/metrics.test.ts"
+    "test:profile": "vitest run src/game/metrics.test.ts",
+    "test:community": "vitest run src/game/battle-keywords.test.ts src/community/library.test.ts src/game/metrics.test.ts"
   },
   "dependencies": {
     "@fontsource/roboto-condensed": "^5.3.0",

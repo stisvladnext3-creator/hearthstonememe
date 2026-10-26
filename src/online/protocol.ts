@@ -1,3 +1,4 @@
+import { validKeywordState } from '../game/battle-keywords';
 import { CARD, cardAbilities, deckError, type CardDef } from '../game/cards';
 import { registerCardPack, validContinuation, validCustomCounts } from '../game/custom-cards';
 import { createGame, other, type Action, type Game, type Side } from '../game/engine';
@@ -6,7 +7,7 @@ import { validMetrics } from '../game/metrics';
 import { HEROES, knownPower } from '../game/presentation';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
-export const ROOM_PROTOCOL = 7;
+export const ROOM_PROTOCOL = 8;
 export const ROOM_PREFIX = 'memestone-v08-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
@@ -110,7 +111,7 @@ export function roomGameView(input: Game, viewer: Side): Game {
 export function validRoomView(value: unknown): value is Game {
   if (!value || typeof value !== 'object') return false;
   const g = value as Game;
-  try { registerCardPack(g.customCards ?? []); } catch { return false; }
+  try { registerCardPack(g.customCards ?? [], 'match'); } catch { return false; }
   if (!validCustomCounts(g.customCounts)) return false;
   const sideOf = (s: unknown) => s === 'player' || s === 'bot';
   const uid = (n: unknown) => Number.isSafeInteger(n) && Number(n) > 0;
@@ -120,12 +121,12 @@ export function validRoomView(value: unknown): value is Game {
   for (const side of ['player', 'bot'] as const) {
     const p = g[side];
     if (!p || ![p.health, p.armor, p.mana, p.maxMana].every(Number.isFinite) || !knownPower(p.power) || !knownHero(p.hero)) return false;
-    if (p.metrics !== undefined && !validMetrics(p.metrics)) return false;
+    if (!validKeywordState(p) || p.metrics !== undefined && !validMetrics(p.metrics)) return false;
     if (p.quest && (!knownCard(p.quest.id) || !Number.isSafeInteger(p.quest.progress) || p.quest.progress < 0 || p.quest.progress >= (cardAbilities(CARD[p.quest.id])?.quest?.goal ?? 8))) return false;
     if (p.name !== undefined && (typeof p.name !== 'string' || p.name.length > 20)) return false;
     if (!Array.isArray(p.hand) || p.hand.length > 10 || !p.hand.every(c => c && Number.isSafeInteger(c.uid) && (side === 'bot' ? c.id === 'hidden' : knownCard(c.id)))) return false;
     if (!Array.isArray(p.deck) || p.deck.length > 100 || !p.deck.every(id => id === 'hidden')) return false;
-    if (!Array.isArray(p.board) || p.board.length > 7 || !p.board.every(m => m && knownCard(m.id) && uid(m.uid) && [m.attack, m.health, m.maxHealth].every(Number.isFinite)
+    if (!Array.isArray(p.board) || p.board.length > 7 || !p.board.every(m => m && validKeywordState(m) && knownCard(m.id) && uid(m.uid) && [m.attack, m.health, m.maxHealth].every(Number.isFinite)
       && [m.ready, m.taunt, m.cannotAttack, m.silenced, m.ephemeral].every(v => typeof v === 'boolean') && (m.stealth === undefined || typeof m.stealth === 'boolean'))) return false;
   }
   if (g.briefing && (!g.briefing.remainingTurns || !['player', 'bot'].every(s => {
@@ -139,7 +140,7 @@ export function validRoomView(value: unknown): value is Game {
   if (g.discovery && (!sideOf(g.discovery.side) || !knownCard(g.discovery.sourceId) || !Array.isArray(g.discovery.options) || g.discovery.options.length > 3 || !g.discovery.options.every(knownCard)
     || (g.discovery.custom ? !validContinuation(g.discovery.sourceId, g.discovery.custom) : g.discovery.target !== 'hero' && !uid(g.discovery.target)))) return false;
   return Array.isArray(g.events) && g.events.length <= 40 && Array.isArray(g.log) && g.log.length <= 1000
-    && g.events.every(e => e && uid(e.id) && sideOf(e.side) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw'].includes(e.kind) && (!e.cardId || knownCard(e.cardId))
+    && g.events.every(e => e && uid(e.id) && sideOf(e.side) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune'].includes(e.kind) && (!e.cardId || knownCard(e.cardId))
       && (!e.target || sideOf(e.target.side) && (e.target.uid === 'hero' || uid(e.target.uid))) && (e.source === undefined || e.source === 'hero' || uid(e.source)))
     && g.log.every(e => e && typeof e.text === 'string' && (e.side === 'system' || sideOf(e.side)) && (e.kind === undefined || ['play', 'attack', 'effect', 'power', 'transform', 'death', 'draw', 'discard', 'turn', 'finish', 'discover'].includes(e.kind))
       && [e.actor, e.target, e.hero, e.result].every(entity));

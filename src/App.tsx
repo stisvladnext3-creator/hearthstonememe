@@ -98,12 +98,12 @@ export default function App() {
       if (botBudget.current.turn !== turn) botBudget.current = { turn, actions: 0 };
       const finish=(action:Action)=>{
         if(cancelled||settled)return;settled=true;clearTimeout(fallbackTimer);
-        if(!game.mulligan&&!game.discovery)botBudget.current.actions++;
+        if(!game.mulligan&&!game.discovery&&!game.adaptation)botBudget.current.actions++;
         const result=act(game,'bot',action);
         if(result.error){console.error('Bot action failed:',result.error);setGame(act(game,'bot',{type:'end'}).state);}
         else setGame(result.state);
       };
-      if(!game.mulligan&&!game.discovery&&botBudget.current.actions>=60){finish({type:'end'});return;}
+      if(!game.mulligan&&!game.discovery&&!game.adaptation&&botBudget.current.actions>=60){finish({type:'end'});return;}
       if(game.mulligan){finish(chooseBotAction(game));return;}
       const fallback=()=>{if(!cancelled)finish(chooseBotAction(game,{maxNodes:100,depth:5,width:3}));};
       try {

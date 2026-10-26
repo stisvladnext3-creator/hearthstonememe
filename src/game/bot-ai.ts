@@ -1,3 +1,4 @@
+import {ADAPTATIONS} from './adaptation';
 import { CARD, cardAbilities } from './cards';
 import { abilityTargets, activePower, boardLimit, cardCost, legalTargets, powerProblem, simulateAction, targetNeeded, type Action, type Game, type Minion } from './engine';
 import { registerCardPack } from './custom-cards';
@@ -12,6 +13,7 @@ function bodyValue(m: Minion) {
   const c = CARD[m.id];
   let value = 1 + liveAttack(m) * 1.25 + Math.min(m.health, 18) * .65 + (m.taunt ? 1.2 : 0);
   if (m.ephemeral) value *= .08;
+  value+=(m.reborn?Math.min(12,(c.attack??0)*1.25+1.65):0)+(m.lifesteal?1+m.attack*.25:0)+(m.elusive?1.2:0)+Math.min(5,(m.adaptSpores??0)*2.5);
   if (!m.silenced) value += (m.divineShield ? 2.4 : 0) + (m.poisonous ? 3.5 : 0) + (m.stealth ? 1.4 : 0)
     + (m.immuneWhileAttacking ? 2.5 : 0) + (m.immuneOnOwnTurn ? 1.5 : 0) + (c.bulky ? 3 : 0)
     + (c.deathrattle ? c.deathrattle === 'clawFuryThree' ? 1 : 2.3 : 0)
@@ -74,6 +76,7 @@ function observations(g: Game): Game[] {
 }
 export function botActions(g: Game): Action[] {
   if(g.winner||g.active!=='bot')return [];
+  if(g.adaptation)return g.adaptation.side==='bot'?g.adaptation.options.map(option=>({type:'adapt',option})):[];
   if(g.discovery)return g.discovery.side==='bot'?g.discovery.options.map(cardId=>({type:'discover',cardId})):[];
   const result:Action[]=[];const ids=new Set<string>();
   for(const h of g.bot.hand){
@@ -91,7 +94,7 @@ export function botActions(g: Game): Action[] {
 }
 function priority(g: Game, a: Action) {
   if(a.type==='end')return -100;
-  if(a.type==='discover')return 50;
+  if(a.type==='discover'||a.type==='adapt')return 50;
   if(a.type==='mulligan'||a.type==='concede')return -1000;
   if(a.type==='attack'){
     const m=g.bot.board.find(m=>m.uid===a.uid)!;
@@ -112,8 +115,9 @@ function advance(g: Game,a: Action,style: BotStyle):Game|null {
   const result=simulateAction(g,'bot',a);if(result.error)return null;let next=result.state;
   // A future discovery is a contingent decision, not knowledge of its options.
   // Resolve it independently in each sample; the real decision is made anew.
-  for(let n=0;n<4&&next.discovery?.side==='bot'&&!next.winner;n++){
-    const choices=next.discovery.options.map(cardId=>simulateAction(next,'bot',{type:'discover',cardId})).filter(r=>!r.error);
+  for(let n=0;n<12&&(next.discovery?.side==='bot'||next.adaptation?.side==='bot')&&!next.winner;n++){
+    const actions:Action[]=next.adaptation?next.adaptation.options.map(option=>({type:'adapt',option})):next.discovery!.options.map(cardId=>({type:'discover',cardId}));
+    const choices=actions.map(a=>simulateAction(next,'bot',a)).filter(r=>!r.error);
     if(!choices.length)break;choices.sort((a,b)=>score(b.state,style)-score(a.state,style));next=choices[0].state;
   }
   next.log=[];next.events=[];return next;
@@ -121,14 +125,15 @@ function advance(g: Game,a: Action,style: BotStyle):Game|null {
 interface Node { states:Game[]; first:Action; value:number; depth:number }
 // Compare every partial line at the same boundary: after our end effects and
 // the opponent's natural draw. Otherwise ending falsely looks like losing a card.
-const boundaryValue=(g:Game,style:BotStyle)=>score(g.active==='bot'&&!g.winner&&!g.discovery?simulateAction(g,'bot',{type:'end'}).state:g,style);
+const boundaryValue=(g:Game,style:BotStyle)=>score(g.active==='bot'&&!g.winner&&!g.discovery&&!g.adaptation?simulateAction(g,'bot',{type:'end'}).state:g,style);
 const average=(states:Game[],style:BotStyle)=>states.reduce((n,g)=>n+boundaryValue(g,style),0)/states.length;
-function signature(g:Game){return JSON.stringify([g.active,g.winner,g.bot,g.player.board,g.player.health,g.player.armor,g.player.quest,g.rashDeaths,g.briefing,g.customCounts]);}
+function signature(g:Game){return JSON.stringify([g.active,g.winner,g.bot,g.player.board,g.player.health,g.player.armor,g.player.quest,g.rashDeaths,g.briefing,g.customCounts,g.adaptation]);}
 export function chooseBotAction(input: Game, options: BotSearchOptions = {}): Action {
   registerCardPack(input.customCards??[],'match');
   if(input.mulligan){const cheap=input.bot.hand.some(h=>CARD[h.id].kind==='minion'&&CARD[h.id].cost<=2);return {type:'mulligan',replace:input.bot.hand.filter(h=>{const c=CARD[h.id];return c.effect==='concede'||c.cost>3&&!c.quest||c.effect==='silence'&&!input.bot.hand.some(x=>CARD[x.id].cannotAttack)||c.kind==='spell'&&!c.quest&&!['bolt','discoverBlast'].includes(c.effect??'')||c.cost===3&&!cheap&&!c.quest;}).map(h=>h.uid)};}
   if(input.winner||input.active!=='bot')return {type:'end'};
   const style=trainingBot(input.trainingBotId).style;
+  if(input.adaptation?.side==='bot'){const choices=input.adaptation.options.filter(option=>ADAPTATIONS[option]).map(option=>{const a:Action={type:'adapt',option};const result=simulateAction(observations(input)[0],'bot',a);return {a,value:result.error?-Infinity:average([result.state],style)};});choices.sort((a,b)=>b.value-a.value);return choices[0]?.a??{type:'end'};}
   if(input.discovery?.side==='bot'){
     const views=observations(input);let best:Action={type:'discover',cardId:input.discovery.options[0]},value=-Infinity;
     for(const cardId of input.discovery.options){const a:Action={type:'discover',cardId};const states=views.map(g=>advance(g,a,style));if(states.some(g=>!g))continue;const v=average(states as Game[],style);if(v>value){best=a;value=v;}}return best;

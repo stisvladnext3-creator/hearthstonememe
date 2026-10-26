@@ -1,13 +1,14 @@
 import { COMBAT_KEYWORDS, type CombatKeyword } from './battle-keywords';
 import type { CardDef, Effect } from './cards';
 import { validHeroClass } from './classes';
+import {ADAPT_TARGETS} from './adaptation';
 import {validImageView,type ImageView} from './image-view';
 
 export const TRIGGERS = { play: 'Розыгрыш / боевой клич', death: 'Предсмертный хрип', summon: 'Когда призвано существо', died: 'Когда погибло существо', played: 'Когда разыграна карта', turnStart: 'В начале хода', turnEnd: 'В конце хода', aura: 'Аура', reveal: 'При выходе из маскировки' } as const;
-export const OPERATIONS = { damage: 'Нанести урон', heal: 'Восстановить здоровье', buff: 'Изменить атаку / здоровье', silence: 'Наложить немоту', destroy: 'Уничтожить', summon: 'Призвать карту', draw: 'Взять карты', addCard: 'Добавить карту в руку', shuffle: 'Замешать карту в колоду', discard: 'Сбросить карты', purgeDeck: 'Удалить карты из колоды', armor: 'Дать броню', mana: 'Восстановить ману', transform: 'Превратить в карту', devolve: 'Превратить в более дешёвое', discover: 'Раскопать копию из колоды', replacePower: 'Заменить силу героя', grantKeyword: 'Дать ключевое слово', briefing: 'Держать в курсе' } as const;
+export const OPERATIONS = { adapt:'Адаптация', damage: 'Нанести урон', heal: 'Восстановить здоровье', buff: 'Изменить атаку / здоровье', silence: 'Наложить немоту', destroy: 'Уничтожить', summon: 'Призвать карту', draw: 'Взять карты', addCard: 'Добавить карту в руку', shuffle: 'Замешать карту в колоду', discard: 'Сбросить карты', purgeDeck: 'Удалить карты из колоды', armor: 'Дать броню', mana: 'Восстановить ману', transform: 'Превратить в карту', devolve: 'Превратить в более дешёвое', discover: 'Раскопать копию из колоды', replacePower: 'Заменить силу героя', grantKeyword: 'Дать ключевое слово', briefing: 'Держать в курсе' } as const;
 export const TARGETS = { selectedEnemy: 'Выбранный враг', selectedFriendly: 'Выбранный союзник', selectedMinion: 'Выбранное существо', selectedCharacter: 'Выбранный персонаж', self: 'Это существо', ownHero: 'Ваш герой', enemyHero: 'Герой противника', friendlyMinions: 'Все ваши существа', enemyMinions: 'Все вражеские существа', allMinions: 'Все существа', friendlyCharacters: 'Все ваши персонажи', enemyCharacters: 'Все враги', allCharacters: 'Все персонажи', randomEnemy: 'Случайный враг', randomFriendly: 'Случайный союзник', randomEnemyMinion: 'Случайное вражеское существо', randomFriendlyMinion: 'Случайное своё существо', event: 'Существо / игрок события' } as const;
 export const SIDES = { friendly: 'Ваши', enemy: 'Противника', any: 'Обоих игроков' } as const;
-export const KEYWORDS = { taunt: 'Провокация', charge: 'Рывок', rush: 'Натиск', echo: 'Эхо', cannotAttack: 'Не может атаковать', stealth: 'Маскировка', bulky: 'Громоздкий', ...COMBAT_KEYWORDS } as const;
+export const KEYWORDS = { adapt:'Адаптация', taunt: 'Провокация', charge: 'Рывок', rush: 'Натиск', echo: 'Эхо', cannotAttack: 'Не может атаковать', stealth: 'Маскировка', bulky: 'Громоздкий', ...COMBAT_KEYWORDS } as const;
 export type Trigger = keyof typeof TRIGGERS;
 export type Operation = keyof typeof OPERATIONS;
 export type RuleTarget = keyof typeof TARGETS;
@@ -46,7 +47,7 @@ export function normalizeCustomCard(raw: unknown): CardDef | null {
     || raw.auraAttack !== undefined && !integer(raw.auraAttack, 0, 20)
     || !object(raw.editor) || raw.editor.version !== 1) return null;
   const e = raw.editor, creature = raw.kind === 'minion' || raw.kind === 'token';
-  if (!creature && Object.keys(KEYWORDS).filter(key => key !== 'echo').some(key => raw[key] === true)
+  if (!creature && Object.keys(KEYWORDS).filter(key => !['echo','lifesteal'].includes(key)).some(key => raw[key] === true)
     || ['power', 'token'].includes(raw.kind) && raw.echo === true) return null;
   if (creature && (!integer(raw.attack, 0, 99) || !integer(raw.health, 1, 99)) || raw.kind === 'hero' && !integer(raw.armor, 0, 99)) return null;
   if (!Array.isArray(e.tags) || e.tags.length > 8 || !e.tags.every((t: unknown) => text(t, 32) && String(t).trim())
@@ -60,7 +61,8 @@ export function normalizeCustomCard(raw: unknown): CardDef | null {
       || r.keyword !== undefined && !choice(r.keyword, COMBAT_KEYWORDS) || r.operation === 'grantKeyword' && !choice(r.keyword, COMBAT_KEYWORDS)
       || r.cardId !== undefined && !id(r.cardId) || r.targetCardId !== undefined && !id(r.targetCardId) || r.targetTag !== undefined && !text(r.targetTag, 32)) return null;
     const f = filter(r.filter); if (!f) return null;
-    if (!creature && ['death', 'reveal'].includes(r.trigger) || !creature && raw.kind !== 'hero' && !['play'].includes(r.trigger) || r.operation === 'discover' && r.trigger !== 'play'
+    if (!creature && ['death', 'reveal'].includes(r.trigger) || !creature && raw.kind !== 'hero' && !['play'].includes(r.trigger) || ['discover','adapt'].includes(r.operation) && r.trigger !== 'play'
+      || r.operation==='adapt'&&!(ADAPT_TARGETS as readonly string[]).includes(r.target)
       || r.trigger === 'aura' && (r.operation !== 'buff' || !['friendlyMinions', 'enemyMinions', 'allMinions'].includes(r.target) || r.health !== 0 || r.amount < 0 || r.chance !== 100)
       || r.trigger !== 'play' && r.target.startsWith('selected')) return null;
     let condition: CustomRule['condition'];

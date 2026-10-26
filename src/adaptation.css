@@ -1,0 +1,43 @@
+.modal.adaptation-modal {width:min(1000px,96vw);height:min(670px,94dvh);display:flex;flex-direction:column;gap:20px;padding:38px;overflow:hidden;}
+.adaptation-modal header {flex-shrink:0;text-align:center;}
+.adaptation-modal header>span {display:flex;justify-content:center;align-items:center;gap:7px;font:600 13px/1.4 var(--readable-font);color:#71502c;}
+.adaptation-modal h2 {font:750 29px/1.2 var(--readable-font);margin:10px 0;color:#392715;}
+.adaptation-modal header p,.adaptation-modal footer p {font:13px/1.5 var(--readable-font);color:#65492e;margin:0;}
+.adaptation-options {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;min-height:0;flex:1;align-items:stretch;}
+.adaptation-option {display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;gap:18px;padding:20px 14px;border:4px ridge #ad8950;border-radius:50% 50% 10px 10px;background:radial-gradient(ellipse at top,#fff0bc,#d9bd83 65%,#ac8956);box-shadow:inset 0 0 0 2px #6e4b2b66,0 5px 12px #3e250b44;color:#342415;text-shadow:none;font-family:var(--readable-font);transition:filter .15s,box-shadow .15s;}
+.adaptation-option:hover,.adaptation-option:focus-visible {filter:brightness(1.06);box-shadow:inset 0 0 0 2px #f3d36c,0 0 14px #ffd14b99;outline:2px solid #e8c260;outline-offset:2px;}
+.adaptation-icon {width:90px;height:90px;display:grid;place-items:center;border:3px ridge #b59557;border-radius:50%;background:radial-gradient(#33564a,#172d29);color:#e2d19e;box-shadow:0 3px 7px #432b1933;flex-shrink:1;}
+.adaptation-icon svg {width:46%;height:46%;}
+.adaptation-option strong {font:750 20px/1.25 var(--readable-font);text-align:center;overflow-wrap:anywhere;}
+.adaptation-option p {font:500 14px/1.5 var(--readable-font);margin:0;text-align:center;}
+.adaptation-choose {border-top:1px solid #7c5c3455;padding-top:10px;width:100%;margin-top:auto;font:700 13px/1.3 var(--readable-font);text-align:center;}
+.adaptation-modal footer {text-align:center;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.reborn-badge,.lifesteal-badge,.elusive-badge {position:absolute;left:-4px;display:grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid #d9c797;background:#143a42;font-size:13px;color:#84f1ec;z-index:5;}
+.reborn-badge {top:28%;}.lifesteal-badge {top:48%;color:#e488f3;background:#37213e;}.elusive-badge {top:68%;color:#c3d6c7;}
+.fx-impact.heal>span {color:#c9ffd0!important;text-shadow:0 0 5px #0b5222;background:#134d2ccc;}
+@media(max-width:600px) and (orientation:portrait) {
+ .modal.adaptation-modal {padding:48px 24px 20px;gap:14px;}
+ .adaptation-modal h2 {font-size:22px;margin:8px 0;}
+ .adaptation-modal header p,.adaptation-modal footer p {font-size:11px;}
+ .adaptation-options {grid-template-columns:1fr;grid-template-rows:repeat(3,minmax(0,1fr));gap:10px;}
+ .adaptation-option {display:grid;grid-template-columns:50px minmax(0,1fr);grid-template-rows:auto auto;gap:3px 10px;padding:10px 12px;border-radius:10px;border-width:3px;align-content:center;}
+ .adaptation-icon {grid-column:1;grid-row:1/3;width:46px;height:46px;}
+ .adaptation-option strong {font-size:15px;text-align:left;}
+ .adaptation-option p {font-size:12px;text-align:left;}
+ .adaptation-choose {display:none;}
+ .reborn-badge,.lifesteal-badge,.elusive-badge {width:12px;height:12px;font-size:9px;}
+}
+@media(max-height:500px) and (orientation:landscape) {
+ .modal.adaptation-modal {padding:27px 30px 14px;gap:9px;}
+ .adaptation-modal h2 {font-size:20px;margin:5px 0;}
+ .adaptation-modal header>span {font-size:10px;}
+ .adaptation-modal header p,.adaptation-modal footer p {font-size:10px;}
+ .adaptation-options {gap:12px;}
+ .adaptation-option {padding:8px;gap:8px;border-width:3px;border-radius:28px 28px 6px 6px;}
+ .adaptation-icon {width:40px;height:40px;border-width:2px;}
+ .adaptation-option strong {font-size:13px;}
+ .adaptation-option p {font-size:11px;line-height:1.35;}
+ .adaptation-choose {display:none;}
+}
+
+.adaptation-modal footer p {color:#f9e6ba;text-shadow:0 1px 1px #38200e;}

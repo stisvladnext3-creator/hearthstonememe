@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.20.0",
+  "version": "0.21.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -35,6 +35,7 @@
     "test:tigerra": "vitest run src/game/tigerra.test.ts",
     "test:tigerra-ui": "node scripts/check-tigerra.mjs",
     "test:profile": "vitest run src/game/metrics.test.ts",
+    "test:keywords": "vitest run src/game/new-keywords.test.ts src/game/battle-keywords.test.ts src/game/metrics.test.ts src/game/training-bots.test.ts",
     "test:training": "vitest run src/game/training-bots.test.ts src/game/image-view.test.ts",
     "test:deck-publication": "vitest run src/community/library.test.ts",
     "test:community": "vitest run src/game/battle-keywords.test.ts src/community/library.test.ts src/game/metrics.test.ts"

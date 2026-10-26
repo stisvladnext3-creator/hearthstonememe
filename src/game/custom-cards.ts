@@ -1,5 +1,5 @@
 import { COMBAT_KEYWORDS } from './battle-keywords';
-import { CARD, CARDS, type CardDef } from './cards';
+import { CARD, CARDS,cardPlayRules, type CardDef } from './cards';
 import { CUSTOM_LIMIT, PACK_LIMIT, matchesCard, normalizeCustomCard, references, KEYWORDS, OPERATIONS, TARGETS, TRIGGERS, type CustomRule } from './custom-schema';
 
 const KEY = 'memestone.v1.custom-cards';
@@ -86,7 +86,7 @@ const targetText = (r: CustomRule) => TARGETS[r.target].toLocaleLowerCase() + (r
 export function ruleDescription(r: CustomRule, find: (id: string) => CardDef | undefined = id => CARD[id]): string {
   const card = r.cardId ? find(r.cardId)?.name ?? 'выбранную карту' : '';
   const n = Math.max(0, r.amount);
-  const action = r.operation === 'grantKeyword' ? 'Даёт «' + COMBAT_KEYWORDS[r.keyword!] + '»: ' + targetText(r)
+  const action = r.operation==='adapt'?'Адаптация'+(r.count>1?' ×'+r.count:'')+': '+targetText(r) : r.operation === 'grantKeyword' ? 'Даёт «' + COMBAT_KEYWORDS[r.keyword!] + '»: ' + targetText(r)
     : r.operation === 'damage' ? 'Наносит ' + n + ' урона: ' + targetText(r)
     : r.operation === 'heal' ? 'Восстанавливает ' + n + ' здоровья: ' + targetText(r)
     : r.operation === 'buff' ? 'Даёт ' + (r.amount >= 0 ? '+' : '') + r.amount + '/' + (r.health >= 0 ? '+' : '') + r.health + ': ' + targetText(r)
@@ -105,12 +105,12 @@ export function ruleDescription(r: CustomRule, find: (id: string) => CardDef | u
 export function describeCustomCard(card: CardDef, legacyText = card.editor?.legacyText ?? '', find: (id: string) => CardDef | undefined = id => CARD[id]): string {
   const e = card.editor!;
   for (;;) {
-    const next = legacyText.replace(/^(?:Провокация|Рывок|Натиск|Эхо|Не может атаковать|Маскировка|Громоздкий|Божественный щит|Неистовство ветра|Яд|Неуязвимость во время атаки|Неуязвимость в свой ход|Неуязвимость до конца хода)\.\s*/i, '');
+    const next = legacyText.replace(/^(?:Провокация|Рывок|Натиск|Эхо|Не может атаковать|Маскировка|Громоздкий|Божественный щит|Неистовство ветра|Яд|Перерождение|Адаптация|Похищение жизни|Боевой клич: Адаптация|Неуязвимость во время атаки|Неуязвимость в свой ход|Неуязвимость до конца хода)\.\s*/i, '');
     if (next === legacyText) break; legacyText = next;
   }
   legacyText = legacyText.replace(/Начало матча:[^.]*\.?\s*/gi, '').trim();
   if (card.kind === 'hero') legacyText = card.effect === 'jaina' ? 'Стоит на 1 ману меньше за каждое РДШ, погибшее в матче.' : '';
-  const text = [card.kind === 'hero' && 'Даёт ' + (card.armor ?? 0) + ' брони.', legacyText, ...Object.entries(KEYWORDS).filter(([k]) => card[k as keyof CardDef]).map(([, label]) => label + '.'),
+  const text = [card.kind === 'hero' && 'Даёт ' + (card.armor ?? 0) + ' брони.', legacyText, ...Object.entries(KEYWORDS).filter(([k]) => card[k as keyof CardDef]).map(([key, label]) => (key==='adapt'?'Боевой клич: Адаптация':label) + '.'),
     ...e.rules.map(r => (r.trigger === 'play' && (card.kind === 'minion' || card.kind === 'hero') ? 'Боевой клич: ' : '') + ruleDescription(r, find)),
     e.powerId && 'Сила героя: «' + (find(e.powerId)?.name ?? 'своя сила') + '».',
     e.discount && 'Скидка ' + e.discount.amount + ' маны за ' + eventText[e.discount.event] + (e.discount.filter.tag ? ' с меткой «' + e.discount.filter.tag + '»' : '') + (e.discount.filter.side === 'any' ? ' у обоих игроков' : e.discount.filter.side === 'enemy' ? ' у противника' : ' у вас') + '.',
@@ -124,7 +124,7 @@ export function validContinuation(sourceId: string, raw: unknown): boolean {
   const c = raw as { rules?: unknown; sourceUid?: unknown; afterLegacy?: unknown };
   if (!Array.isArray(c.rules) || c.sourceUid !== undefined && (!Number.isSafeInteger(c.sourceUid) || Number(c.sourceUid) < 1)
     || c.afterLegacy !== undefined && typeof c.afterLegacy !== 'boolean') return false;
-  const rules = CARD[sourceId]?.editor?.rules.filter(r => r.trigger === 'play');
+  const rules = CARD[sourceId]?cardPlayRules(CARD[sourceId]):undefined;
   return !!rules && rules.some((_, i) => JSON.stringify(rules.slice(i)) === JSON.stringify(c.rules)) || !!rules && c.rules.length === 0;
 }
 export function validCustomCounts(raw: unknown): boolean {

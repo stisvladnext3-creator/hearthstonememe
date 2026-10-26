@@ -2,17 +2,19 @@ import { CARD, type CardDef } from './cards';
 import type { Anchor, Game, Minion, Side } from './engine';
 
 export const COMBAT_KEYWORDS = {
+  reborn: 'Перерождение', lifesteal: 'Похищение жизни',
   divineShield: 'Божественный щит', windfury: 'Неистовство ветра', poisonous: 'Яд',
   immuneWhileAttacking: 'Неуязвимость во время атаки', immuneOnOwnTurn: 'Неуязвимость в свой ход', immuneThisTurn: 'Неуязвимость до конца хода',
 } as const;
 export type CombatKeyword = keyof typeof COMBAT_KEYWORDS;
 export interface KeywordState {
+  reborn?:boolean; lifesteal?:boolean; elusive?:boolean; adaptSpores?:number; stealthUntilTurn?:number;
   divineShield?: boolean; windfury?: boolean; poisonous?: boolean;
   immuneWhileAttacking?: boolean; immuneOnOwnTurn?: boolean; immuneUntilTurn?: number; attacksThisTurn?: number;
 }
 export const attacksUsed = (m: Minion) => m.attacksThisTurn ?? (m.attackedThisTurn ? 1 : 0);
 export function keywordState(card: CardDef, turn: number): KeywordState {
-  return { divineShield: !!card.divineShield, windfury: !!card.windfury, poisonous: !!card.poisonous,
+  return { reborn:!!card.reborn,lifesteal:!!card.lifesteal,elusive:false,adaptSpores:0,stealthUntilTurn:undefined,divineShield: !!card.divineShield, windfury: !!card.windfury, poisonous: !!card.poisonous,
     immuneWhileAttacking: !!card.immuneWhileAttacking, immuneOnOwnTurn: !!card.immuneOnOwnTurn,
     immuneUntilTurn: card.immuneThisTurn ? turn : undefined };
 }
@@ -50,7 +52,9 @@ export function applyDamage(g: Game, side: Side, target: Anchor, amount: number,
   return { amount };
 }
 export function validKeywordState(raw: KeywordState): boolean {
-  return ['divineShield','windfury','poisonous','immuneWhileAttacking','immuneOnOwnTurn'].every(key => raw[key as keyof KeywordState] === undefined || typeof raw[key as keyof KeywordState] === 'boolean')
+  return ['reborn','lifesteal','elusive','divineShield','windfury','poisonous','immuneWhileAttacking','immuneOnOwnTurn'].every(key => raw[key as keyof KeywordState] === undefined || typeof raw[key as keyof KeywordState] === 'boolean')
+    && (raw.adaptSpores===undefined||Number.isSafeInteger(raw.adaptSpores)&&raw.adaptSpores>=0)
+    && (raw.stealthUntilTurn===undefined||Number.isSafeInteger(raw.stealthUntilTurn)&&raw.stealthUntilTurn>=1)
     && (raw.immuneUntilTurn === undefined || Number.isSafeInteger(raw.immuneUntilTurn) && raw.immuneUntilTurn >= 1)
     && (raw.attacksThisTurn === undefined || Number.isSafeInteger(raw.attacksThisTurn) && raw.attacksThisTurn >= 0 && raw.attacksThisTurn <= 2);
 }

@@ -1,3 +1,4 @@
+import {isAdaptation,validAdaptation} from '../game/adaptation';
 import { validKeywordState } from '../game/battle-keywords';
 import { CARD, cardAbilities, deckError, type CardDef } from '../game/cards';
 import { registerCardPack, validContinuation, validCustomCounts } from '../game/custom-cards';
@@ -7,8 +8,8 @@ import { validMetrics } from '../game/metrics';
 import { HEROES, knownPower } from '../game/presentation';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
-export const ROOM_PROTOCOL = 8;
-export const ROOM_PREFIX = 'memestone-v08-';
+export const ROOM_PROTOCOL = 9;
+export const ROOM_PREFIX = 'memestone-v09-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
 export const validCode = (value: string) => new RegExp(`^[${ROOM_ALPHABET}]{6}$`).test(value);
@@ -33,6 +34,7 @@ export function validAction(value: unknown): value is Action {
     case 'attack': return uid && target;
     case 'power': return a.target === undefined || target;
     case 'discover': return knownCard(a.cardId);
+    case 'adapt':return isAdaptation(a.option);
     case 'end': case 'concede': return true;
     default: return false;
   }
@@ -70,6 +72,7 @@ export function roomGameView(input: Game, viewer: Side): Game {
   g[opponent].hand = g[opponent].hand.map(c => ({ uid: c.uid, id: 'hidden' }));
   g.player.deck = g.player.deck.map(() => 'hidden'); g.bot.deck = g.bot.deck.map(() => 'hidden');
   g.rng = 0; g.nextUid = 0;
+  if(g.adaptation&&g.adaptation.side!==viewer)g.adaptation.options=[];
   if (g.discovery && g.discovery.side !== viewer) g.discovery.options = [];
   const guestName = input.bot.name ?? 'Соперник';
   for (const entry of g.log) {
@@ -97,6 +100,7 @@ export function roomGameView(input: Game, viewer: Side): Game {
     [g.mulligan.selected.player, g.mulligan.selected.bot] = [g.mulligan.selected.bot, g.mulligan.selected.player];
   }
   if (g.winner && g.winner !== 'draw') g.winner = other(g.winner);
+  if(g.adaptation){g.adaptation.side=other(g.adaptation.side);for(const target of g.adaptation.targets)target.side=other(target.side);}
   if (g.discovery) g.discovery.side = other(g.discovery.side);
   if (g.briefing) [g.briefing.remainingTurns.player, g.briefing.remainingTurns.bot] = [g.briefing.remainingTurns.bot, g.briefing.remainingTurns.player];
   const flip = (entity: HistoryEntity | undefined) => { if (entity) entity.side = other(entity.side); };
@@ -137,10 +141,12 @@ export function validRoomView(value: unknown): value is Game {
       && typeof g.mulligan!.ready[s as Side] === 'boolean' && Array.isArray(g.mulligan!.selected[s as Side])
       && new Set(g.mulligan!.selected[s as Side]).size === g.mulligan!.selected[s as Side].length
       && g.mulligan!.selected[s as Side].length <= 3 && g.mulligan!.selected[s as Side].every(n => uid(n) && g[s as Side].hand.some(c => c.uid === n))))) return false;
+  if(g.adaptation&&(!validAdaptation(g,g.adaptation,g.adaptation.side==='bot')||g.adaptation.continuation&&!validContinuation(g.adaptation.sourceId,g.adaptation.continuation)))return false;
+  if(g.adaptation&&g.discovery)return false;
   if (g.discovery && (!sideOf(g.discovery.side) || !knownCard(g.discovery.sourceId) || !Array.isArray(g.discovery.options) || g.discovery.options.length > 3 || !g.discovery.options.every(knownCard)
     || (g.discovery.custom ? !validContinuation(g.discovery.sourceId, g.discovery.custom) : g.discovery.target !== 'hero' && !uid(g.discovery.target)))) return false;
   return Array.isArray(g.events) && g.events.length <= 40 && Array.isArray(g.log) && g.log.length <= 1000
-    && g.events.every(e => e && uid(e.id) && sideOf(e.side) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune'].includes(e.kind) && (!e.cardId || knownCard(e.cardId))
+    && g.events.every(e => e && uid(e.id) && sideOf(e.side) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune','heal'].includes(e.kind) && (!e.cardId || knownCard(e.cardId))
       && (!e.target || sideOf(e.target.side) && (e.target.uid === 'hero' || uid(e.target.uid))) && (e.source === undefined || e.source === 'hero' || uid(e.source)))
     && g.log.every(e => e && typeof e.text === 'string' && (e.side === 'system' || sideOf(e.side)) && (e.kind === undefined || ['play', 'attack', 'effect', 'power', 'transform', 'death', 'draw', 'discard', 'turn', 'finish', 'discover'].includes(e.kind))
       && [e.actor, e.target, e.hero, e.result].every(entity));

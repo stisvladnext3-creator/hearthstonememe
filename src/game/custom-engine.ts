@@ -1,23 +1,25 @@
 import { grantKeyword, isImmune, keywordState, attacksUsed } from './battle-keywords';
-import { CARD, COLLECTIBLE, cardAbilities } from './cards';
+import { CARD, COLLECTIBLE, cardAbilities,cardPlayRules } from './cards';
 import { powerKey } from './presentation';
 import { matchesCard, type CardFilter, type CustomRule, type RuleTarget } from './custom-schema';
 import { cardEntity, heroEntity, type HistoryDetails } from './history';
 import type { Anchor, Game, GameEvent, Minion, Side, Target } from './engine';
+import type {AdaptationChoice} from './adaptation';
 import { ruleDescription } from './custom-cards';
 
 export type CountEvent = 'summon' | 'death' | 'play';
 export type CustomCounts = Record<Side, Record<CountEvent, Record<string, number>>>;
 export interface CustomContinuation { rules: CustomRule[]; sourceUid?: number; afterLegacy?: boolean }
-interface Event { kind: CountEvent | 'turnStart' | 'turnEnd' | 'reveal'; side: Side; cardId?: string; uid?: number; dead?: Minion; revealed?: Minion }
+interface Event { kind: CountEvent | 'turnStart' | 'turnEnd' | 'reveal'; side: Side; cardId?: string; uid?: number; dead?: Minion; revealed?: Minion;rightUids?:number[] }
 interface Context { side: Side; id: string; uid?: number; selected?: Target; event?: Event; dead?: Minion }
 interface Api {
+  adapt:(g:Game,choice:Omit<AdaptationChoice,'options'>)=>void;
   random: (g: Game) => number;
   log: (g: Game, text: string, side: Side, details?: HistoryDetails) => void;
   emit: (g: Game, event: Omit<GameEvent, 'id'>) => void;
-  dealDamage: (g: Game, side: Side, target: Anchor, n: number, source?: { uid?: number; cardId?: string; poisonous?: boolean }) => number;
+  dealDamage: (g: Game, side: Side, target: Anchor, n: number, source?: { uid?: number; cardId?: string; poisonous?: boolean;lifesteal?:boolean }) => number;
   destroy: (g: Game, side: Side, predicate: (m: Minion) => boolean) => void;
-  summon: (g: Game, side: Side, id: string, source?: number | 'hero', creator?: string) => Minion | undefined;
+  summon: (g: Game, side: Side, id: string, source?: number | 'hero', creator?: string,options?:{position?:number}) => Minion | undefined;
   draw: (g: Game, side: Side, n?: number) => void;
   addToHand: (g: Game, side: Side, id: string) => void;
   boardLimit: (g: Game) => number;
@@ -35,9 +37,9 @@ export function customSelectedTargets(g: Game, side: Side, id: string): Target[]
   const rules = cardAbilities(CARD[id])?.rules.filter(r => r.trigger === 'play' && r.target.startsWith('selected')) ?? [];
   if (!rules.length) return null;
   const result = (r: CustomRule): Target[] => {
-    const friendly = g[side].board.filter(m => m.health > 0 && matchesCard(CARD[m.id], { tag: r.targetTag, cardId: r.targetCardId })).map(m => m.uid);
-    const enemy = g[foe(side)].board.filter(m => m.health > 0 && !m.stealth && !isImmune(g, foe(side), m) && matchesCard(CARD[m.id], { tag: r.targetTag, cardId: r.targetCardId })).map(m => m.uid);
-    const heroes = !r.targetTag && !r.targetCardId && !['buff', 'transform', 'devolve'].includes(r.operation) && (r.operation !== 'grantKeyword' || ['immuneThisTurn','immuneOnOwnTurn'].includes(r.keyword??''));
+    const friendly = g[side].board.filter(m => m.health > 0 && (!['spell','power'].includes(CARD[id].kind)||!m.elusive) && matchesCard(CARD[m.id], { tag: r.targetTag, cardId: r.targetCardId })).map(m => m.uid);
+    const enemy = g[foe(side)].board.filter(m => m.health > 0 && !m.stealth && !isImmune(g, foe(side), m) && (!['spell','power'].includes(CARD[id].kind)||!m.elusive) && matchesCard(CARD[m.id], { tag: r.targetTag, cardId: r.targetCardId })).map(m => m.uid);
+    const heroes = !r.targetTag && !r.targetCardId && !['buff', 'transform', 'devolve','adapt'].includes(r.operation) && (r.operation !== 'grantKeyword' || ['immuneThisTurn','immuneOnOwnTurn'].includes(r.keyword??''));
     return r.target === 'selectedEnemy' ? [...(heroes && !isImmune(g, foe(side)) ? ['hero' as const] : []), ...enemy]
       : r.target === 'selectedFriendly' ? [...(heroes ? ['own-hero' as const] : []), ...friendly]
       : r.target === 'selectedMinion' ? [...friendly, ...enemy] : [...(heroes ? [...(!isImmune(g, foe(side)) ? ['hero' as const] : []), 'own-hero' as const] : []), ...friendly, ...enemy];
@@ -47,7 +49,7 @@ export function customSelectedTargets(g: Game, side: Side, id: string): Target[]
 export function silenceMinion(g: Game, m: Minion) {
   if ((m.charge || m.rush) && !m.silenced && m.enteredTurn === g.turn) m.ready = false;
   m.charge = false; m.rush = false; m.taunt = false; m.cannotAttack = false; m.ephemeral = false; m.silenced = true;
-  m.stealth = false;
+  m.stealth = false;delete m.stealthUntilTurn;m.reborn=false;m.lifesteal=false;m.elusive=false;m.adaptSpores=0;
   m.divineShield = false; m.windfury = false; m.poisonous = false; m.immuneWhileAttacking = false; m.immuneOnOwnTurn = false; delete m.immuneUntilTurn;
   if (attacksUsed(m) >= 1) m.ready = false;
   m.attack -= m.attackBuff ?? 0; m.attackBuff = 0;
@@ -120,6 +122,11 @@ export function createCustomEngine(api: Api) {
       const actor = cardEntity(ctx.id, ctx.side, ctx.dead ?? g[ctx.side].board.find(m => m.uid === ctx.uid));
       api.log(g, CARD[ctx.id].name + ': ' + ruleDescription(r), ctx.side, { actor, target: list[0] ? entity(g, list[0]) : undefined, amount: r.amount });
       const n = Math.max(0, r.amount);
+      if(r.operation==='adapt'){
+        const adapted=list.filter(t=>g[t.side].board.some(m=>m.uid===t.uid&&m.health>0));
+        if(adapted.length){api.adapt(g,{side:ctx.side,sourceId:ctx.id,sourceUid:ctx.uid,targets:adapted,remaining:r.count,selected:ctx.selected,continuation:{rules:rules.slice(index+1),sourceUid:ctx.uid}});return;}
+        continue;
+      }
       if (r.operation === 'discover') {
         let options = [...new Set(g[ctx.side].deck)].filter(id => matchesCard(CARD[id], { tag: r.targetTag, cardId: r.targetCardId }));
         const picks: string[] = [];
@@ -144,7 +151,7 @@ export function createCustomEngine(api: Api) {
           if (r.operation === 'purgeDeck') p.deck = p.deck.filter(id => !matchesCard(CARD[id], { tag: r.targetTag, cardId: r.targetCardId }));
           if (r.operation === 'discard') p.hand.splice(0, r.count);
           for (let i = 0; i < r.count && spend(g, ctx.side); i++) {
-            if (r.operation === 'summon') api.summon(g, owner, r.cardId!, undefined, ctx.id);
+            if (r.operation === 'summon') {const right=owner===ctx.side?ctx.event?.rightUids:undefined,index=right?g[owner].board.findIndex(m=>right.includes(m.uid)):-1;api.summon(g, owner, r.cardId!, undefined, ctx.id,{position:index<0?undefined:index});}
             if (r.operation === 'addCard') api.addToHand(g, owner, r.cardId!);
             if (r.operation === 'shuffle' && p.deck.length < 100) p.deck.splice(Math.floor(api.random(g) * (p.deck.length + 1)), 0, r.cardId!);
           }
@@ -158,7 +165,7 @@ export function createCustomEngine(api: Api) {
           api.emit(g, { kind: 'spell', side: ctx.side, source: ctx.uid ?? 'hero', target, cardId: ctx.id });
         if (r.operation === 'damage') {
           if (n > 0 && ctx.uid !== undefined) api.reveal(g, ctx.side, ctx.uid);
-          api.dealDamage(g, ctx.side, target, n, { uid: ctx.uid, cardId: ctx.id, poisonous: ctx.dead?.poisonous });
+          api.dealDamage(g, ctx.side, target, n, { uid: ctx.uid, cardId: ctx.id, poisonous: ctx.dead?.poisonous,lifesteal:ctx.dead?.lifesteal });
         }
         if (r.operation === 'grantKeyword' && r.keyword) grantKeyword(g, target.side, target.uid, r.keyword);
         if (r.operation === 'heal') { if (m) m.health = Math.min(m.maxHealth, m.health + n); else p.health = Math.min(30, p.health + n); }
@@ -227,7 +234,8 @@ export function createCustomEngine(api: Api) {
   }
   return { record, flush, auraBonus: (g: Game, side: Side, m: Minion) => auraBonuses(g, side, m).reduce((n, a) => n + a.amount, 0),
     auraSource: (g: Game, side: Side, m: Minion) => auraBonuses(g, side, m)[0]?.id,
-    play: (g: Game, side: Side, id: string, uid?: number, selected?: Target) => run(g, { side, id, uid, selected }, cardAbilities(CARD[id])?.rules.filter(r => r.trigger === 'play') ?? []),
+    playRules:(id:string)=>cardPlayRules(CARD[id]),
+    play: (g: Game, side: Side, id: string, uid?: number, selected?: Target) => run(g, { side, id, uid, selected }, cardPlayRules(CARD[id])),
     continue: (g: Game, side: Side, id: string, custom: CustomContinuation, selected?: Target) => run(g, { side, id, uid: custom.sourceUid, selected }, custom.rules),
   };
 }

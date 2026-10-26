@@ -1,3 +1,4 @@
+import {validAdaptation} from './game/adaptation';
 import { validKeywordState } from './game/battle-keywords';
 import { CARD, cardAbilities, STARTER_DECK, deckError, migrateRewardDeck } from './game/cards';
 import { clawFuryPool, refreshAuras, type Game, type Minion, type Player } from './game/engine';
@@ -62,7 +63,7 @@ export function loadGame(): Game | null {
   if (g && g.events === undefined) g.events = [];
   if (!g || g.trainingBotId !== undefined && (typeof g.trainingBotId !== 'string' || g.trainingBotId.length > 30) || typeof g.id !== 'string' || !validPlayer(g.player) || !validPlayer(g.bot) || !['player', 'bot'].includes(g.active)
     || g.winner !== null || ![g.turn, g.nextUid, g.rng, g.nextLog, g.rashDeaths].every(finite) || !Number.isSafeInteger(g.rashDeaths) || g.rashDeaths < 0
-    || !Array.isArray(g.events) || !g.events.every(e => e && finite(e.id) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune'].includes(e.kind) && ['player', 'bot'].includes(e.side)
+    || !Array.isArray(g.events) || !g.events.every(e => e && finite(e.id) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune','heal'].includes(e.kind) && ['player', 'bot'].includes(e.side)
       && (!e.cardId || Object.hasOwn(CARD, e.cardId)) && (!e.source || e.source === 'hero' || finite(e.source)) && (!e.target || ['player', 'bot'].includes(e.target.side) && (e.target.uid === 'hero' || finite(e.target.uid))))
     || !Array.isArray(g.log) || !g.log.every(validEntry)) return null;
   if (g.mulligan && (!finite(g.mulligan.deadline) || !g.mulligan.ready || !g.mulligan.selected || !['player', 'bot'].every(s => {
@@ -71,6 +72,8 @@ export function loadGame(): Game | null {
       && typeof g.mulligan!.ready[side] === 'boolean' && Array.isArray(selected) && selected.length <= 3
       && new Set(selected).size === selected.length && selected.every(n => g[side].hand.some(c => c.uid === n));
   }))) return null;
+  if(g.adaptation&&(!validAdaptation(g,g.adaptation)||g.adaptation.continuation&&!validContinuation(g.adaptation.sourceId,g.adaptation.continuation)))return null;
+  if(g.adaptation&&g.discovery)return null;
   if (g.discovery && (g.discovery.side !== g.active || !cardId(g.discovery.sourceId) || (!g.discovery.custom && !['discoverBlast', 'clawFury'].includes(CARD[g.discovery.sourceId].effect ?? ''))
     || !Array.isArray(g.discovery.options) || g.discovery.options.length < 1 || g.discovery.options.length > 3
     || new Set(g.discovery.options).size !== g.discovery.options.length || !g.discovery.options.every(id => cardId(id) && (CARD[g.discovery!.sourceId].effect === 'clawFury' ? clawFuryPool(g).some(c => c.id === id) : g[g.active].deck.includes(id)))

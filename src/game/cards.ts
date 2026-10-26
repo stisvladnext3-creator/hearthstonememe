@@ -1,5 +1,5 @@
 import type { CombatKeyword } from './battle-keywords';
-import type { EditorData } from './custom-schema';
+import type { EditorData,CustomRule } from './custom-schema';
 import { belongsToClass, HERO_CLASSES, type HeroClass } from './classes';
 export type CardKind = 'minion' | 'spell' | 'hero' | 'power' | 'token';
 export type Effect = 'clawFury' | 'galinka' | 'concede' | 'casino' | 'trachukcha' | 'legendaryHand' | 'deathwing' | 'maratik' | 'bolt' | 'heal' | 'draw' | 'silence' | 'armor' | 'lifeTap' | 'oy' | 'jaina' | 'rds' | 'devolve' | 'purgeZhanna' | 'volunteer' | 'dragonslayer' | 'discoverBlast' | 'masik' | 'paperArmy' | 'briefing' | 'rashQuest' | 'echoMaxim' | 'briefingDraw' | 'jainaVolunteer';
@@ -9,13 +9,17 @@ export interface CardDef extends Partial<Record<CombatKeyword, boolean>> {
   text: string; flavor: string; rarity: 'common' | 'rare' | 'epic' | 'legendary'; printedCost?: number;
   art: number; heroClass?: HeroClass; custom?: boolean; taunt?: boolean; cannotAttack?: boolean; quest?: boolean; reward?: boolean;
   effect?: Effect; tribe?: string; auraAttack?: number; frame?: 'simple'; charge?: boolean; rush?: boolean; echo?: boolean; stealth?: boolean; bulky?: boolean; deathrattle?: 'rds-guard' | 'slime-token' | 'randomEnemyDamage' | 'clawFuryThree';
+  adapt?:boolean;
   editor?: EditorData;
   abilities?: EditorData;
 }
 // Built-in declarative abilities use the same resolver as cards from the editor.
 export const cardAbilities = (card?: CardDef) => card?.editor ?? card?.abilities;
 
+export function cardPlayRules(card?:CardDef):CustomRule[]{return [...(card?.adapt?[{trigger:'play',operation:'adapt',target:'self',amount:0,health:0,count:1,chance:100,filter:{side:'friendly'}} as CustomRule]:[]),...cardAbilities(card)?.rules.filter(r=>r.trigger==='play')??[]];}
+
 export const CARDS: CardDef[] = [
+  {id:'adapt-plant',name:'Растение',cost:1,kind:'token',attack:1,health:1,text:'Призвано «Живыми спорами».',flavor:'Два ростка на месте одного павшего существа.',rarity:'common',art:11},
   { id: 'tigerra', name: 'Тигрерра', heroClass: 'cat', cost: 6, kind: 'minion', attack: 6, health: 3, rarity: 'epic', art: 9, tribe: 'Мяу', frame: 'simple', deathrattle: 'clawFuryThree',
     text: 'Боевой клич: 3 урона герою противника. Предсмертный хрип: бесплатно активирует «Ярость когтей» — случайная карта за 3 маны в руку и 3 урона вашему герою.',
     flavor: 'Хрип срабатывает в ход любого игрока, независимо от маны и использования силы. Карта выбирается из общих и карт Кота ровно за 3 маны. Броня поглощает урон; при полной руке копия сгорает. Не меняет ману, силу героя и её отметку использования. Немота существа отменяет хрип.',

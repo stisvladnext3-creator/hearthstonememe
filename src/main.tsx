@@ -32,6 +32,7 @@ import './community.css';
 import './history-interface.css';
 import './training.css';
 import './image-framing.css';
+import './adaptation.css';
 
 restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(

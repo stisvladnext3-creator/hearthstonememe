@@ -7,6 +7,7 @@ import type { CardDef } from './cards';
 import { matchesCard } from './custom-schema';
 import { belongsToClass, HERO_CLASSES, type HeroClass } from './classes';
 import { applyDamage, attacksUsed, expireImmunity, isImmune, keywordState, type KeywordState } from './battle-keywords';
+import {ADAPTATIONS,adaptationOptions,applyAdaptation,type AdaptationChoice,type AdaptationId} from './adaptation';
 import { addMetric, emptyMetrics, type MatchMetrics } from './metrics';
 
 export type Side = 'player' | 'bot';
@@ -42,13 +43,14 @@ export interface Game {
   log: HistoryEntry[]; nextLog: number;
   customCards?: CardDef[];
   customCounts?: CustomCounts;
+  adaptation?:AdaptationChoice;
   discovery?: { side: Side; sourceId: string; options: string[]; target: Target; custom?: CustomContinuation };
   briefing?: { remainingTurns: Record<Side, number> };
   mulligan?: { deadline: number; ready: Record<Side, boolean>; selected: Record<Side, number[]> };
 }
 export interface Anchor { side: Side; uid: number | 'hero' }
 export interface GameEvent {
-  id: number; kind: 'attack' | 'summon' | 'spell' | 'power' | 'damage' | 'death' | 'transform' | 'draw' | 'shield' | 'immune';
+  id: number; kind: 'attack' | 'summon' | 'spell' | 'power' | 'damage' | 'death' | 'transform' | 'draw' | 'shield' | 'immune' | 'heal';
   side: Side; source?: number | 'hero'; target?: Anchor; cardId?: string; amount?: number;
 }
 export type Target = number | 'hero' | 'own-hero';
@@ -58,6 +60,7 @@ export type Action =
   | { type: 'attack'; uid: number; target: Target }
   | { type: 'power'; target?: Target }
   | { type: 'discover'; cardId: string }
+  | { type: 'adapt'; option:AdaptationId }
   | { type: 'end' }
   | { type: 'concede' };
 export interface Result { state: Game; error?: string }
@@ -73,6 +76,7 @@ export function powerProblem(g: Game, side: Side): string | undefined {
   if (g.winner) return 'Матч уже завершён.';
   if (g.mulligan) return 'Сначала выберите стартовую руку.';
   if (g.active !== side) return 'Сейчас ход соперника.';
+  if (g.adaptation) return 'Сначала выберите адаптацию.';
   if (g.discovery) return 'Сначала выберите карту раскопки.';
   if (p.powerSilenceTurns) return `Сила героя отключена немотой. Осталось своих ходов: ${p.powerSilenceTurns}.`;
   if (p.powerUsed) return 'Сила героя уже использована в этом ходу.';
@@ -110,7 +114,7 @@ function emit(g: Game, event: Omit<GameEvent, 'id'>) {
   g.events.push({ ...event, id: (g.events.at(-1)?.id ?? 0) + 1 });
   g.events = g.events.slice(-40);
 }
-function dealDamage(g: Game, side: Side, target: Anchor, n: number, source: { uid?: number; cardId?: string; poisonous?: boolean; attackingUid?: number } = {}) {
+function dealDamage(g: Game, side: Side, target: Anchor, n: number, source: { uid?: number; cardId?: string; poisonous?: boolean; lifesteal?:boolean; attackingUid?: number } = {}) {
   const result = applyDamage(g, side, target, n, source);
   if (result.blocked) {
     emit(g, { kind: result.blocked, side, source: source.uid, target, cardId: source.cardId });
@@ -118,27 +122,36 @@ function dealDamage(g: Game, side: Side, target: Anchor, n: number, source: { ui
     const victim=body?cardEntity(body.id,target.side,body):heroEntity(g[target.side],target.side);
     log(g, victim.name+': '+(result.blocked==='shield'?'божественный щит поглощает урон.':'неуязвимость предотвращает урон.'),side,{actor:source.cardId?cardEntity(source.cardId,side):heroEntity(g[side],side),target:victim});
   }
-  if (result.amount) emit(g, { kind: 'damage', side, source: source.uid, target, amount: result.amount, cardId: source.cardId });
+  if (result.amount) {
+    emit(g, { kind: 'damage', side, source: source.uid, target, amount: result.amount, cardId: source.cardId });
+    const body=g[side].board.find(m=>m.uid===source.uid),lifesteal=source.lifesteal??(body?body.lifesteal:source.cardId&&CARD[source.cardId]?.lifesteal);
+    if(lifesteal){const p=g[side],healed=Math.min(result.amount,30-p.health);p.health+=healed;if(healed>0){emit(g,{kind:'heal',side,source:source.uid,target:{side,uid:'hero'},amount:healed,cardId:source.cardId});log(g,`Похищение жизни: восстановлено ${healed} здоровья.`,side,{actor:source.cardId?cardEntity(source.cardId,side):heroEntity(p,side),target:heroEntity(p,side),amount:healed});}}
+  }
   return result.amount;
 }
 function reveal(g: Game, side: Side, uid: number) {
   const m = g[side].board.find(m => m.uid === uid);
   if (!m?.stealth) return;
-  m.stealth = false;
+  m.stealth = false;delete m.stealthUntilTurn;
   log(g, `${CARD[m.id].name} выходит из маскировки.`, side, { actor: cardEntity(m.id, side, m) });
   custom.record(g, { kind: 'reveal', side, cardId: m.id, uid, revealed: structuredClone(m) });
 }
 // Deathrattles wait until all casualties have left the battlefield. The queue is
 // transient: no half-resolved actions are saved or copied into the next action.
-const deathrattles = new WeakMap<Game, { side: Side; minion: Minion }[]>();
+type DeathEntry={side:Side;minion:Minion;rightUids:number[]};
+const deathrattles = new WeakMap<Game, DeathEntry[]>();
+const rebirths = new WeakMap<Game, DeathEntry[]>();
+const deathPosition=(g:Game,e:DeathEntry)=>{const index=g[e.side].board.findIndex(m=>e.rightUids.includes(m.uid));return index<0?g[e.side].board.length:index;};
 function destroy(g: Game, side: Side, predicate: (m: Minion) => boolean) {
-  g[side].board = g[side].board.filter(m => {
+  g[side].board = g[side].board.filter((m,index,board) => {
     if (!predicate(m)) return true;
     if (matchesCard(CARD[m.id], { tag: 'РДШ' })) g.rashDeaths++;
-    custom.record(g, { kind: 'death', side, cardId: m.id, uid: m.uid, dead: structuredClone(m) });
-    if (CARD[m.id].deathrattle && !m.silenced) {
+    const entry={side,minion:structuredClone(m),rightUids:board.slice(index+1).map(m=>m.uid)};
+    custom.record(g, { kind: 'death', side, cardId: m.id, uid: m.uid, dead: structuredClone(m),rightUids:entry.rightUids });
+    if(m.reborn){const pending=rebirths.get(g)??[];pending.push(entry);rebirths.set(g,pending);}
+    if (CARD[m.id].deathrattle && !m.silenced || m.adaptSpores) {
       const pending = deathrattles.get(g) ?? [];
-      pending.push({ side, minion: m }); deathrattles.set(g, pending);
+      pending.push(entry); deathrattles.set(g, pending);
     }
     emit(g, { kind: 'death', side, target: { side, uid: m.uid }, cardId: m.id });
     log(g, `${CARD[m.id].name} (${side === 'player' ? 'ваше существо' : 'существо соперника'}) погибает.`, side, { kind: 'death', actor: cardEntity(m.id, side, m) });
@@ -168,9 +181,15 @@ function resolve(g: Game) {
     for (const side of [g.active, other(g.active)]) destroy(g, side, m => m.health <= 0);
     const pending = deathrattles.get(g) ?? [];
     deathrattles.delete(g);
-    if (!pending.length) { if (custom.flush(g)) continue; break; }
-    for (const { side, minion } of pending) {
-      const deathrattle = CARD[minion.id].deathrattle!;
+    if (!pending.length) {
+      if (custom.flush(g)) continue;
+      const reborn=rebirths.get(g)??[];rebirths.delete(g);
+      if(reborn.length){for(const entry of reborn){const m=summon(g,entry.side,entry.minion.id,undefined,entry.minion.id,{position:deathPosition(g,entry),health:1,reborn:false});log(g,`Перерождение: ${CARD[entry.minion.id].name} ${m?'возвращается с 1 здоровьем.':'не возвращается — на столе нет места.'}`,entry.side,{actor:cardEntity(entry.minion.id,entry.side,entry.minion),target:m?cardEntity(m.id,entry.side,m):undefined});}continue;}
+      break;
+    }
+    for (const entry of pending) {
+      const {side,minion}=entry;
+      const deathrattle = minion.silenced?undefined:CARD[minion.id].deathrattle;
       if (deathrattle === 'randomEnemyDamage') {
         const foe = other(side), enemy = g[foe];
         const targets: (number | 'hero')[] = ['hero', ...enemy.board.filter(m => m.health > 0).map(m => m.uid)];
@@ -178,7 +197,7 @@ function resolve(g: Game) {
         const body = enemy.board.find(m => m.uid === uid);
         const victim = body ? cardEntity(body.id, foe, body) : heroEntity(enemy, foe);
         emit(g, { kind: 'spell', side, source: minion.uid, cardId: minion.id, target: { side: foe, uid } });
-        dealDamage(g, side, { side: foe, uid }, 1, { uid: minion.uid, cardId: minion.id, poisonous: minion.poisonous });
+        dealDamage(g, side, { side: foe, uid }, 1, { uid: minion.uid, cardId: minion.id, poisonous: minion.poisonous,lifesteal:minion.lifesteal });
         log(g, `Предсмертный хрип «${CARD[minion.id].name}» → ${victim.name}: 1 урон.`, side,
           { actor: cardEntity(minion.id, side, minion), target: victim, amount: 1 });
       } else if (deathrattle === 'clawFuryThree') {
@@ -195,12 +214,13 @@ function resolve(g: Game) {
         }
         dealDamage(g, side, { side, uid: 'hero' }, 3, { cardId: 'claw-fury' });
         log(g, 'Ярость когтей: 3 урона своему герою.', side, { kind: 'power', actor: power, hero: heroEntity(p, side), target: heroEntity(p, side), amount: 3 });
-      } else {
-        const token = summon(g, side, deathrattle, undefined, minion.id);
+      } else if(deathrattle) {
+        const token = summon(g, side, deathrattle, undefined, minion.id,{position:deathPosition(g,entry)});
         emit(g, { kind: 'spell', side, source: minion.uid, cardId: minion.id, target: { side, uid: token?.uid ?? 'hero' } });
         log(g, `Предсмертный хрип «${CARD[minion.id].name}»: ${token ? `призывает ${CARD[deathrattle].name} ${token.attack}/${token.health}${token.taunt ? ' с провокацией' : ''}` : 'призыв не сработал — на столе нет места'}.`, side,
           { actor: cardEntity(minion.id, side, minion), target: token ? cardEntity(deathrattle, side, token) : undefined });
       }
+      for(let i=0;i<Math.min((minion.adaptSpores??0)*2,boardLimit(g));i++){const plant=summon(g,side,'adapt-plant',undefined,minion.id,{position:deathPosition(g,entry)});if(!plant)break;log(g,'Живые споры: призвано Растение 1/1.',side,{actor:cardEntity(minion.id,side,minion),target:cardEntity(plant.id,side,plant)});}
     }
   }
   for (const { side, minion, before, source } of refreshAuras(g)) {
@@ -210,7 +230,8 @@ function resolve(g: Game) {
   if (g.player.health <= 0 && g.bot.health <= 0) g.winner = 'draw';
   else if (g.player.health <= 0) g.winner = 'bot';
   else if (g.bot.health <= 0) g.winner = 'player';
-  if (g.winner) delete g.discovery;
+  if (g.winner) {delete g.discovery;delete g.adaptation;}
+  else if(g.adaptation){const a=g.adaptation;a.targets=a.targets.filter(t=>g[t.side].board.some(m=>m.uid===t.uid&&m.health>0));if(!a.targets.length){delete g.adaptation;if(a.continuation)custom.continue(g,a.side,a.sourceId,a.continuation,a.selected);resolve(g);}}
 }
 function addToHand(g: Game, side: Side, id: string) {
   if (g[side].hand.length < 10) g[side].hand.push({ id, uid: g.nextUid++ });
@@ -234,13 +255,15 @@ function draw(g: Game, side: Side, n = 1) {
     if (g.winner) break;
   }
 }
-function summon(g: Game, side: Side, id: string, source?: number | 'hero', createdBy?: string): Minion | undefined {
+function summon(g: Game, side: Side, id: string, source?: number | 'hero', createdBy?: string,options:{position?:number;health?:number;reborn?:boolean}={}): Minion | undefined {
   if (g[side].board.length >= boardLimit(g)) return;
   const c = CARD[id];
   const m: Minion = { ...keywordState(c, g.turn), attacksThisTurn: 0, id, uid: g.nextUid++, attack: c.attack ?? 0, health: c.health ?? 1,
     maxHealth: c.health ?? 1, ready: !!(c.charge || c.rush), charge: !!c.charge, rush: !!c.rush, enteredTurn: g.turn, attackedThisTurn: false, taunt: !!c.taunt, stealth: !!c.stealth, cannotAttack: !!c.cannotAttack,
     silenced: false, ephemeral: c.effect === 'deathwing', origin: typeof source === 'number' ? 'played' : 'summoned', createdBy };
-  g[side].board.push(m);
+  if(options.health!==undefined)m.health=options.health;
+  if(options.reborn!==undefined)m.reborn=options.reborn;
+  g[side].board.splice(options.position??g[side].board.length,0,m);
   emit(g, { kind: 'summon', side, source, target: { side, uid: m.uid }, cardId: id });
   custom.record(g, { kind: 'summon', side, cardId: id, uid: m.uid });
   const quest = g[side].quest;
@@ -260,7 +283,8 @@ function emptyPlayer(hero: string, power = 'spark'): Player {
   return { health: 30, armor: 0, mana: 0, maxMana: 0, hand: [], deck: [], board: [],
     fatigue: 0, hero, power, powerUsed: false, powerSilenceTurns: 0, metrics: emptyMetrics() };
 }
-const custom = createCustomEngine({ random, log, emit, dealDamage, destroy, summon, draw, addToHand, boardLimit, reveal });
+function adapt(g:Game,choice:Omit<AdaptationChoice,'options'>){if(!choice.targets.length)return;g.adaptation={...choice,options:adaptationOptions(()=>random(g))};log(g,`Адаптация: выберите улучшение (${choice.targets.length} существ).`,choice.side,{actor:cardEntity(choice.sourceId,choice.side)});}
+const custom = createCustomEngine({ random, log, emit, dealDamage, destroy, summon, draw, addToHand, boardLimit, reveal,adapt });
 export function createGame(deck = STARTER_DECK, seed = Date.now(), opponentDeck = BOT_DECK, mulliganDeadline?: number, classes: { player?: HeroClass; bot?: HeroClass } = {}): Game {
   const playerClass = HERO_CLASSES[classes.player ?? 'mage'], botClass = classes.bot ? HERO_CLASSES[classes.bot] : undefined;
   const g: Game = { id: String(seed), rashDeaths: 0, events: [], player: emptyPlayer(playerClass.hero, playerClass.power), bot: emptyPlayer(botClass?.hero ?? 'boris', botClass?.power ?? 'spark'), active: 'player', turn: 1,
@@ -322,17 +346,19 @@ export function abilityTargets(g: Game, uid?: number): Target[] {
   const id = uid === undefined ? powerCardId(activePower(g, g.active)) : g[g.active].hand.find(c => c.uid === uid)?.id;
   if (!id) return [];
   const effect = CARD[id].effect, targets = customSelectedTargets(g, g.active, id);
-  const legacy = uid === undefined ? activePower(g, g.active) === 'spark' ? legalTargets(g, 'spark') : null
-    : effect === 'bolt' || effect === 'discoverBlast' ? legalTargets(g, 'bolt') : effect === 'silence' ? legalTargets(g, 'silence')
-      : effect === 'masik' ? legalTargets(g, 'masik') : effect === 'echoMaxim' && g[g.active].board.length ? legalTargets(g, 'echoMaxim') : null;
+  const legacy = uid === undefined ? activePower(g, g.active) === 'spark' ? legalTargets(g, 'spark',undefined,id) : null
+    : effect === 'bolt' || effect === 'discoverBlast' ? legalTargets(g, 'bolt',undefined,id) : effect === 'silence' ? legalTargets(g, 'silence',undefined,id)
+      : effect === 'masik' ? legalTargets(g, 'masik',undefined,id) : effect === 'echoMaxim' && g[g.active].board.length ? legalTargets(g, 'echoMaxim') : null;
   return targets && legacy ? targets.filter(t => legacy.includes(t)) : targets ?? legacy ?? [];
 }
-export function legalTargets(g: Game, action: 'attack' | 'bolt' | 'silence' | 'spark' | 'masik' | 'echoMaxim', attackerUid?: number): Target[] {
-  const enemies = g[other(g.active)].board.filter(m => !m.stealth && !isImmune(g, other(g.active), m));
+export function legalTargets(g: Game, action: 'attack' | 'bolt' | 'silence' | 'spark' | 'masik' | 'echoMaxim', attackerUid?: number, sourceId?:string): Target[] {
+  const spell=action!=='attack'&&['spell','power'].includes(sourceId?CARD[sourceId].kind:action==='masik'||action==='echoMaxim'?'minion':'spell');
+  const friendly=g[g.active].board.filter(m=>!spell||!m.elusive);
+  const enemies = g[other(g.active)].board.filter(m => !m.stealth && !isImmune(g, other(g.active), m)&&(!spell||!m.elusive));
   if (action === 'echoMaxim') return g[g.active].board.map(m => m.uid);
-  if (action === 'masik') return [...(isImmune(g, other(g.active)) ? [] : ['hero' as const]), 'own-hero', ...g[g.active].board.map(m => m.uid), ...enemies.map(m => m.uid)];
-  if (action === 'silence') return [...g[g.active].board, ...enemies].map(m => m.uid);
-  if (action === 'spark' || action === 'bolt') return [...(isImmune(g, other(g.active)) ? [] : ['hero' as const]), ...(action === 'spark' ? ['own-hero' as const] : []), ...g[g.active].board.map(m => m.uid), ...enemies.map(m => m.uid)];
+  if (action === 'masik') return [...(isImmune(g, other(g.active)) ? [] : ['hero' as const]), 'own-hero', ...friendly.map(m => m.uid), ...enemies.map(m => m.uid)];
+  if (action === 'silence') return [...friendly, ...enemies].map(m => m.uid);
+  if (action === 'spark' || action === 'bolt') return [...(isImmune(g, other(g.active)) ? [] : ['hero' as const]), ...(action === 'spark' ? ['own-hero' as const] : []), ...friendly.map(m => m.uid), ...enemies.map(m => m.uid)];
   const taunts = enemies.filter(m => m.taunt);
   if (action === 'attack' && taunts.length) return taunts.map(m => m.uid);
   const attacker = g[g.active].board.find(m => m.uid === attackerUid);
@@ -359,6 +385,7 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
   }
   if (input.mulligan && action.type !== 'concede') return fail('Сначала выберите стартовую руку.');
   if (input.active !== side && action.type !== 'concede') return fail('Сейчас ход соперника.');
+  if(input.adaptation&&action.type!=='adapt'&&action.type!=='concede')return fail('Сначала выберите адаптацию.');
   if (input.discovery && action.type !== 'discover' && action.type !== 'concede') return fail('Сначала выберите карту раскопки.');
   const g = structuredClone(input);
   refreshAuras(g);
@@ -383,12 +410,20 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
   };
   if (action.type === 'concede') {
     g.winner = enemySide;
-    delete g.discovery;
+    delete g.discovery;delete g.adaptation;
     delete g.mulligan;
     record(side === 'player' ? 'Вы сдались.' : `${p.name ?? 'Соперник'} сдался.`, { kind: 'finish' });
     return { state: g };
   }
-  if (action.type === 'discover') {
+  if(action.type==='adapt'){
+    const choice=g.adaptation;if(!choice||choice.side!==side||!choice.options.includes(action.option))return fail('Выберите одно из предложенных улучшений.');
+    delete g.adaptation;applyAdaptation(g,choice,action.option);actor=cardEntity(choice.sourceId,side);
+    record(`Адаптация — ${ADAPTATIONS[action.option].name}: ${ADAPTATIONS[action.option].text}`);
+    for(const target of choice.targets)emit(g,{kind:'spell',side,source:choice.sourceUid,cardId:choice.sourceId,target});
+    const targets=choice.targets.filter(t=>g[t.side].board.some(m=>m.uid===t.uid&&m.health>0));
+    if(choice.remaining>1&&targets.length)adapt(g,{...choice,targets,remaining:choice.remaining-1});
+    else if(choice.continuation)custom.continue(g,side,choice.sourceId,choice.continuation,choice.selected);
+  } else if (action.type === 'discover') {
     const discovery = g.discovery;
     if (!discovery || discovery.side !== side || !discovery.options.includes(action.cardId)) return fail('Выберите одну из предложенных карт раскопки.');
     actor = CARD[discovery.sourceId].kind === 'power' ? powerEntity(p, side, discovery.sourceId) : cardEntity(discovery.sourceId, side);
@@ -420,7 +455,7 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
     if (targetNeeded(g, action.uid) && (action.target === undefined || !abilityTargets(g, action.uid).includes(action.target))) return fail('Выберите подходящую цель.');
     if (c.effect === 'echoMaxim' && p.board.length && (action.target === undefined || !legalTargets(g, 'echoMaxim').includes(action.target))) return fail('Выберите своё существо для +1 к атаке.');
     if (c.effect === 'bolt' || c.effect === 'silence' || c.effect === 'discoverBlast' || c.effect === 'masik') {
-      if (action.target === undefined || !legalTargets(g, c.effect === 'discoverBlast' ? 'bolt' : c.effect).includes(action.target)) return fail('Выберите подходящую цель.');
+      if (action.target === undefined || !legalTargets(g, c.effect === 'discoverBlast' ? 'bolt' : c.effect,undefined,c.id).includes(action.target)) return fail('Выберите подходящую цель.');
     }
     p.mana -= cost;
     addMetric(p, 'manaSpent', cost);
@@ -563,7 +598,7 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
         break;
       }
     }
-    const abilities = cardAbilities(c);
+    const abilities = cardAbilities(c) ?? (c.adapt?{version:1,tags:[],rules:[]}:undefined);
     if (abilities) {
       if (c.kind === 'hero') {
         p.hero = c.id;
@@ -572,7 +607,7 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
         record('Герой «' + c.name + '»: +' + (c.armor ?? 0) + ' брони. Сила героя: «' + CARD[powerCardId(p.power)].name + '».', { target: powerEntity(p, side) });
       }
       if (abilities.quest) p.quest = { id: c.id, progress: 0 };
-      if (g.discovery?.sourceId === c.id) g.discovery.custom = { rules: abilities.rules.filter(r => r.trigger === 'play'), sourceUid: body?.uid, afterLegacy: true };
+      if (g.discovery?.sourceId === c.id) g.discovery.custom = { rules: custom.playRules(c.id), sourceUid: body?.uid, afterLegacy: true };
       else custom.play(g, side, c.id, body?.uid, action.target);
     }
     custom.record(g, { kind: 'play', side, cardId: c.id, uid: body?.uid });
@@ -594,7 +629,7 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
     const victim = targetEntity(action.target);
     emit(g, { kind: 'attack', side, source: m.uid, target: anchorFor(action.target), cardId: m.id });
     const dealt = hit(action.target, m.attack);
-    const returned = defender ? dealDamage(g, enemySide, { side, uid: m.uid }, defender.attack, { uid: defender.uid, cardId: defender.id, poisonous: defender.poisonous, attackingUid: m.uid }) : undefined;
+    const returned = defender ? dealDamage(g, enemySide, { side, uid: m.uid }, defender.attack, { uid: defender.uid, cardId: defender.id, poisonous: defender.poisonous,lifesteal:defender.lifesteal, attackingUid: m.uid }) : undefined;
     if (splashDamage > 0) for (const neighbor of splash) {
       emit(g, { kind: 'spell', side, source: m.uid, target: { side: enemySide, uid: neighbor.uid }, cardId: m.id });
       hit(neighbor.uid, splashDamage);
@@ -689,6 +724,7 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
     expireImmunity(g);
     g.active = enemySide;
     g.turn++;
+    for(const m of enemy.board)if(m.stealthUntilTurn!==undefined&&m.stealthUntilTurn<=g.turn){reveal(g,enemySide,m.uid);}
     enemy.maxMana = Math.min(10, enemy.maxMana + 1);
     enemy.mana = enemy.maxMana;
     enemy.powerUsed = false;

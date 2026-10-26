@@ -14,7 +14,7 @@ const metaValue=(p:Publication)=>({version:1 as const,id:p.id,owner:p.owner,kind
 async function validMeta(raw:unknown):Promise<CatalogMeta|null>{
  try{const m=raw as CatalogMeta;if(!m||m.version!==1||typeof m.id!=='string'||!/^[a-f0-9]{16}-[a-f0-9-]{36}$/.test(m.id)||typeof m.owner!=='string'||!m.id.startsWith(m.owner.slice(0,16)+'-')||m.owner!==await ownerOf(m.key)
   ||!['card','deck','expansion'].includes(m.kind)||typeof m.title!=='string'||!m.title.trim()||m.title.length>60||typeof m.author!=='string'||!m.author.trim()||m.author.length>24||/[\x00-\x1f\x7f]/.test(m.title+m.author)||!Number.isSafeInteger(m.createdAt)||m.createdAt<1||m.createdAt>Date.now()+300_000
-  ||!Number.isInteger(m.count)||m.count<1||m.count>60||!Number.isInteger(m.parts)||m.parts<1||m.parts>120||typeof m.hash!=='string'||!/^[a-f0-9]{64}$/.test(m.hash)||typeof m.signature!=='string'||m.signature.length>150||m.cover!==undefined&&!validImage(m.cover)||m.heroClass!==undefined&&!validHeroClass(m.heroClass)||m.kind==='card'&&!normalizeCustomCard(m.preview)||m.removed!==undefined&&m.removed!==true)return null;
+  ||!Number.isInteger(m.count)||m.count<(m.kind==='deck'?0:1)||m.count>60||!Number.isInteger(m.parts)||m.parts<1||m.parts>120||typeof m.hash!=='string'||!/^[a-f0-9]{64}$/.test(m.hash)||typeof m.signature!=='string'||m.signature.length>150||m.cover!==undefined&&!validImage(m.cover)||m.heroClass!==undefined&&!validHeroClass(m.heroClass)||m.kind==='card'&&!normalizeCustomCard(m.preview)||m.removed!==undefined&&m.removed!==true)return null;
   return await verify(signedValue(m),m.key,m.signature)?m:null;
  }catch{return null;}
 }

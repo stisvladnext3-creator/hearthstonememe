@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Crown, Flame, Layers3, Minus, Paintbrush, Plus, RotateCcw, Search, Shield, Sparkles, Swords, Trash2, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Crown, Flame, Layers3, Minus, Paintbrush, Plus, RotateCcw, Search, Shield, Sparkles, Swords, Trash2, Upload, X } from 'lucide-react';
 import { CARDS, CARD, STARTER_DECK, deckCopyLimit, deckError, classDeck, type CardDef } from '../game/cards';
 import { Art, Card } from './Card';
 import { useViewport } from '../useViewport';
@@ -18,11 +18,11 @@ const TABS = [
   { id: 'spell', label: 'Заклинания', icon: <Flame /> },
   { id: 'hero', label: 'Герои', icon: <Shield /> },
 ];
-export default function Collection({ deckInfo, decks, selectDeck, createDeck, deleteDeck, saveDeck, inspect, back, notify, editCards, expansions, revision }: {
+export default function Collection({ deckInfo, decks, selectDeck, createDeck, deleteDeck, saveDeck, inspect, back, notify, editCards, expansions, publishDeck, revision }: {
   deckInfo: SavedDeck | null; decks: SavedDeck[]; selectDeck: (id: string) => void;
   createDeck: (heroClass: HeroClass, name: string, starter: boolean) => SavedDeck | null; deleteDeck: (id: string) => void;
   saveDeck: (ids: string[], name?: string) => void; inspect: (c: CardDef) => void; back: () => void; notify: (text: string) => void;
-  editCards: () => void; expansions: () => void; revision: number;
+  editCards: () => void; expansions: () => void; publishDeck: (id: string) => void; revision: number;
 }) {
   const deck = deckInfo?.cards ?? [];
   const [query, setQuery] = useState('');
@@ -108,7 +108,7 @@ export default function Collection({ deckInfo, decks, selectDeck, createDeck, de
       {!shownDeck.length && <p className="deck-empty">Нажимай на карты, чтобы добавить их в колоду.</p>}
       <p className="deck-rule">Обычная ×3 · Редкая ×3 · Эпическая ×2 · Легендарная ×1. Всего 30 карт.</p><div className="deck-editor-actions"><button className="button primary deck-save" disabled={!draftName.trim()} onClick={() => { saveDeck(draft, draftName); setBuilding(false); notify(deckError(draft) ? 'Черновик сохранён. Для боя нужно 30 карт.' : 'Колода сохранена.'); }}><Check size={17} /> Сохранить колоду</button><button className="text-button deck-reset" onClick={() => updateDraft(classDeck(STARTER_DECK, deckInfo?.heroClass ?? 'mage'))}><RotateCcw size={15} /> Стартовая колода</button><button className="button danger deck-delete" onClick={() => setDeleting(deckInfo)}><Trash2 size={15} />Удалить колоду</button><button className="text-button deck-reset" onClick={() => updateDraft([])}>Очистить колоду</button></div>
     </>}
-      <button className="button secondary collection-expansions" onClick={expansions}>Дополнения</button><button className="album-back" onClick={back}><ArrowLeft size={18} />Назад</button>
+      {building && deckInfo ? <button className="button primary collection-community-action" disabled={!readyDeck({...deckInfo, cards: draft})} title={readyDeck({...deckInfo, cards: draft}) ? 'Опубликовать эту колоду для других игроков' : 'Для публикации собери колоду из 30 карт'} onClick={() => publishDeck(deckInfo.id)}><Upload size={16} />Опубликовать</button> : <button className="button secondary collection-community-action" onClick={expansions}>Дополнения</button>}<button className="album-back" onClick={back}><ArrowLeft size={18} />Назад</button>
     </aside></div>
     {creating && <HeroClassPicker value={newClass} change={setNewClass} name={newName} changeName={setNewName} starter={starter} changeStarter={setStarter} close={() => setCreating(false)} confirm={() => { const created = createDeck(newClass, newName, starter); if (created) { setDraft([...created.cards]); setDraftName(created.name); setBuilding(true); setCreating(false); setDeckPage(1); } }} />}
     {deleting && <Modal title="Удаление колоды" close={() => setDeleting(null)} className="small-modal"><h2>Удалить «{deleting.name}»?</h2><p>Карты останутся в коллекции.</p><button className="button danger" onClick={() => { deleteDeck(deleting.id); setDeleting(null); setBuilding(false); }}>Удалить колоду</button><button className="button secondary" onClick={() => setDeleting(null)}>Отмена</button></Modal>}

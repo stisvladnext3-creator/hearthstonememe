@@ -18,10 +18,10 @@ export function validatePublication(raw:unknown):Publication {
     ||!['card','deck','expansion'].includes(p.kind)||!label(p.title,60)||!label(p.author,24)||typeof p.description!=='string'||p.description.length>500||/[\x00-\x08\x0b-\x1f\x7f]/.test(p.description)
     ||!Number.isSafeInteger(p.createdAt)||p.createdAt<1||p.createdAt>Date.now()+300_000||p.cover!==undefined&&!validImage(p.cover))throw new Error('Некорректные сведения публикации.');
   const cards=validateCardPack(p.cards),map=new Map(cards.map(c=>[c.id,c]));
-  if(!cards.length||!Array.isArray(p.roots)||!p.roots.length||p.roots.length>60||new Set(p.roots).size!==p.roots.length||p.roots.some(id=>typeof id!=='string'||!map.has(id))||p.kind==='card'&&p.roots.length!==1)throw new Error('В публикации нет выбранных карт.');
+  if((p.kind!=='deck'&&!cards.length)||!Array.isArray(p.roots)||(p.kind!=='deck'&&!p.roots.length)||p.roots.length>60||new Set(p.roots).size!==p.roots.length||p.roots.some(id=>typeof id!=='string'||!map.has(id))||p.kind==='card'&&p.roots.length!==1)throw new Error('В публикации нет выбранных карт.');
   if(p.kind==='deck') {
     const d=p.deck;
-    if(!d||!label(d.name,32)||!validHeroClass(d.heroClass)||!Array.isArray(d.cards)||d.cards.length!==30||!d.cards.some(id=>map.has(id)))throw new Error('Для публикации нужна готовая колода из 30 карт с пользовательскими картами.');
+    if(!d||!label(d.name,32)||!validHeroClass(d.heroClass)||!Array.isArray(d.cards)||d.cards.length!==30)throw new Error('Для публикации нужна готовая колода из 30 карт.');
     const find=(id:string)=>map.get(id)??(!id.startsWith('custom-')?CARD[id]:undefined);
     for(const id of d.cards){const c=find(id);if(!c||!['minion','spell','hero'].includes(c.kind)||c.reward||!belongsToClass(c,d.heroClass)||d.cards.filter(x=>x===id).length>deckCopyLimit(c))throw new Error('Колода нарушает правила класса, количества карт или копий.');}
   } else if(p.deck!==undefined)throw new Error('Колода не соответствует типу публикации.');

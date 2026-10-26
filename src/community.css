@@ -53,7 +53,7 @@
 .publish-footer>p {font:400 12px/1.4 var(--readable-font);color:#654d30;margin:0;flex:1;}
 .publish-footer>[role=alert] {color:#922e1b;}
 .publish-footer .button {min-height:37px;white-space:nowrap;font-size:13px;}
-.collection-v2 .collection-expansions {height:28px;min-height:28px;flex-shrink:0;font-size:12px;padding:3px;}
+.collection-v2 .collection-community-action {height:28px;min-height:28px;flex-shrink:0;font-size:12px;padding:3px;}
 .wood-menu .wood-buttons {top:27%;gap:8px;}
 .wood-menu .wood-main-button {height:clamp(42px,8dvh,60px);}
 .wood-menu .wood-main-button>span {font-size:clamp(21px,3vw,32px);}
@@ -82,7 +82,7 @@
  .publish-fields {gap:9px;}.publish-fields input,.publish-fields select,.publish-fields textarea,.publish-contents select {font-size:13px;padding:6px;}
  .publish-card-list {gap:6px;}.publish-card-list label {font-size:12px;padding:6px;gap:6px;}.publish-card-list small {font-size:10px;}
  .publish-footer {flex-wrap:wrap;gap:8px;}.publish-footer>p {flex-basis:100%;font-size:11px;}.publish-footer .button {width:100%;}
- .collection-v2 .collection-expansions {font-size:clamp(8px,1.5vw,11px);min-height:25px;height:25px;}
+ .collection-v2 .collection-community-action {font-size:clamp(8px,1.5vw,11px);min-height:25px;height:25px;}
  .wood-menu .wood-main-button {height:clamp(40px,7dvh,55px);}.wood-menu .wood-main-button>span {font-size:clamp(19px,4.6vw,26px);}.wood-menu .wood-community-button>span {font-size:clamp(16px,4.2vw,24px);}
  .workshop-toolbar .button {font-size:11px;min-width:0;gap:4px;}
  .workshop-toolbar .button svg {width:14px;}

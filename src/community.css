@@ -111,3 +111,6 @@
 .publish-select-actions button {background:#6b5236;color:#fff0d0;border:1px solid #a48655;border-radius:4px;font:600 12px/1.3 var(--readable-font);padding:5px 9px;}
 .publish-select-actions button:disabled {opacity:.45;}
 @media(max-height:600px) and (orientation:landscape) { .publish-select-actions button {font-size:11px;padding:3px 7px;} .publish-contents {gap:7px;} }
+.community-tile .album-owned {max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.community-sidebar>p,.community-sidebar-copy p {overflow-wrap:anywhere;}
+.publish-footer>p {min-width:0;overflow-wrap:anywhere;}

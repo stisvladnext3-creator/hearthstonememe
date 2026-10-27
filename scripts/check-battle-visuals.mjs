@@ -44,7 +44,7 @@ try{
     await page.locator('.player-hand .hand-card-button').click();await page.locator('.enemy-board .board-unit').first().click();await expect(page.locator('.card-play-effects')).toHaveCount(1);
     await page.waitForTimeout(650);const b=await page.locator('.casting-card').boundingBox();expect(b.x).toBeGreaterThanOrEqual(-1);expect(b.y).toBeGreaterThanOrEqual(-1);expect(b.x+b.width).toBeLessThanOrEqual(viewport.width+1);expect(b.y+b.height).toBeLessThanOrEqual(viewport.height+1);
     await expect(page.locator('[data-fx="deathrattle"]')).toBeVisible();if(viewport.width===390)await page.screenshot({path:'/tmp/deathrattle-skull-390.png'});
-    await page.getByRole('button',{name:'Настройки',exact:true}).click();await expect(page.locator('.board-option')).toHaveCount(4);
+    await page.getByRole('button',{name:'Настройки',exact:true}).click();await expect(page.locator('.board-option')).toHaveCount(5);
     const overflow=await page.locator('.hearth-options').evaluate(el=>[...el.querySelectorAll('button,.board-option')].flatMap(n=>{const b=n.getBoundingClientRect();return b.width&&b.height&&(b.left<-.5||b.right>innerWidth+.5||b.top<-.5||b.bottom>innerHeight+.5)?[n.textContent]:[];}));expect(overflow).toEqual([]);
     await page.locator('.board-option').filter({hasText:'Огненная кузница'}).click();await page.getByRole('button',{name:'Продолжить бой',exact:true}).click();await expect(page.locator('.battle-arena.board-forge')).toBeVisible();
   }

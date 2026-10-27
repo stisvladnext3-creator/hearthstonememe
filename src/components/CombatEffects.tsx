@@ -10,6 +10,7 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
   const previous = useRef(new Map<string, Box>());
   const seen = useRef(game.events.at(-1)?.id ?? 0);
   const gameId = useRef(game.id);
+  const casting = useRef(game.casting);
   const timers = useRef<number[]>([]);
   const [effects, setEffects] = useState<Effect[]>([]);
   useLayoutEffect(() => {
@@ -38,6 +39,8 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
       const batch: Effect[] = [];
       const before = previous.current;
       for (const event of incoming) {
+        // The played body has already flown to its slot during the cast phase.
+        if (event.kind === 'summon' && casting.current?.action.type === 'play' && event.source === casting.current.action.uid && event.cardId === casting.current.cardId) continue;
         const targetKey = event.kind === 'draw' && event.side === 'bot' ? 'bot:hand' : event.target ? `${event.target.side}:${event.target.uid}` : `${event.side}:hero`;
         const sourceKey = event.kind === 'draw' ? `${event.side}:deck` : event.kind === 'power' ? `${event.side}:power` : `${event.side}:${event.source ?? 'hero'}`;
         const to = (event.kind === 'summon' || event.kind === 'draw' ? current.get(targetKey) : before.get(targetKey)) ?? current.get(targetKey);
@@ -75,9 +78,10 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
         }
       }
       setEffects(old => [...old, ...batch]);
-      timers.current.push(window.setTimeout(() => setEffects(old => old.filter(f => !batch.includes(f))), 1000 + Math.max(0, ...batch.map(f => f.delay))));
+      timers.current.push(window.setTimeout(() => setEffects(old => old.filter(f => !batch.includes(f))), 1550 + Math.max(0, ...batch.map(f => f.delay))));
     }
     previous.current = current;
+    casting.current = game.casting;
   }, [game, enabled]);
   useLayoutEffect(() => () => timers.current.forEach(clearTimeout), []);
   return createPortal(<div className="combat-effects" aria-hidden="true">{effects.map(({ event: e, from, to, delay }) => {
@@ -105,7 +109,8 @@ export default function CombatEffects({ game, enabled }: { game: Game; enabled: 
     if(e.kind==='heal')return <div key={e.id} data-fx="heal" className="fx-impact heal" style={{left:to.x+to.width/2,top:to.y+to.height/2}}><span>+{e.amount}</span></div>;
     if (e.kind === 'shield' || e.kind === 'immune') return <div key={e.id} data-fx={e.kind} className={`fx-protection ${e.kind}`} style={{left:to.x+to.width/2,top:to.y+to.height/2}}><span>{e.kind === 'shield' ? '✧' : '◇'}</span></div>;
     if (e.kind === 'draw') return <div key={e.id} data-fx="draw" className="fx-drawn-card" style={{ ...style, animationDelay: `${delay}ms` }}><span className="card-back-design">✦</span></div>;
-    if ((e.kind === 'attack' || e.kind === 'summon') && e.cardId) return <div key={e.id} data-fx={e.kind} className={`fx-flying-unit ${e.kind}`} style={style}><Art index={CARD[e.cardId].art} cardId={e.cardId} /><span>{CARD[e.cardId].name}</span></div>;
+    if ((e.kind === 'attack' || e.kind === 'summon') && e.cardId) return <div key={e.id} data-fx={e.kind} className={`fx-flying-unit ${e.kind}`} style={style}><Art index={CARD[e.cardId].art} cardId={e.cardId} /></div>;
+    if(e.kind==='death'&&e.deathrattle)return <div key={e.id} data-fx="deathrattle" className="fx-deathrattle" style={{left:to.x+to.width/2,top:to.y+to.height/2,'--skull-size':`${Math.max(40,to.width*.85)}px`} as CSSProperties}><svg viewBox="0 0 120 130"><g className="deathrattle-bones"><path d="m22 76 77 40M21 111 99 72"/><circle cx="20" cy="74" r="7"/><circle cx="27" cy="69" r="7"/><circle cx="98" cy="115" r="7"/><circle cx="105" cy="110" r="7"/><circle cx="19" cy="112" r="7"/><circle cx="25" cy="118" r="7"/><circle cx="98" cy="72" r="7"/><circle cx="105" cy="78" r="7"/></g><path className="deathrattle-skull" d="M60 8C12 8 15 50 28 63L35 69 36 83Q60 98 84 83L85 69 92 63C105 50 108 8 60 8Z"/><path className="deathrattle-eyes" d="M33 40Q43 27 50 46L48 55Q29 58 33 40M87 40Q77 27 70 46L72 55Q91 58 87 40M60 51 53 65 67 65Z"/><path d="M48 76v10m12-10v13m12-13v10" stroke="#514029" strokeWidth="4"/></svg></div>;
     if (e.kind === 'damage' || e.kind === 'death') return <div key={e.id} data-fx={e.kind} className={`fx-impact ${e.kind}`} style={{ left: to.x + to.width / 2, top: to.y + to.height / 2 }}><span>{e.kind === 'damage' ? `−${e.amount}` : '✦'}</span></div>;
     return <div key={e.id} data-fx={e.kind} className={`fx-magic ${e.kind}`}><svg><line x1={from.x + from.width / 2} y1={from.y + from.height / 2} x2={to.x + to.width / 2} y2={to.y + to.height / 2} /></svg><span className="fx-rune" style={{ left: to.x + to.width / 2, top: to.y + to.height / 2 }}>✦</span>{e.kind === 'power' && <span className="fx-power-name" style={{ left: from.x + from.width / 2, top: from.y - 16 }}>{e.cardId === 'bolt' ? 'Искра' : e.cardId ? CARD[e.cardId].name : ''}</span>}</div>;
   })}</div>, document.body);

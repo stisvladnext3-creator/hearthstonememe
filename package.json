@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.21.0",
+  "version": "0.22.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -38,7 +38,10 @@
     "test:keywords": "vitest run src/game/new-keywords.test.ts src/game/battle-keywords.test.ts src/game/metrics.test.ts src/game/training-bots.test.ts",
     "test:training": "vitest run src/game/training-bots.test.ts src/game/image-view.test.ts",
     "test:deck-publication": "vitest run src/community/library.test.ts",
-    "test:community": "vitest run src/game/battle-keywords.test.ts src/community/library.test.ts src/game/metrics.test.ts"
+    "test:community": "vitest run src/game/battle-keywords.test.ts src/community/library.test.ts src/game/metrics.test.ts",
+    "test:battle-visuals": "vitest run src/game/card-play.test.ts src/game/battle-timeline.test.ts src/game/new-keywords.test.ts src/game/metrics.test.ts",
+    "test:battle-visuals-ui": "node scripts/check-battle-visuals.mjs",
+    "test:cast-rooms": "node scripts/check-cast-rooms.mjs"
   },
   "dependencies": {
     "@fontsource/roboto-condensed": "^5.3.0",

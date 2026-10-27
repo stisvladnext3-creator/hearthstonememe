@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Sparkles, X } from 'lucide-react';
 import type { CardDef } from './game/cards';
 import { act, chooseBotAction, createGame, expireMulligan, type Action } from './game/engine';
+import { resolveCast, stageAction } from './game/card-play';
 import { loadGame, loadStats, read, write, recordMatchStats } from './storage';
 import Collection from './components/Collection';
 import Battle from './components/Battle';
@@ -90,7 +91,7 @@ export default function App() {
     window.addEventListener('storage', sync); return () => window.removeEventListener('storage', sync);
   }, []);
   useEffect(() => {
-    if (page !== 'battle' || !game || game.winner || !game.mulligan && (modal || inspected)) return;
+    if (page !== 'battle' || !game || game.winner || game.casting || !game.mulligan && (modal || inspected)) return;
     if (game.mulligan ? game.mulligan.ready.bot : game.active !== 'bot') return;
     let cancelled=false,settled=false;let fallbackTimer:ReturnType<typeof setTimeout>;
     const timeout = window.setTimeout(() => {
@@ -99,7 +100,7 @@ export default function App() {
       const finish=(action:Action)=>{
         if(cancelled||settled)return;settled=true;clearTimeout(fallbackTimer);
         if(!game.mulligan&&!game.discovery&&!game.adaptation)botBudget.current.actions++;
-        const result=act(game,'bot',action);
+        const result=stageAction(game,'bot',action);
         if(result.error){console.error('Bot action failed:',result.error);setGame(act(game,'bot',{type:'end'}).state);}
         else setGame(result.state);
       };
@@ -118,6 +119,18 @@ export default function App() {
     }, settings.motion ? 350 : 60);
     return () => {cancelled=true;clearTimeout(timeout);clearTimeout(fallbackTimer);};
   }, [page, game, modal, inspected, settings.motion]);
+  useEffect(() => {
+    if (!game?.casting) return;
+    const endsAt=game.casting.endsAt;
+    let timer:number;
+    const finish=()=>{
+      const remaining=endsAt-Date.now();
+      if(remaining>0){timer=window.setTimeout(finish,remaining+1);return;}
+      setGame(current=>current?resolveCast(current):current);
+    };
+    timer=window.setTimeout(finish,Math.max(0,endsAt-Date.now())+1);
+    return () => clearTimeout(timer);
+  }, [game?.id, game?.casting?.endsAt]);
   useEffect(() => {
     if (!game?.mulligan) return;
     const timer = setInterval(() => setGame(current => current ? expireMulligan(current) : current), 250);
@@ -138,7 +151,7 @@ export default function App() {
     if (!game) return;
     const current = expireMulligan(game);
     if (current !== game) setGame(current);
-    const result = act(current, 'player', action);
+    const result = stageAction(current, 'player', action);
     if (result.error) notify(result.error);
     else { setGame(result.state); sound(); }
   };

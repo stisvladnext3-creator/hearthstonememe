@@ -38,6 +38,7 @@ export interface Game {
   rashDeaths: number;
   trainingBotId?: string;
   events: GameEvent[];
+  casting?: CardCast;
   player: Player; bot: Player; active: Side; turn: number;
   winner: Side | 'draw' | null; nextUid: number; rng: number;
   log: HistoryEntry[]; nextLog: number;
@@ -48,10 +49,14 @@ export interface Game {
   briefing?: { remainingTurns: Record<Side, number> };
   mulligan?: { deadline: number; ready: Record<Side, boolean>; selected: Record<Side, number[]> };
 }
+export interface CardCast {
+  side: Side; cardId: string; startedAt: number; endsAt: number;
+  action: Extract<Action, { type: 'play' | 'power' }>;
+}
 export interface Anchor { side: Side; uid: number | 'hero' }
 export interface GameEvent {
   id: number; kind: 'attack' | 'summon' | 'spell' | 'power' | 'damage' | 'death' | 'transform' | 'draw' | 'shield' | 'immune' | 'heal';
-  side: Side; source?: number | 'hero'; target?: Anchor; cardId?: string; amount?: number;
+  side: Side; source?: number | 'hero'; target?: Anchor; cardId?: string; amount?: number; deathrattle?: boolean;
 }
 export type Target = number | 'hero' | 'own-hero';
 export type Action =
@@ -74,6 +79,7 @@ export function powerProblem(g: Game, side: Side): string | undefined {
   const p = g[side];
   const power = activePower(g, side);
   if (g.winner) return 'Матч уже завершён.';
+  if (g.casting) return 'Карта разыгрывается…';
   if (g.mulligan) return 'Сначала выберите стартовую руку.';
   if (g.active !== side) return 'Сейчас ход соперника.';
   if (g.adaptation) return 'Сначала выберите адаптацию.';
@@ -112,7 +118,7 @@ function emit(g: Game, event: Omit<GameEvent, 'id'>) {
     addMetric(g[event.side], event.target.uid === 'hero' ? 'heroDamage' : 'minionDamage', event.amount ?? 0);
   }
   g.events.push({ ...event, id: (g.events.at(-1)?.id ?? 0) + 1 });
-  g.events = g.events.slice(-40);
+  g.events = g.events.slice(-120);
 }
 function dealDamage(g: Game, side: Side, target: Anchor, n: number, source: { uid?: number; cardId?: string; poisonous?: boolean; lifesteal?:boolean; attackingUid?: number } = {}) {
   const result = applyDamage(g, side, target, n, source);
@@ -153,7 +159,7 @@ function destroy(g: Game, side: Side, predicate: (m: Minion) => boolean) {
       const pending = deathrattles.get(g) ?? [];
       pending.push(entry); deathrattles.set(g, pending);
     }
-    emit(g, { kind: 'death', side, target: { side, uid: m.uid }, cardId: m.id });
+    emit(g, { kind: 'death', side, target: { side, uid: m.uid }, cardId: m.id, deathrattle: !!((CARD[m.id].deathrattle || cardAbilities(CARD[m.id])?.rules.some(r => r.trigger === 'death')) && !m.silenced || m.adaptSpores) });
     log(g, `${CARD[m.id].name} (${side === 'player' ? 'ваше существо' : 'существо соперника'}) погибает.`, side, { kind: 'death', actor: cardEntity(m.id, side, m) });
     return false;
   });
@@ -372,6 +378,7 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
   if (!simulation) registerCardPack(input.customCards ?? [], 'match');
   const fail = (error: string): Result => ({ state: input, error });
   if (input.winner) return fail('Матч уже завершён.');
+  if (input.casting && action.type !== 'concede') return fail('Дождитесь завершения розыгрыша карты.');
   if (action.type === 'mulligan') {
     if (!input.mulligan) return fail('Стартовая рука уже выбрана.');
     if (input.mulligan.ready[side]) return fail('Вы уже подтвердили стартовую руку.');
@@ -388,6 +395,7 @@ function applyAction(input: Game, side: Side, action: Action, simulation: boolea
   if(input.adaptation&&action.type!=='adapt'&&action.type!=='concede')return fail('Сначала выберите адаптацию.');
   if (input.discovery && action.type !== 'discover' && action.type !== 'concede') return fail('Сначала выберите карту раскопки.');
   const g = structuredClone(input);
+  if (action.type === 'concede') delete g.casting;
   refreshAuras(g);
   const p = g[side];
   const enemySide = other(side);

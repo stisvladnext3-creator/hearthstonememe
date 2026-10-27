@@ -1,4 +1,5 @@
 import {isAdaptation,validAdaptation} from '../game/adaptation';
+import { validCast } from '../game/card-play';
 import { validKeywordState } from '../game/battle-keywords';
 import { CARD, cardAbilities, deckError, type CardDef } from '../game/cards';
 import { registerCardPack, validContinuation, validCustomCounts } from '../game/custom-cards';
@@ -8,8 +9,8 @@ import { validMetrics } from '../game/metrics';
 import { HEROES, knownPower } from '../game/presentation';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
-export const ROOM_PROTOCOL = 9;
-export const ROOM_PREFIX = 'memestone-v09-';
+export const ROOM_PROTOCOL = 10;
+export const ROOM_PREFIX = 'memestone-v10-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
 export const validCode = (value: string) => new RegExp(`^[${ROOM_ALPHABET}]{6}$`).test(value);
@@ -100,6 +101,7 @@ export function roomGameView(input: Game, viewer: Side): Game {
     [g.mulligan.selected.player, g.mulligan.selected.bot] = [g.mulligan.selected.bot, g.mulligan.selected.player];
   }
   if (g.winner && g.winner !== 'draw') g.winner = other(g.winner);
+  if (g.casting) g.casting.side = other(g.casting.side);
   if(g.adaptation){g.adaptation.side=other(g.adaptation.side);for(const target of g.adaptation.targets)target.side=other(target.side);}
   if (g.discovery) g.discovery.side = other(g.discovery.side);
   if (g.briefing) [g.briefing.remainingTurns.player, g.briefing.remainingTurns.bot] = [g.briefing.remainingTurns.bot, g.briefing.remainingTurns.player];
@@ -143,10 +145,11 @@ export function validRoomView(value: unknown): value is Game {
       && g.mulligan!.selected[s as Side].length <= 3 && g.mulligan!.selected[s as Side].every(n => uid(n) && g[s as Side].hand.some(c => c.uid === n))))) return false;
   if(g.adaptation&&(!validAdaptation(g,g.adaptation,g.adaptation.side==='bot')||g.adaptation.continuation&&!validContinuation(g.adaptation.sourceId,g.adaptation.continuation)))return false;
   if(g.adaptation&&g.discovery)return false;
+  if (!validCast(g, g.casting, true)) return false;
   if (g.discovery && (!sideOf(g.discovery.side) || !knownCard(g.discovery.sourceId) || !Array.isArray(g.discovery.options) || g.discovery.options.length > 3 || !g.discovery.options.every(knownCard)
     || (g.discovery.custom ? !validContinuation(g.discovery.sourceId, g.discovery.custom) : g.discovery.target !== 'hero' && !uid(g.discovery.target)))) return false;
-  return Array.isArray(g.events) && g.events.length <= 40 && Array.isArray(g.log) && g.log.length <= 1000
-    && g.events.every(e => e && uid(e.id) && sideOf(e.side) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune','heal'].includes(e.kind) && (!e.cardId || knownCard(e.cardId))
+  return Array.isArray(g.events) && g.events.length <= 120 && Array.isArray(g.log) && g.log.length <= 1000
+    && g.events.every(e => e && uid(e.id) && sideOf(e.side) && ['attack', 'summon', 'spell', 'power', 'damage', 'death', 'transform', 'draw', 'shield', 'immune','heal'].includes(e.kind) && (e.deathrattle === undefined || typeof e.deathrattle === 'boolean') && (!e.cardId || knownCard(e.cardId))
       && (!e.target || sideOf(e.target.side) && (e.target.uid === 'hero' || uid(e.target.uid))) && (e.source === undefined || e.source === 'hero' || uid(e.source)))
     && g.log.every(e => e && typeof e.text === 'string' && (e.side === 'system' || sideOf(e.side)) && (e.kind === undefined || ['play', 'attack', 'effect', 'power', 'transform', 'death', 'draw', 'discard', 'turn', 'finish', 'discover'].includes(e.kind))
       && [e.actor, e.target, e.hero, e.result].every(entity));

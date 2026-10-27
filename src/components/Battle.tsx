@@ -6,6 +6,9 @@ import { abilityTargets, cardCost, legalTargets, powerProblem, targetNeeded, typ
 import { Art, Card } from './Card';
 import Modal from './Modal';
 import CombatEffects from './CombatEffects';
+import CardPlayEffects from './CardPlayEffects';
+import UnitEnchantments from './UnitEnchantments';
+import { hasAura, hasDeathrattle } from '../game/visual-effects';
 import BattleHistory from './BattleHistory';
 import Discover from './Discover';
 import { heroDefinition, heroCard } from '../game/presentation';
@@ -18,6 +21,7 @@ import { battleground, boardImage, type BattlegroundId } from '../battlegrounds'
 import type { BattleSettingsActions } from './SettingsDialog';
 import HistoryRail from './HistoryRail';
 import { isImmune } from '../game/battle-keywords';
+import { useBattleTimeline } from '../useBattleTimeline';
 
 type Selection = { type: 'play' | 'attack'; uid: number } | { type: 'power' };
 function HandCardFace({ card, cost, playable, play, inspect }: { card: CardDef; cost: number; playable: boolean; play: () => void; inspect: () => void }) {
@@ -32,10 +36,12 @@ function Mana({ player, compact = false }: { player: Player; compact?: boolean }
 function Hero({ player, side, targetable, onClick, active, inspect }: { player: Player; side: Side; targetable: boolean; onClick: () => void; active: boolean; inspect: Inspect }) {
   const gesture = useLongPress(() => inspect(heroCard(player.hero), { zone: 'hero', owner: side, note: player.powerSilenceTurns ? `Сила героя отключена немотой. Осталось своих ходов: ${player.powerSilenceTurns}.` : undefined }));
   const hero = heroDefinition(player.hero);
+  const aura=hasAura(heroCard(player.hero));
   return <div className={`hero-panel hero-${player.hero} ${side} ${active ? 'active' : ''}`}>
     {side === 'player' && <div className="hero-label"><strong>{player.name ?? hero.name}</strong></div>}
-    <button data-combat-anchor={`${side}:hero`} className={`hero-portrait ${targetable ? 'targetable' : ''}`} onClick={onClick} aria-label={`${side === 'bot' ? 'Герой противника' : 'Ваш герой'}: ${player.health} здоровья${targetable ? ', атаковать' : ''}`} aria-disabled={!targetable} {...gesture}>
+    <button data-combat-anchor={`${side}:hero`} className={`hero-portrait ${aura?'aura-source':''} ${targetable ? 'targetable' : ''}`} onClick={onClick} aria-label={`${side === 'bot' ? 'Герой противника' : 'Ваш герой'}: ${player.health} здоровья${targetable ? ', атаковать' : ''}`} aria-disabled={!targetable} {...gesture}>
       <Art index={hero.art} cardId={player.hero} /><span className="hero-hp"><Flame size={14} />{Math.max(0, player.health)}</span>
+      {aura&&<span className="unit-aura-fire hero-aura-fire" aria-hidden="true"><i/><i/><i/><i/><i/><i/></span>}
       {player.armor > 0 && <span className="hero-armor"><Shield size={14} />{player.armor}</span>}
     </button>
     <div className="hero-health-track"><i style={{ width: `${Math.max(0, player.health / 30 * 100)}%` }} /></div>
@@ -46,12 +52,12 @@ function Unit({ m, side, selected, canSelect, targetable, onClick, inspect, immu
 }) {
   const c = CARD[m.id];
   const gesture = useLongPress(inspect);
-  return <div className="unit-wrap"><button data-combat-anchor={`${side}:${m.uid}`} className={`board-unit ${m.taunt ? 'taunt' : ''} ${m.stealth ? 'stealth' : ''} ${m.divineShield ? 'divine-shield' : ''} ${immune ? 'immune-unit' : ''} ${canSelect ? 'ready' : ''} ${selected ? 'selected' : ''} ${targetable ? 'targetable' : ''}`} onClick={onClick} {...gesture} aria-label={`${c.name}: ${m.attack} атаки, ${m.health} здоровья${canSelect ? ', готов атаковать' : ''}`} title={`${c.name}. ${c.text}`}>
-    <Art index={c.art} cardId={c.id} /><div className="unit-shade" /><span className="unit-name">{c.name}</span>
+  return <div className="unit-wrap"><button data-combat-anchor={`${side}:${m.uid}`} className={`board-unit ${m.taunt ? 'taunt' : ''} ${m.stealth ? 'stealth' : ''} ${hasAura(c,m)?'aura-source':''} ${m.divineShield ? 'divine-shield' : ''} ${immune ? 'immune-unit' : ''} ${canSelect ? 'ready' : ''} ${selected ? 'selected' : ''} ${targetable ? 'targetable' : ''}`} onClick={onClick} {...gesture} aria-label={`${c.name}: ${m.attack} атаки, ${m.health} здоровья${canSelect ? ', готов атаковать' : ''}`} title={`${c.name}. ${c.text}`}>
+    <Art index={c.art} cardId={c.id} /><div className="unit-shade" /><UnitEnchantments minion={m} aura={hasAura(c,m)} immune={immune}/>
     {m.origin === 'transformed' && <span className="origin-badge" title="Превращение: боевой клич не срабатывал"><RefreshCw size={11} /></span>}
     {m.charge && !m.silenced && <span className="charge-badge" title="Рывок: может атаковать сразу после выхода"><Zap size={12} /></span>}
     {m.rush && !m.silenced && <span className="rush-badge" title="Натиск: сразу атакует существ, героя — со следующего своего хода"><Swords size={12} /></span>}
-    {((c.deathrattle || c.editor?.rules.some(r => r.trigger === 'death')) && !m.silenced || !!m.adaptSpores) && <span className="deathrattle-badge" title={m.adaptSpores?`Живые споры: призовёт ${m.adaptSpores*2} Растений 1/1.`:c.text.slice(c.text.indexOf('Предсмертный хрип:'))}>☠</span>}
+    {hasDeathrattle(c,m) && <span className="deathrattle-badge" title={m.adaptSpores?`Живые споры: призовёт ${m.adaptSpores*2} Растений 1/1.`:c.text.slice(c.text.indexOf('Предсмертный хрип:'))}>☠</span>}
     {c.bulky && !m.silenced && <span className="bulky-badge" title="Громоздкий: половина атаки по соседям цели">↔</span>}
     {m.reborn&&<span className="reborn-badge" title="Перерождение: вернётся с 1 здоровьем">↻</span>}
     {m.lifesteal&&<span className="lifesteal-badge" title="Похищение жизни: нанесённый урон лечит героя">♥</span>}
@@ -59,17 +65,17 @@ function Unit({ m, side, selected, canSelect, targetable, onClick, inspect, immu
     {m.windfury && <span className="windfury-badge" title="Неистовство ветра: две атаки за ход">≋</span>}
     {m.poisonous && <span className="poison-badge" title="Яд: нанесённый существу урон смертелен">☠</span>}
     {m.stealth && <span className="stealth-badge" title="Маскировка: нельзя выбрать целью вражеской атаки или способности">◉</span>}
-    {m.taunt && <Shield className="taunt-icon" size={17} />}
     {!m.ready && !m.cannotAttack && <span className="sleep-mark">zZ</span>}
     {m.cannotAttack && <span className="sleep-mark"><X size={15} /></span>}
     {m.silenced && <span className="silence-mark">Немота</span>}
     <span className="unit-attack">{m.attack}</span><span className={`unit-health ${m.health < m.maxHealth ? 'damaged' : ''}`}>{m.health}</span>
   </button><button className="unit-info" onClick={inspect} aria-label={`Подробнее о ${c.name}`}><CircleHelp size={11} /></button></div>;
 }
-export default function Battle({ game, dispatch, back, menu, rematch, inspect, settings, animations, overlayOpen, board, multiplayer }: {
+export default function Battle({ game: inputGame, dispatch, back, menu, rematch, inspect, settings, animations, overlayOpen, board, multiplayer }: {
   game: Game; dispatch: (action: Action) => void; back: () => void; menu?: () => void; rematch: () => void; inspect: Inspect; settings: (actions: BattleSettingsActions) => void; animations: boolean; overlayOpen: boolean; board: BattlegroundId;
   multiplayer?: { code: string; opponent: string; connected: boolean; blocked: string; notice: string; rematchSelf: boolean; rematchOpponent: boolean };
 }) {
+  const game=useBattleTimeline(inputGame);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [showLog, setShowLog] = useState(false);
   const [confirm, setConfirm] = useState(false);
@@ -80,10 +86,10 @@ export default function Battle({ game, dispatch, back, menu, rematch, inspect, s
     return () => clearTimeout(timer);
   }, [game.winner, game.id, animations]);
   const opponent = multiplayer?.opponent ?? game.bot.name ?? heroDefinition(game.bot.hero).name;
-  const playerTurn = game.active === 'player' && !game.winner && !game.mulligan && !game.discovery && !game.adaptation && !multiplayer?.blocked;
+  const playerTurn = game.active === 'player' && !game.winner && !game.casting && !game.mulligan && !game.discovery && !game.adaptation && !multiplayer?.blocked;
   // A repeated network snapshot is the same position. Reset before paint only
   // when the match advances, so a late render cannot cancel a fresh target tap.
-  useLayoutEffect(() => { setSelection(null); }, [game.id, game.active, game.turn, game.nextLog, !!game.discovery,!!game.adaptation, !!game.mulligan]);
+  useLayoutEffect(() => { setSelection(null); }, [game.id, game.active, game.turn, game.nextLog, !!game.casting, !!game.discovery,!!game.adaptation, !!game.mulligan]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelection(null); };
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
@@ -105,12 +111,12 @@ export default function Battle({ game, dispatch, back, menu, rematch, inspect, s
     else dispatch({ type: 'play', uid });
   };
   const hint = multiplayer?.blocked || (game.adaptation ? game.adaptation.side==='player'?'Выбери адаптацию.':`${opponent} выбирает адаптацию…` : game.discovery ? game.discovery.side === 'player' ? 'Выбери карту раскопки.' : `${opponent} выбирает карту раскопки…` : selection ? selection.type === 'attack' ? 'Выбери, кого атаковать' : selectedCard && CARD[selectedCard.id].effect === 'masik' ? 'Выбери существо или героя для немоты Масика' : selectedCard && CARD[selectedCard.id].effect === 'echoMaxim' ? 'Выбери своё существо для +1 к атаке' : selectedCard && CARD[selectedCard.id].effect === 'silence' ? 'Выбери своё или вражеское существо для немоты' : 'Выбери цель заклинания' : game.winner ? 'Партия завершена.' : playerTurn ? 'Твой ход. Пусть начнётся хаос.' : `${opponent} обдумывает свой ход…`);
-  return <section className="battle-page page-enter">
+  return <section className={`battle-page page-enter ${game.casting?'card-resolving':''}`} aria-busy={!!game.casting}>
     <div className={`battle-arena board-${board}`} data-board={board} aria-label={`Игровое поле: ${battleground(board).name}`} style={{ backgroundImage: `url("${boardImage(board)}")` }}>
       <button className="battle-settings icon-button" onClick={() => settings({ leave: menu ?? back, concede: () => setConfirm(true), finished: !!game.winner, online: !!multiplayer })} aria-label="Настройки"><Settings size={21} /></button>
       <HistoryRail entries={game.log} open={() => setShowLog(true)} />
       {multiplayer && (multiplayer.notice || !multiplayer.connected) && <div className="online-notice" role="status">{multiplayer.notice || 'Ждём соединения с соперником…'}</div>}<div className="arena-glow" /><div className="table-corner top-left" /><div className="table-corner bottom-right" />
-      <div className="opponent-hand" data-combat-anchor="bot:hand" aria-label={`У ${opponent} ${game.bot.hand.length} карт`}>{game.bot.hand.map(c => <div className="card-back" data-combat-anchor={`bot:${c.uid}`} key={c.uid}><span>✦</span></div>)}</div>
+      <div className="opponent-hand" data-combat-anchor="bot:hand" aria-label={`У ${opponent} ${game.bot.hand.length} карт`}>{game.bot.hand.map(c => <div className={`card-back ${game.casting?.side==='bot'&&game.casting.action.type==='play'&&game.casting.action.uid===c.uid?'being-played':''}`} data-combat-anchor={`bot:${c.uid}`} key={c.uid}><span>✦</span></div>)}</div>
       <div className="enemy-status"><strong className="enemy-name" title={game.bot.name ?? heroDefinition(game.bot.hero).name}>{game.bot.name ?? heroDefinition(game.bot.hero).name}</strong><Mana player={game.bot} compact /></div>
       <div className="enemy-hero-row"><Hero inspect={inspect} player={game.bot} side="bot" active={game.active === 'bot' && !game.winner} targetable={playerTurn && allowed.includes('hero')} onClick={() => hit('hero')} /><HeroPower game={game} side="bot" inspect={inspect} /></div>
       {game.briefing && <button className="briefing-status" onClick={() => inspect(CARD.briefing, { zone: 'board', owner: 'player', note: `Осталось своих ходов: у вас ${game.briefing!.remainingTurns.player}, у ${opponent} ${game.briefing!.remainingTurns.bot}. Лимит: одно существо у каждого.` })}><BookOpen size={14} /><span>Держать в курсе<small>Вы: {game.briefing.remainingTurns.player} · {opponent}: {game.briefing.remainingTurns.bot}</small><small>1 существо · добор за 6</small></span></button>}
@@ -118,15 +124,17 @@ export default function Battle({ game, dispatch, back, menu, rematch, inspect, s
       <div className="battle-board enemy-board">{game.bot.board.map(m => <Unit key={m.uid} m={m} immune={isImmune(game, 'bot', m)} side="bot" selected={false} canSelect={false} targetable={playerTurn && allowed.includes(m.uid)} onClick={() => hit(m.uid)} inspect={() => inspect(CARD[m.id], { zone: 'board', owner: 'bot', minion: m })} />)}</div>
       <div className="board-divider"><span /><i>✦</i><span /></div>
       <div className="battle-board player-board">{game.player.board.map(m => <Unit key={m.uid} m={m} immune={isImmune(game, 'player', m)} side="player" selected={selection?.type === 'attack' && selection.uid === m.uid} canSelect={playerTurn && !selectingSpell && m.ready && !m.cannotAttack && m.attack > 0 && legalTargets(game, 'attack', m.uid).length > 0} targetable={playerTurn && allowed.includes(m.uid)} onClick={() => { if (!playerTurn) return; if (allowed.includes(m.uid)) { hit(m.uid); return; } if (selectingSpell) return; if (m.ready && !m.cannotAttack && m.attack > 0 && legalTargets(game, 'attack', m.uid).length > 0) setSelection(selection?.type === 'attack' && selection.uid === m.uid ? null : { type: 'attack', uid: m.uid }); }} inspect={() => inspect(CARD[m.id], { zone: 'board', owner: 'player', minion: m })} />)}</div>
-      <div className="turn-control"><span>ХОД {Math.ceil(game.turn / 2)}</span><button className={`end-turn ${playerTurn ? '' : 'waiting'}`} disabled={!playerTurn} onClick={() => dispatch({ type: 'end' })}>{playerTurn ? <>Завершить<ChevronRight size={15} /></> : <><span className="thinking-dot" /> {multiplayer?.blocked ? 'Ждём связь' : game.adaptation?.side==='player'?'Адаптация':game.discovery?.side === 'player' ? 'Выбор карты' : `Ход: ${opponent}`}</>}</button></div>
+      <div className="turn-control"><span>ХОД {Math.ceil(game.turn / 2)}</span><button className={`end-turn ${playerTurn ? '' : 'waiting'}`} disabled={!playerTurn} onClick={() => dispatch({ type: 'end' })}>{playerTurn ? <>Завершить<ChevronRight size={15} /></> : <><span className="thinking-dot" /> {multiplayer?.blocked ? 'Ждём связь' : game.casting ? 'Розыгрыш…' : game.adaptation?.side==='player'?'Адаптация':game.discovery?.side === 'player' ? 'Выбор карты' : `Ход: ${opponent}`}</>}</button></div>
       <div className="own-hero-row"><Hero inspect={inspect} player={game.player} side="player" active={game.active === 'player' && !game.winner} targetable={playerTurn && allowed.includes('own-hero')} onClick={() => hit('own-hero')} /><HeroPower game={game} side="player" inspect={inspect} unavailableReason={unavailableReason} selected={selection?.type === 'power'} onClick={() => { if (!powerAvailable) { dispatch({ type: 'power' }); return; } if (targetNeeded(game)) setSelection(selection?.type === 'power' ? null : { type: 'power' }); else dispatch({ type: 'power' }); }} /></div>
       {(selection || multiplayer?.blocked || game.discovery || game.adaptation) && <div className={`battle-hint ${selection ? 'choosing' : ''}`} role="status">{selection ? <Swords size={15} /> : <Sparkles size={14} />}{hint}{selection && <button className="icon-button" onClick={() => setSelection(null)} aria-label="Отменить выбор"><X size={13} /></button>}</div>}
       <div className="mobile-hero-name">{game.player.name ?? heroDefinition(game.player.hero).name}</div>
-      <div className="player-hand" data-combat-anchor="player:hand" aria-label="Карты в руке" style={{ '--hand-count': game.player.hand.length || 1 } as React.CSSProperties}>{game.player.hand.map((c, i) => <div key={c.uid} data-combat-anchor={`player:${c.uid}`} className={`hand-card-wrap ${c.expiresTurn !== undefined ? 'echo-copy' : ''} ${selection?.type === 'play' && selection.uid === c.uid ? 'selected' : ''}`} style={{ '--hand-i': i, '--hand-count': game.player.hand.length } as React.CSSProperties}><HandCardFace card={CARD[c.id]} cost={cardCost(game, c.id, 'player')} inspect={() => inspect(CARD[c.id], { zone: 'hand', owner: 'player', cost: cardCost(game, c.id, 'player'), note: c.expiresTurn !== undefined ? 'Копия эха исчезнет в конце этого хода.' : undefined })} playable={playerTurn && cardCost(game, c.id, 'player') <= game.player.mana} play={() => selectCard(c.uid)} /><button className="hand-info" onClick={() => inspect(CARD[c.id], { zone: 'hand', owner: 'player', cost: cardCost(game, c.id, 'player'), note: c.expiresTurn !== undefined ? 'Копия эха исчезнет в конце этого хода.' : undefined })} aria-label={`Посмотреть ${CARD[c.id].name}`}><CircleHelp size={13} /></button></div>)}</div>
+      <div className="player-hand" data-combat-anchor="player:hand" aria-label="Карты в руке" style={{ '--hand-count': game.player.hand.length || 1 } as React.CSSProperties}>{game.player.hand.map((c, i) => <div key={c.uid} data-combat-anchor={`player:${c.uid}`} className={`hand-card-wrap ${game.casting?.side==='player'&&game.casting.action.type==='play'&&game.casting.action.uid===c.uid?'being-played':''} ${c.expiresTurn !== undefined ? 'echo-copy' : ''} ${selection?.type === 'play' && selection.uid === c.uid ? 'selected' : ''}`} style={{ '--hand-i': i, '--hand-count': game.player.hand.length } as React.CSSProperties}><HandCardFace card={CARD[c.id]} cost={cardCost(game, c.id, 'player')} inspect={() => inspect(CARD[c.id], { zone: 'hand', owner: 'player', cost: cardCost(game, c.id, 'player'), note: c.expiresTurn !== undefined ? 'Копия эха исчезнет в конце этого хода.' : undefined })} playable={playerTurn && cardCost(game, c.id, 'player') <= game.player.mana} play={() => selectCard(c.uid)} /><button className="hand-info" onClick={() => inspect(CARD[c.id], { zone: 'hand', owner: 'player', cost: cardCost(game, c.id, 'player'), note: c.expiresTurn !== undefined ? 'Копия эха исчезнет в конце этого хода.' : undefined })} aria-label={`Посмотреть ${CARD[c.id].name}`}><CircleHelp size={13} /></button></div>)}</div>
       <div className="player-mana"><Mana player={game.player} /></div>
       <DeckPile side="player" player={game.player} /><DeckPile side="bot" player={game.bot} />{showLog && <BattleHistory entries={game.log} inspect={inspect} close={() => setShowLog(false)} opponent={opponent} />}
     </div>
     <CombatEffects game={game} enabled={animations} />
+    {game.casting && <CardPlayEffects key={`${game.id}:${game.casting.startedAt}:${game.casting.cardId}`} cast={game.casting} animations={animations}/>}
+    {game.casting && <span className="cast-announcement sr-only" role="status">{CARD[game.casting.cardId].name}: розыгрыш карты.</span>}
     {game.mulligan && !overlayOpen && <Mulligan game={game} dispatch={dispatch} inspect={inspect} blocked={!!multiplayer?.blocked} back={back} />}
     {game.adaptation?.side==='player'&&!overlayOpen&&!multiplayer?.blocked&&<AdaptationDialog game={game} dispatch={dispatch} back={back}/>}
     {game.discovery?.side === 'player' && !overlayOpen && !multiplayer?.blocked && <Discover game={game} dispatch={dispatch} inspect={inspect} back={back} />}

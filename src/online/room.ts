@@ -2,6 +2,7 @@ import { CARD, classDeck, migrateRewardDeck, type CardDef } from '../game/cards'
 import { packForCards, registerCardPack } from '../game/custom-cards';
 import type { Peer, DataConnection } from 'peerjs';
 import { act, expireMulligan, type Action, type Game } from '../game/engine';
+import { resolveCast, stageAction } from '../game/card-play';
 import { acceptsActionRevision, cleanName, createRoomGame, EMPTY_ROOM, normalizeCode, ROOM_PREFIX, ROOM_PROTOCOL, roomCode, roomGameView, validAction, validCode, validDeck, validRoomView, type ClientMessage, type HostMessage, type Member, type RoomState } from './protocol';
 import { peerRuntime, readMessage } from './transport';
 import { DIRECTORY_ID, RoomAdvertisement } from './directory';
@@ -54,10 +55,10 @@ export class PeerRoom {
   private remoteCardIds = new Set<string>();
   private transferringCards?: string;
   private pendingStart = false;
-  private phaseTimer = setInterval(() => this.advanceOpening(), 250);
+  private phaseTimer = setInterval(() => this.advanceOpening(), 50);
   private advanceOpening() {
-    if (!this.canonical?.mulligan || this.disposed) return;
-    const next = expireMulligan(this.canonical);
+    if (!this.canonical || this.disposed || !this.canonical.mulligan && !this.canonical.casting) return;
+    const next = resolveCast(expireMulligan(this.canonical));
     if (next !== this.canonical) { this.canonical = next; this.state.revision++; this.publish(); }
   }
   private outbound?: { type: 'action'; action: Action; revision: number; requestId: string; retried?: boolean };
@@ -167,7 +168,7 @@ export class PeerRoom {
         if (!validAction(data.action) || !this.canonical || !acceptsActionRevision(this.canonical, this.state.revision, data.revision, data.action)) {
           this.send({ type: 'reject', message: 'Состояние партии обновилось. Повтори действие.', requestId: data.requestId }); this.publish(); return;
         }
-        const result = act(this.canonical, 'bot', data.action);
+        const result = stageAction(this.canonical, 'bot', data.action);
         if (result.error) this.send({ type: 'reject', message: result.error, requestId: data.requestId });
         else { this.canonical = result.state; this.state.revision++; }
         this.publish();
@@ -285,7 +286,7 @@ export class PeerRoom {
     this.advanceOpening();
     if (!validAction(action) || !this.state.connected || !this.state.game || this.state.pending) return;
     if (this.state.role === 'host') {
-      const result = act(this.canonical!, 'player', action);
+      const result = stageAction(this.canonical!, 'player', action);
       if (result.error) this.update({ error: result.error });
       else { this.canonical = result.state; this.state.revision++; this.update({ error: '' }); this.publish(); }
     } else {

@@ -28,7 +28,7 @@ export default function SettingsDialog({ value, change, close, help, about, prev
     <header className="options-title"><h2>Настройки</h2></header>
     <div className="options-paper"><div className="options-grid">
       <section className="options-section options-graphics" aria-labelledby="options-graphics"><h3 id="options-graphics">Графика</h3>
-        <label className="options-check"><input type="checkbox" checked={value.motion} onChange={e => change({ ...value, motion: e.target.checked })} /><span>Анимации<small>Удары, добор и появление карт</small></span></label>
+        <label className="options-check"><input type="checkbox" checked={value.motion} onChange={e => change({ ...value, motion: e.target.checked })} /><span>Анимации<small>Розыгрыш карт, удары и эффекты существ</small></span></label>
         {document.fullscreenEnabled && <label className="options-check"><input type="checkbox" checked={fullscreen} onChange={() => { void toggleScreen(); }} /><span>Полный экран</span></label>}
         {screenError && <p className="options-error" role="status">{screenError}</p>}
       </section>

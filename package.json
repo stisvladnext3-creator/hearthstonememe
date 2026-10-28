@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.24.0",
+  "version": "0.24.1",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -49,7 +49,8 @@
     "test:card-media": "vitest run src/game/play-media.test.ts src/game/card-play.test.ts src/game/battle-timeline.test.ts src/game/custom-cards.test.ts src/online/protocol.test.ts src/account/model.test.ts",
     "test:card-media-ui": "node scripts/check-card-media.mjs",
     "test:card-media-rooms": "CARD_MEDIA=1 node scripts/check-cast-rooms.mjs",
-    "test:boards-ui": "node scripts/check-board-picker.mjs"
+    "test:boards-ui": "node scripts/check-board-picker.mjs",
+    "test:card-preview-ui": "node scripts/check-card-preview.mjs"
   },
   "dependencies": {
     "@fontsource/roboto-condensed": "^5.3.0",

@@ -133,11 +133,12 @@ body:has(.modal-backdrop) .combat-effects { z-index:95; }
 @media(orientation:portrait) { .battle-arena.board-arcane { background-image:url('/art/arcane-board-portrait.png')!important; } }
 @media(orientation:portrait) { .battle-arena.board-tournament { background-image:url('/art/tournament-board-portrait.png')!important; } }
 @media(max-width:600px) { .battle-arena .board-unit,.battle-arena .board-unit.taunt{border-width:2px} .unit-divine-bubble{border-width:1.5px} }
+/* Explicit editor playback is opt-in; motion preferences still apply in battle. */
 @media(prefers-reduced-motion:reduce) {
-  .unit-enchantments *, .unit-aura-fire, .unit-aura-fire *, .card-play-effects * { animation:none!important; }
-  .card-play-effects .entrance-artwork,.card-play-effects .cast-floor,.card-play-effects .cast-light,.card-play-effects .cast-shockwave{display:none}
-  .card-play-effects .casting-card{transform:none;opacity:1}
-  .card-play-effects.spell-cast .casting-card{transform:translate(var(--spell-x),var(--spell-y))}
+  .unit-enchantments *:not(.play-preview-motion *), .unit-aura-fire:not(.play-preview-motion *), .unit-aura-fire *:not(.play-preview-motion *), .card-play-effects *:not(.play-preview-motion *) { animation:none!important; }
+  .card-play-effects:not(.play-preview-motion *) .entrance-artwork,.card-play-effects:not(.play-preview-motion *) .cast-floor,.card-play-effects:not(.play-preview-motion *) .cast-light,.card-play-effects:not(.play-preview-motion *) .cast-shockwave{display:none}
+  .card-play-effects:not(.play-preview-motion *) .casting-card{transform:none;opacity:1}
+  .card-play-effects.spell-cast:not(.play-preview-motion *) .casting-card{transform:translate(var(--spell-x),var(--spell-y))}
 }
-.reduce-motion .unit-enchantments * { animation:none!important; }
-.reduce-motion .unit-aura-fire,.reduce-motion .unit-aura-fire * { animation:none!important; }
+.reduce-motion .unit-enchantments *:not(.play-preview-motion *) { animation:none!important; }
+.reduce-motion .unit-aura-fire:not(.play-preview-motion *),.reduce-motion .unit-aura-fire *:not(.play-preview-motion *) { animation:none!important; }

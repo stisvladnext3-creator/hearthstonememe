@@ -1,6 +1,6 @@
 import {useCardSounds} from '../useCardSounds';
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { BookOpen, ChevronRight, CircleHelp, Crown, Flag, Flame, RefreshCw, Settings, Shield, Sparkles, Swords, X, Zap } from 'lucide-react';
+import { BookOpen, ChevronRight, CircleHelp, Crown, Flag, Flame, Settings, Shield, Sparkles, Swords, X } from 'lucide-react';
 import AdaptationDialog from './AdaptationDialog';
 import { CARD, cardAbilities, type CardDef } from '../game/cards';
 import { abilityTargets, cardCost, legalTargets, powerProblem, targetNeeded, type Action, type Game, type Minion, type Player, type Side, type Target } from '../game/engine';
@@ -9,7 +9,8 @@ import Modal from './Modal';
 import CombatEffects from './CombatEffects';
 import CardPlayEffects from './CardPlayEffects';
 import UnitEnchantments from './UnitEnchantments';
-import { hasAura, hasDeathrattle } from '../game/visual-effects';
+import UnitBadges from './UnitBadges';
+import { hasAura } from '../game/visual-effects';
 import BattleHistory from './BattleHistory';
 import Discover from './Discover';
 import { heroDefinition, heroCard } from '../game/presentation';
@@ -55,20 +56,7 @@ function Unit({ m, side, selected, canSelect, targetable, onClick, inspect, immu
   const gesture = useLongPress(inspect);
   return <div className="unit-wrap"><button data-combat-anchor={`${side}:${m.uid}`} className={`board-unit ${m.taunt ? 'taunt' : ''} ${m.stealth ? 'stealth' : ''} ${hasAura(c,m)?'aura-source':''} ${m.divineShield ? 'divine-shield' : ''} ${immune ? 'immune-unit' : ''} ${canSelect ? 'ready' : ''} ${selected ? 'selected' : ''} ${targetable ? 'targetable' : ''}`} onClick={onClick} {...gesture} aria-label={`${c.name}: ${m.attack} атаки, ${m.health} здоровья${canSelect ? ', готов атаковать' : ''}`} title={`${c.name}. ${c.text}`}>
     <Art index={c.art} cardId={c.id} /><div className="unit-shade" /><UnitEnchantments minion={m} aura={hasAura(c,m)} immune={immune}/>
-    {m.origin === 'transformed' && <span className="origin-badge" title="Превращение: боевой клич не срабатывал"><RefreshCw size={11} /></span>}
-    {m.charge && !m.silenced && <span className="charge-badge" title="Рывок: может атаковать сразу после выхода"><Zap size={12} /></span>}
-    {m.rush && !m.silenced && <span className="rush-badge" title="Натиск: сразу атакует существ, героя — со следующего своего хода"><Swords size={12} /></span>}
-    {hasDeathrattle(c,m) && <span className="deathrattle-badge" title={m.adaptSpores?`Живые споры: призовёт ${m.adaptSpores*2} Растений 1/1.`:c.text.slice(c.text.indexOf('Предсмертный хрип:'))}>☠</span>}
-    {c.bulky && !m.silenced && <span className="bulky-badge" title="Громоздкий: половина атаки по соседям цели">↔</span>}
-    {m.reborn&&<span className="reborn-badge" title="Перерождение: вернётся с 1 здоровьем">↻</span>}
-    {m.lifesteal&&<span className="lifesteal-badge" title="Похищение жизни: нанесённый урон лечит героя">♥</span>}
-    {m.elusive&&<span className="elusive-badge" title="Не может быть целью заклинаний и силы героя">◇</span>}
-    {m.windfury && <span className="windfury-badge" title="Неистовство ветра: две атаки за ход">≋</span>}
-    {m.poisonous && <span className="poison-badge" title="Яд: нанесённый существу урон смертелен">☠</span>}
-    {m.stealth && <span className="stealth-badge" title="Маскировка: нельзя выбрать целью вражеской атаки или способности">◉</span>}
-    {!m.ready && !m.cannotAttack && <span className="sleep-mark">zZ</span>}
-    {m.cannotAttack && <span className="sleep-mark"><X size={15} /></span>}
-    {m.silenced && <span className="silence-mark">Немота</span>}
+    <UnitBadges card={c} minion={m}/>
     <span className="unit-attack">{m.attack}</span><span className={`unit-health ${m.health < m.maxHealth ? 'damaged' : ''}`}>{m.health}</span>
   </button><button className="unit-info" onClick={inspect} aria-label={`Подробнее о ${c.name}`}><CircleHelp size={11} /></button></div>;
 }

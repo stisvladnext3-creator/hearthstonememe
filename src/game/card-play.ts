@@ -1,6 +1,7 @@
 import { CARD } from './cards';
 import { act, activePower, type Action, type CardCast, type Game, type Result, type Side } from './engine';
 import { powerCardId } from './presentation';
+import { usesCardEntrance } from './visual-effects';
 
 export const CARD_PLAY_MS = 1500;
 
@@ -10,6 +11,7 @@ export function stageAction(input: Game, side: Side, action: Action, now = Date.
   const checked = act(input, side, action);
   if (checked.error || action.type !== 'play' && action.type !== 'power') return checked;
   const cardId = action.type === 'play' ? input[side].hand.find(c => c.uid === action.uid)!.id : powerCardId(activePower(input, side));
+  if(action.type==='power'&&!usesCardEntrance(CARD[cardId]))return checked;
   return { state: { ...input, casting: { side, cardId, action: { ...action }, startedAt: now, endsAt: now + CARD_PLAY_MS } } };
 }
 

@@ -10,7 +10,7 @@ export const userCards = () => [...library];
 export const isCustomHero = (id: string) => CARD[id]?.kind === 'hero';
 export const LIBRARY_LIMIT = 300;
 export function validateCardPack(raw: unknown, scope: 'publication' | 'library' | 'match' = 'publication'): CardDef[] {
-  if (!Array.isArray(raw) || raw.length > (scope === 'library' ? LIBRARY_LIMIT : scope === 'match' ? CUSTOM_LIMIT * 2 : CUSTOM_LIMIT) || new TextEncoder().encode(JSON.stringify(raw)).length > (scope === 'library' ? 8_000_000 : scope === 'match' ? PACK_LIMIT * 2 : PACK_LIMIT)) throw new Error(scope === 'library'?'В личной коллекции допустимо до 300 пользовательских карт. Удали ненужное дополнение или уменьши картинки.':scope === 'match'?'В матче допустимо до 120 пользовательских определений и 4000 КБ. Уменьшите число зависимостей.':'В наборе допустимо до 60 карт и 2000 КБ. Уменьши число карт или размер картинок.');
+  if (!Array.isArray(raw) || raw.length > (scope === 'library' ? LIBRARY_LIMIT : scope === 'match' ? CUSTOM_LIMIT * 2 : CUSTOM_LIMIT) || new TextEncoder().encode(JSON.stringify(raw)).length > (scope === 'library' ? 8_000_000 : scope === 'match' ? PACK_LIMIT * 2 : PACK_LIMIT)) throw new Error(scope === 'library'?'В личной коллекции допустимо до 300 пользовательских карт. Удали ненужное дополнение или уменьши картинки и звуки.':scope === 'match'?'В матче допустимо до 120 пользовательских определений и 4000 КБ. Уменьшите число зависимостей или размер звуков.':'В наборе допустимо до 60 карт и 2000 КБ. Уменьши число карт, размер картинок или звуков.');
   const cards = raw.map(normalizeCustomCard);
   if (cards.some(c => !c)) throw new Error('Некорректная карта или правило. Проверь параметры редактора.');
   const result = cards as CardDef[], map = new Map(result.map(c => [c.id, c]));
@@ -74,7 +74,7 @@ export function saveCustomLibrary(cards: CardDef[], extra: Record<string, unknow
   catch {
     for (const key of Object.keys(updates)) localStorage.removeItem(key);
     for (const [key,value] of previous) if (value !== null) localStorage.setItem(key,value);
-    throw new Error('Не удалось сохранить набор: в браузере нет места. Удали ненужное дополнение или уменьши картинки.');
+    throw new Error('Не удалось сохранить набор: в браузере нет места. Удали ненужное дополнение или уменьши картинки и звуки.');
   }
   for (const card of normalized) CARD[card.id] = card;
   displayLibrary(normalized);

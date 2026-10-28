@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.23.0",
+  "version": "0.24.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -45,6 +45,10 @@
     "test:accounts": "vitest run src/account/model.test.ts src/account/api.test.ts src/decks.test.ts src/game/metrics.test.ts",
     "test:account-server": "node scripts/check-account-server.mjs",
     "test:accounts-ui": "node scripts/check-accounts.mjs",
+    "test:session-transport": "node scripts/check-session-transport.mjs",
+    "test:card-media": "vitest run src/game/play-media.test.ts src/game/card-play.test.ts src/game/battle-timeline.test.ts src/game/custom-cards.test.ts src/online/protocol.test.ts src/account/model.test.ts",
+    "test:card-media-ui": "node scripts/check-card-media.mjs",
+    "test:card-media-rooms": "CARD_MEDIA=1 node scripts/check-cast-rooms.mjs",
     "test:boards-ui": "node scripts/check-board-picker.mjs"
   },
   "dependencies": {

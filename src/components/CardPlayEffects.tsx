@@ -1,9 +1,9 @@
 import { useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { CARD } from '../game/cards';
+import { CARD,type CardDef } from '../game/cards';
 import { CARD_PLAY_MS } from '../game/card-play';
 import type { CardCast } from '../game/engine';
-import { entranceFor, isCreature, type Entrance } from '../game/visual-effects';
+import { entranceFor, isCreature, usesCardEntrance, type Entrance } from '../game/visual-effects';
 import { Art, Card } from './Card';
 
 // Vector artwork stays crisp at phone and desktop sizes. Every entrance has
@@ -33,7 +33,7 @@ export function EntranceArtwork({ variant }: { variant: Entrance }) {
 export default function CardPlayEffects({ cast, animations }: { cast: CardCast; animations: boolean }) {
   const [geometry, setGeometry] = useState<{ x:number; y:number; dx:number; dy:number; size:number; width:number; height:number; spellX:number; spellY:number }>();
   const elapsed = useRef(Math.min(CARD_PLAY_MS, Math.max(0, Date.now() - cast.startedAt)));
-  const card = CARD[cast.cardId], creature = isCreature(card), variant = entranceFor(card);
+  const card = CARD[cast.cardId], creature = isCreature(card);
   useLayoutEffect(() => {
     const measure = () => {
       const arena = document.querySelector<HTMLElement>('.battle-arena'), row = document.querySelector<HTMLElement>(cast.side === 'player' ? '.player-board' : '.enemy-board');
@@ -57,12 +57,17 @@ export default function CardPlayEffects({ cast, animations }: { cast: CardCast; 
     };
     measure();window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);
   }, [cast]);
-  if(!geometry)return null;
+  if(!geometry||!usesCardEntrance(card))return null;
   const {x,y,dx,dy,size,width,height,spellX,spellY}=geometry;
   const style={'--cast-size':`${size}px`,'--cast-dx':`${dx}px`,'--cast-dy':`${dy}px`,'--cast-width':`${width}px`,'--cast-height':`${height}px`,'--spell-x':`${spellX}px`,'--spell-y':`${spellY}px`,'--cast-elapsed':`${-elapsed.current}ms`,left:x,top:y} as CSSProperties;
-  return createPortal(<div className={`card-play-effects ${creature?'creature-cast':'spell-cast'} cast-${variant} ${!animations?'still-cast':''}`} data-entrance={variant} style={style} aria-hidden="true">
+  return createPortal(<CardPlayVisual card={card} animations={animations} style={style}/>,document.body);
+}
+
+export function CardPlayVisual({card,animations=true,style}:{card:CardDef;animations?:boolean;style:CSSProperties}){
+  const creature=isCreature(card),variant=entranceFor(card);
+  return <div className={`card-play-effects ${creature?'creature-cast':'spell-cast'} cast-${variant} ${!animations?'still-cast':''}`} data-entrance={variant} style={style} aria-hidden="true">
     <div className="cast-floor"/><EntranceArtwork variant={variant}/><div className="cast-light"/>
-    <div className="casting-card">{creature?<><Art index={card.art} cardId={card.id}/><span className="cast-stat attack">{card.attack}</span><span className="cast-stat health">{card.health}</span></>:<Card card={card}/>}</div>
+    <div className="casting-card">{creature?<><Art index={card.art} cardId={card.id} picture={card.editor?.image} sourceId={card.editor?.artSourceId} view={card.editor?.imageView}/><span className="cast-stat attack">{card.attack}</span><span className="cast-stat health">{card.health}</span></>:<Card card={card}/>}</div>
     <div className="cast-shockwave"/>
-  </div>,document.body);
+  </div>;
 }

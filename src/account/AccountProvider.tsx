@@ -1,6 +1,6 @@
 import { Fragment,createContext,useCallback,useContext,useEffect,useLayoutEffect,useRef,useState,type ReactNode } from 'react';
 import { LoaderCircle } from 'lucide-react';
-import { AccountApi,ApiError,discoverApi,validAccount,validSession,type Account,type Session } from './api';
+import { AccountApi,ApiError,confirmSession,discoverApi,validAccount,validSession,type Account,type Session } from './api';
 import { AccountSync,type SyncNotice } from './sync';
 import { applyRecords,captureRecords,digest,hasProgress,mergeRecords,stable,starterRecord } from './model';
 import { profileKey,profileRefreshed,profileScope,setProfileScope } from './scope';
@@ -43,8 +43,8 @@ export function AccountProvider({children}:{children:ReactNode}){
   return()=>controller.stop();
  },[target]);
  const client=useCallback(()=>{const s=sessionRef.current,u=urlRef.current;return s&&u?new AccountApi(u,s.token):null;},[]);
- const login=async(email:string,password:string)=>{if(!url)throw new Error('Вход пока недоступен.');const s=await new AccountApi(url).login(email.trim().toLowerCase(),password);if(!validSession(s))throw new Error('Не удалось войти в аккаунт.');saveSession(url,s);setConfigured(true);switchSession(s);};
- const register=async(email:string,password:string,name:string)=>{if(!url)throw new Error('Регистрация пока недоступна.');const result=await new AccountApi(url).register(email.trim().toLowerCase(),password,name);if('requiresVerification'in result)return true;if(!validSession(result))throw new Error('Не удалось создать аккаунт.');saveSession(url,result);switchSession(result);return false;};
+ const login=async(email:string,password:string)=>{if(!url)throw new Error('Вход пока недоступен.');const api=new AccountApi(url);await api.health();const raw=await api.login(email.trim().toLowerCase(),password);if(!validSession(raw))throw new Error('Не удалось войти в аккаунт.');const s=await confirmSession(url,raw);if(!validSession(s))throw new Error('Не удалось войти в аккаунт.');saveSession(url,s);setConfigured(true);switchSession(s);};
+ const register=async(email:string,password:string,name:string)=>{if(!url)throw new Error('Регистрация пока недоступна.');const api=new AccountApi(url);await api.health();const result=await api.register(email.trim().toLowerCase(),password,name);if('requiresVerification'in result)return true;if(!validSession(result))throw new Error('Не удалось создать аккаунт.');const verified=await confirmSession(url,result);saveSession(url,verified);switchSession(verified);return false;};
  const logout=async()=>{await sync.current?.sync();const api=client();try{await api?.logout();}catch{/* Logout removes local credentials even offline. */}if(url)saveSession(url,null);switchSession(null);};
  const retryServer=async()=>{const found=url??await discoverApi();if(!found)throw new Error('Вход пока недоступен. Попробуй позже.');await new AccountApi(found).health();setUrl(found);urlRef.current=found;setConfigured(true);};
  const importGuest=async()=>{const scope=profileScope();if(scope==='guest')return;await sync.current?.sync();const guest=captureRecords('guest'),local=captureRecords(scope);if(!hasProgress(local))for(const key of Object.keys(local))if(key.startsWith('deck:')&&starterRecord(local[key]))delete local[key];

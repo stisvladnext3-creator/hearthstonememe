@@ -35,6 +35,7 @@ import './image-framing.css';
 import './adaptation.css';
 import './battle-visuals.css';
 import './accounts.css';
+import './card-media.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><AccountProvider><ArtworkProvider><CardAppearanceProvider><App /></CardAppearanceProvider></ArtworkProvider></AccountProvider></React.StrictMode>,

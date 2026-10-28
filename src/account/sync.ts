@@ -6,7 +6,7 @@ import { applyRecords,captureRecords,digest,initializeAccountDecks,mergeRecords,
 import { PROFILE_CHANGED,profileKey,profileRefreshed } from './scope';
 
 export type SyncStatus='loading'|'syncing'|'saved'|'offline'|'error';
-export interface SyncNotice {status:SyncStatus;message:string;lastSync?:number}
+export interface SyncNotice {status:SyncStatus;message:string;lastSync?:number;reason?:'reauth'|'server-session'}
 const cancelled=()=>new DOMException('Account changed','AbortError');
 function readBase(scope:string):RemoteState{try{const value=JSON.parse(localStorage.getItem(profileKey('sync-base',scope))??'null');if(value&&Number.isSafeInteger(value.revision)&&value.records&&typeof value.records==='object')return value;}catch{/* A fresh pull can recover the cache. */}return {revision:0,records:{}};}
 export class AccountSync {
@@ -14,12 +14,12 @@ export class AccountSync {
  private base:RemoteState;lastSync?:number;
  constructor(public readonly scope:string,public readonly api:AccountApi,private notice:(v:SyncNotice)=>void){this.base=readBase(scope);}
  private assert(){if(!this.alive)throw cancelled();}
- private report(status:SyncStatus,message:string){if(this.alive)this.notice({status,message,lastSync:this.lastSync});}
+ private report(status:SyncStatus,message:string,reason?:SyncNotice['reason']){if(this.alive)this.notice({status,message,lastSync:this.lastSync,...(reason?{reason}:{})});}
  start(){window.addEventListener(PROFILE_CHANGED,this.change);window.addEventListener('online',this.wake);window.addEventListener('focus',this.wake);this.interval=setInterval(this.wake,20000);}
  stop(){this.alive=false;clearTimeout(this.timer);clearInterval(this.interval);window.removeEventListener(PROFILE_CHANGED,this.change);window.removeEventListener('online',this.wake);window.removeEventListener('focus',this.wake);}
  private change=(event:Event)=>{const detail=(event as CustomEvent<{scope:string;keys:string[]}>).detail;if(detail.scope!==this.scope||!detail.keys.some(k=>!['game','sync-base'].includes(k)))return;this.dirty=true;clearTimeout(this.timer);this.report('syncing','Сохраняем прогресс…');this.timer=setTimeout(()=>void this.sync(),800);};
  private wake=()=>{void this.sync();};
- async sync():Promise<void>{if(this.running){this.dirty=true;return this.running;}if(!this.alive)return;const work=this.run().catch(error=>{if(!this.alive||error?.name==='AbortError')return;if(error instanceof ApiError&&error.status===401){this.report('error','Нужно снова войти в аккаунт.');return;}this.report(error instanceof ApiError&&error.status===0?'offline':'error',error instanceof Error?error.message:'Не удалось сохранить прогресс.');}).finally(()=>{this.running=null;if(this.alive&&this.dirty){clearTimeout(this.timer);this.timer=setTimeout(()=>void this.sync(),1500);}});this.running=work;return work;}
+ async sync():Promise<void>{if(this.running){this.dirty=true;return this.running;}if(!this.alive)return;const work=this.run().catch(error=>{if(!this.alive||error?.name==='AbortError')return;if(error instanceof ApiError&&error.status===401){if(error.code==='session_header_missing')this.report('error',error.message,'server-session');else this.report('error','Сервер не принимает текущую сессию. Войди ещё раз; если ошибка повторяется сразу после входа, обнови сервер аккаунтов на хостинге.','reauth');return;}this.report(error instanceof ApiError&&error.status===0?'offline':'error',error instanceof Error?error.message:'Не удалось сохранить прогресс.');}).finally(()=>{this.running=null;if(this.alive&&this.dirty){clearTimeout(this.timer);this.timer=setTimeout(()=>void this.sync(),1500);}});this.running=work;return work;}
  private setBase(value:RemoteState){this.assert();localStorage.setItem(profileKey('sync-base',this.scope),JSON.stringify(value));this.base=value;}
  private async prepareArtwork(){
   const images=await readArtwork(this.scope);this.assert();

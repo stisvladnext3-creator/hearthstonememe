@@ -31,7 +31,7 @@ try{
  r=await fetch(url.replace('index.php','install.php'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(installBody)});assert.equal(r.status,200,JSON.stringify(await r.json()));checks++;
  assert.equal((await fetch(url.replace('index.php','install.php'))).status,404);checks++;
  docker('exec',api,'php','-r',"$p='/var/lib/memestone/config.php';$c=require $p;$c['allowed_origins'][]='http://127.0.0.1:4174';file_put_contents($p,'<?php return '.var_export($c,true).';');");
- await request('health');await request('health',{headers:{Origin:'https://evil.example'},status:403});
+ assert.equal((await request('health')).data.sessionHeader,'X-Memestone-Session');checks++;await request('health',{headers:{Origin:'https://evil.example'},status:403});
  const cors=await request('health',{headers:{Origin:'http://127.0.0.1:5176'}});assert.equal(cors.response.headers.get('access-control-allow-origin'),'http://127.0.0.1:5176');checks++;
  await request('me',{status:401});
  const a=(await request('register',{method:'POST',body:{email:'a@example.test',password,name:'Игрок А',role:'admin',capabilities:{unlimitedResources:true}},status:201})).data;
@@ -41,6 +41,11 @@ try{
  await request('login',{method:'POST',body:{email:a.user.email,password:'incorrect'},status:401});
  const a2=(await request('login',{method:'POST',body:{email:'A@example.test',password}})).data;
  const admin=(await request('login',{method:'POST',body:{email:'admin@example.test',password:adminPassword}})).data;assert.equal(admin.user.role,'admin');assert.equal(admin.user.capabilities.unlimitedResources,true);checks++;
+ await request('me',{headers:{'X-Memestone-Session':a.token}});await request('state',{headers:{'X-Memestone-Session':a.token}});
+ const renamed=(await request('profile',{method:'POST',headers:{'X-Memestone-Session':a.token},body:{name:'Имя через FastCGI'}})).data;assert.equal(renamed.user.name,'Имя через FastCGI');checks++;
+ await request('me',{token:a.token,headers:{'X-Memestone-Session':b.token},status:401});
+ const preflight=await request('state',{method:'OPTIONS',headers:{Origin:'http://127.0.0.1:5176','Access-Control-Request-Headers':'x-memestone-session,content-type'},status:204});assert.ok(preflight.response.headers.get('access-control-allow-headers').includes('X-Memestone-Session'));checks++;
+ const alias=docker('exec',api,'php','-r',`require '/var/www/html/api/lib/core.php';$_SERVER['REDIRECT_HTTP_AUTHORIZATION']='Bearer ${a.token}';echo session_token()==='${a.token}'?'ok':'bad';`);assert.equal(alias,'ok');checks++;
  const profile=(await request('profile',{token:a.token,method:'POST',body:{name:'Новое имя',role:'admin'}})).data;assert.equal(profile.user.name,'Новое имя');assert.equal(profile.user.role,'player');checks++;
  const deck={id:'test-deck',name:'Синергия',heroClass:'mage',cards:['regular','regular'],order:0},metrics={cardsPlayed:4,heroDamage:8,minionDamage:3,manaSpent:10};
  await request('state',{token:a.token,method:'PUT',body:{expectedRevision:0,changes:{'deck:test-deck':deck,'selected:deck':'test-deck','stat:match-one':{...metrics,finished:true,won:true},'legacy:old':{cardsPlayed:0,heroDamage:0,minionDamage:0,manaSpent:0,wins:2,games:0}}}});
@@ -56,11 +61,16 @@ try{
  await request('state',{token:b.token,method:'PUT',body:{expectedRevision:0,changes:{'art:test':{hash,format:'portrait',mime:'image/png',size:png.length}}},status:409});
  await request('state',{token:a.token,method:'PUT',body:{expectedRevision:2,changes:{'art:test':{hash,format:'portrait',mime:'image/png',size:png.length},'deck:test-deck':null}}});
  r=await fetch(imageUrl,{headers:{Authorization:'Bearer '+a2.token}});assert.deepEqual(Buffer.from(await r.arrayBuffer()),png);checks++;
+ const audio=Buffer.alloc(160044);audio.write('RIFF');audio.writeUInt32LE(audio.length-8,4);audio.write('WAVEfmt ',8);audio.writeUInt32LE(16,16);audio.writeUInt16LE(1,20);audio.writeUInt16LE(1,22);audio.writeUInt32LE(16000,24);audio.writeUInt32LE(32000,28);audio.writeUInt16LE(2,32);audio.writeUInt16LE(16,34);audio.write('data',36);audio.writeUInt32LE(160000,40);
+ const mediaCard={id:'custom-media-card',name:'Звуковая карта',kind:'minion',cost:2,attack:2,health:3,art:0,text:'',flavor:'',rarity:'common',editor:{version:1,tags:[],rules:[],animation:'nature',sound:{data:'data:audio/wav;base64,'+audio.toString('base64'),name:'voice.wav',duration:5000}}};
+ await request('state',{token:a.token,method:'PUT',body:{expectedRevision:3,changes:{'card:custom-media-card':mediaCard}}});assert.equal((await request('state',{token:a2.token})).data.records['card:custom-media-card'].editor.sound.duration,5000);checks++;
+ await request('state',{token:a.token,method:'PUT',body:{expectedRevision:4,changes:{'card:custom-media-card':{...mediaCard,editor:{...mediaCard.editor,animation:'unsafe'}}}},status:400});
+ await request('state',{token:a.token,method:'PUT',body:{expectedRevision:4,changes:{'card:custom-media-card':{...mediaCard,editor:{...mediaCard.editor,sound:{...mediaCard.editor.sound,data:'https://evil.example/sound.mp3'}}}}},status:400});
  const history={id:'match-one',endedAt:Date.now(),turns:4,outcome:'win',opponent:'Борис',playerHero:'mage',opponentHero:'cat',mode:'training',metrics,log:[{id:1,text:'Победа!',side:'system',kind:'finish'}],cards:[]};
  await request('history',{token:a.token,method:'POST',body:history});await request('history',{token:a.token,method:'POST',body:{...history,outcome:'loss'}});
  assert.equal((await request('history',{token:a2.token})).data.total,1);assert.equal((await request('history',{token:a2.token,query:{id:'match-one'}})).data.outcome,'win');checks++;
  await request('history',{token:b.token,query:{id:'match-one'},status:404});assert.equal((await request('history',{token:b.token})).data.total,0);checks++;
- await request('logout',{token:b.token,method:'POST',body:{}});await request('me',{token:b.token,status:401});
+ await request('logout',{headers:{'X-Memestone-Session':b.token},method:'POST',body:{}});await request('me',{token:b.token,status:401});
  const changed=(await request('password-change',{token:a.token,method:'POST',body:{currentPassword:password,password:password+'new'}})).data;await request('me',{token:a.token,status:401});await request('me',{token:a2.token,status:401});await request('me',{token:changed.token});
  await request('login',{method:'POST',body:{email:a.user.email,password},status:401});await request('login',{method:'POST',body:{email:a.user.email,password:password+'new'}});
  await request('password-forgot',{method:'POST',body:{email:a.user.email},status:503});

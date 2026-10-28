@@ -6,7 +6,7 @@ require __DIR__.'/lib/state.php';
 require __DIR__.'/lib/data.php';
 try{
  $action=$_GET['action']??'health';$c=configuration();safe_headers($c);
- if($action==='health'){method('GET');respond(['service'=>'memestone-accounts','version'=>1,'configured'=>true,'mailEnabled'=>mail_enabled($c)]);}
+ if($action==='health'){method('GET');respond(['service'=>'memestone-accounts','version'=>1,'configured'=>true,'mailEnabled'=>mail_enabled($c),'sessionHeader'=>'X-Memestone-Session']);}
  $db=db($c);
  if(in_array($action,['register','login','me','logout','profile','password-change','password-forgot','password-reset','email-verify','verify-resend'],true))auth_route($action,$db,$c);
  $a=current_account($db);

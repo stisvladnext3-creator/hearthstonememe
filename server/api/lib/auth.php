@@ -24,7 +24,7 @@ function auth_route(string $action,PDO $db,array $c):never {
   respond(session($db,$a));
  }
  if($action==='me'){method('GET');respond(['user'=>public_account(current_account($db)),'mailEnabled'=>mail_enabled($c)]);}
- if($action==='logout'){method('POST');current_account($db);$token=substr($_SERVER['HTTP_AUTHORIZATION'],7);query($db,'DELETE FROM account_sessions WHERE token_hash=?',[hash('sha256',$token)]);respond(['ok'=>true]);}
+ if($action==='logout'){method('POST');current_account($db);$token=session_token();query($db,'DELETE FROM account_sessions WHERE token_hash=?',[hash('sha256',$token)]);respond(['ok'=>true]);}
  if($action==='profile'){
   method('POST');$a=current_account($db);$v=json_body(4096);$name=display_name($v['name']??null);query($db,'UPDATE accounts SET display_name=? WHERE id=?',[$name,$a['id']]);$a['display_name']=$name;respond(['user'=>public_account($a)]);
  }

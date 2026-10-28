@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { BOT_DECK, STARTER_DECK } from '../game/cards';
+import { BOT_DECK, STARTER_DECK, classDeck } from '../game/cards';
 import { act, type Side } from '../game/engine';
 import { cleanName, createRoomGame, normalizeCode, roomCode, roomGameView, validAction, validCode, validDeck, validRoomView } from './protocol';
 
-const make = (seed = 100) => createRoomGame(STARTER_DECK, BOT_DECK, 'Хозяин', 'Гость', seed, 'opaque-match-id');
+const hostDeck=classDeck(STARTER_DECK,'mage'),guestDeck=classDeck(BOT_DECK,'mage');
+const make = (seed = 100) => createRoomGame(hostDeck, guestDeck, 'Хозяин', 'Гость', seed, 'opaque-match-id');
 describe('room protocol and private information', () => {
   it.each([100, 101])('both selected decks and a fair first turn survive seat assignment for seed %s', seed => {
     const g = make(seed);
     const cards = (side: Side) => [...g[side].deck, ...g[side].hand.map(c => c.id)].sort();
-    expect(cards('player')).toEqual([...STARTER_DECK].sort()); expect(cards('bot')).toEqual([...BOT_DECK].sort());
+    expect(cards('player')).toEqual([...hostDeck].sort()); expect(cards('bot')).toEqual([...guestDeck].sort());
     expect(g.active).toBe(seed % 2 ? 'bot' : 'player'); expect(g[g.active].mana).toBe(1); expect(g[g.active === 'player' ? 'bot' : 'player'].mana).toBe(0);
     expect(g.id).toBe('opaque-match-id'); expect(g.player.name).toBe('Хозяин'); expect(g.bot.name).toBe('Гость');
   });

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CARD, CARDS, STARTER_DECK, deckError, type CardDef } from './cards';
+import { CARD, CARDS, STARTER_DECK, classDeck, deckError, type CardDef } from './cards';
 import { abilityTargets, act, cardCost, chooseBotAction, createGame, legalTargets, other, powerCost, targetNeeded, type Game, type Side, type Target } from './engine';
 import { describeCustomCard, newCustomCard, packForCards, registerCardPack, restoreCustomCards, saveCustomLibrary, userCards, validateCardPack } from './custom-cards';
 import { newRule, type CustomRule } from './custom-schema';
@@ -183,7 +183,7 @@ describe('custom catalog, saved games and network definitions', () => {
   it('persists the library, supports a legal 30-card deck and guarantees its quest in the opening hand', () => {
     const values = new Map<string, string>(); vi.stubGlobal('localStorage', { getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => values.set(k, v) });
     const pack = rdsExample(); saveCustomLibrary(pack); restoreCustomCards(); expect(userCards()).toHaveLength(6);
-    const quest = pack.find(c => c.quest)!; const deck = [...STARTER_DECK]; deck[deck.indexOf('rash-quest')] = quest.id;
+    const quest = pack.find(c => c.quest)!; const deck = classDeck(STARTER_DECK,'mage'); deck[deck.indexOf('rash-quest')] = quest.id;
     expect(deckError(deck)).toBeUndefined(); const g = createGame(deck, 12, deck, 30000);
     expect(g.player.hand[0].id).toBe(quest.id); expect(g.bot.hand[0].id).toBe(quest.id);
     values.set('memestone.v1.game', JSON.stringify(g)); expect(loadGame()?.id).toBe(g.id);

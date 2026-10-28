@@ -15,6 +15,7 @@ function setup() {
 function body(g:Game,id='regular',patch:Partial<Minion>={}) {
   const c=CARD[id]; const m:Minion={id,uid:g.nextUid++,attack:c.attack!,health:1,maxHealth:c.health!,ready:true,taunt:false,cannotAttack:false,silenced:false,ephemeral:false,...patch};g.bot.board.push(m);return m;
 }
+function animatedPower(g:Game){const c:CardDef={...newCustomCard(),kind:'power',attack:undefined,health:undefined};c.editor!.animation='arcane';c.editor!.rules=[{...newRule(),amount:1,target:'selectedEnemy'}];registerCardPack([c]);g.player.power=c.id;g.customCards=[c];}
 afterEach(()=>vi.unstubAllGlobals());
 
 it('applies a spell, its cost and metrics only after the entire 1500ms cast',()=>{
@@ -38,7 +39,7 @@ it('delays hero replacement, armour and its new power together',()=>{
   const resolved=resolveCast(cast,11500);expect(resolved.player.hero).toBe('trachukcha');expect(resolved.player.armor).toBe(50);expect(resolved.player.power).not.toBe('spark');
 });
 it('delays targeted powers and blocks all other commands, while allowing concede',()=>{
-  const g=setup(),cast=stageAction(g,'player',{type:'power',target:'hero'},10000).state;
+  const g=setup();animatedPower(g);const cast=stageAction(g,'player',{type:'power',target:'hero'},10000).state;
   expect(cast.player.powerUsed).toBe(false);expect(cast.bot.health).toBe(30);
   for(const action of [{type:'end'},{type:'play',uid:g.player.hand[1].uid},{type:'power',target:'hero'}] as const)expect(stageAction(cast,'player',action,10500).error).toBeTruthy();
   const resigned=stageAction(cast,'player',{type:'concede'},10500).state;expect(resigned.winner).toBe('bot');expect(resigned.casting).toBeUndefined();expect(resolveCast(resigned,12000).bot.health).toBe(30);
@@ -59,7 +60,7 @@ it('projects a cast to both seats without exposing the rest of the opponent hand
   for(const side of ['player','bot'] as const){const view=roomGameView(cast,side);expect(validRoomView(view)).toBe(true);expect(view.casting?.side).toBe(side==='player'?'player':'bot');expect(view.casting?.cardId).toBe('bolt');expect(view.bot.hand.every(h=>h.id==='hidden')).toBe(true);}
 });
 it('validates cast duration, owner, source and pending choice exclusivity',()=>{
-  const g=stageAction(setup(),'player',{type:'power',target:'hero'},10000).state;
+  const initial=setup();animatedPower(initial);const g=stageAction(initial,'player',{type:'power',target:'hero'},10000).state;
   expect(validCast(g,g.casting)).toBe(true);
   for(const patch of [{endsAt:11499},{side:'bot'},{cardId:'regular'},{startedAt:NaN},{action:{type:'end'}}])expect(validCast(g,{...g.casting,...patch})).toBe(false);
   expect(validCast({...g,winner:'player'},g.casting)).toBe(false);

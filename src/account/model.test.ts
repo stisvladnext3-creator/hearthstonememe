@@ -7,6 +7,7 @@ import { setTestAccount } from './access';
 import { emptyMetrics } from '../game/metrics';
 import { newCustomCard } from '../game/custom-cards';
 import { newRule } from '../game/custom-schema';
+import {pcmSound} from '../game/play-media';
 
 const alice='11111111-1111-4111-8111-111111111111',bob='22222222-2222-4222-8222-222222222222';
 let store:Map<string,string>;
@@ -39,6 +40,9 @@ it('deletes the original but retains an independently edited version of a remove
 });
 it('removes a cloud-deleted preference instead of uploading the old device value again',()=>{
  store.set(profileKey('online-name',alice),JSON.stringify('Прежнее имя'));applyRecords({'preferences:online-name':null},alice);expect(captureRecords(alice)['preferences:online-name']).toBeUndefined();
+});
+it('restores the selected animation and embedded sound on another account device',()=>{
+ const c=newCustomCard();c.editor!.animation='portal';c.editor!.sound=pcmSound(new Float32Array(1600),'voice.wav');applyRecords({['card:'+c.id]:c},alice);const captured=captureRecords(alice);applyRecords(captured,bob);const restored=captureRecords(bob)['card:'+c.id];expect(restored).toEqual(captured['card:'+c.id]);expect((restored as typeof c).editor!.sound).toEqual(c.editor!.sound);
 });
 it('counts each match once while combining monotonic metrics from two devices',async()=>{
  const a={...emptyMetrics(),cardsPlayed:5,heroDamage:8,finished:true,won:true},b={...a,cardsPlayed:2,heroDamage:12,finished:false,won:false};

@@ -1,6 +1,7 @@
+import {unlockCardAudio} from './card-audio';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Sparkles, X } from 'lucide-react';
-import type { CardDef } from './game/cards';
+import { CARD,type CardDef } from './game/cards';
 import { act, chooseBotAction, createGame, expireMulligan, type Action } from './game/engine';
 import { resolveCast, stageAction } from './game/card-play';
 import { loadGame, loadStats, read, write, recordMatchStats } from './storage';
@@ -39,6 +40,7 @@ function Logo({ small = false }: { small?: boolean }) {
 }
 export default function App() {
   const account=useAccount(),scope=profileScope();
+  useEffect(()=>{document.addEventListener('pointerdown',unlockCardAudio,{passive:true});document.addEventListener('keydown',unlockCardAudio);return()=>{document.removeEventListener('pointerdown',unlockCardAudio);document.removeEventListener('keydown',unlockCardAudio);};},[]);
   const viewport = useViewport();
   useEffect(() => { document.documentElement.style.setProperty('--app-height', `${viewport.height}px`); }, [viewport.height]);
   const [page, setPage] = useState<Page>(() => new URLSearchParams(location.search).has('room') ? 'rooms' : 'home');
@@ -164,7 +166,7 @@ export default function App() {
     if (current !== game) setGame(current);
     const result = stageAction(current, 'player', action);
     if (result.error) notify(result.error);
-    else { setGame(result.state); sound(); }
+    else { setGame(result.state); if(action.type!=='play'||!CARD[current.player.hand.find(c=>c.uid===action.uid)?.id??'']?.editor?.sound)sound(); }
   };
   const saveDeck = (ids: string[], name?: string) => {
     const error = draftError(ids, selectedDeck?.heroClass); if (error) { notify(error); return; }
@@ -191,8 +193,8 @@ export default function App() {
       {page === 'collection' && <Collection deckInfo={selectedDeck} decks={deckBook.decks} selectDeck={selectDeck} createDeck={addDeck} deleteDeck={deleteDeck} saveDeck={saveDeck} inspect={inspect} back={() => navigate('home')} notify={notify} editCards={() => openEditor('collection')} expansions={() => openCommunity('installed')} publishDeck={id => openPublish({kind:'deck',deckId:id})} revision={cardRevision} />}
       {page === 'editor' && <CardWorkshop back={() => navigate(editorBack)} backLabel={editorBack === 'home' ? 'Главное меню' : editorBack === 'community' ? 'Пользовательские карты' : 'Коллекция'} publish={openPublish} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deckBook.decks.flatMap(d => d.cards)} />}
       {page === 'community' && catalog.current && <CommunityCards key={communityTab} initialTab={communityTab} state={catalogState} catalog={catalog.current} book={deckBook} changed={book => { setDeckBook(book); setCardRevision(n=>n+1); }} back={() => navigate('home')} editor={() => openEditor('community')} publish={openPublish} inspect={inspect} notify={notify} overlayOpen={!!modal || !!inspected} />}
-      {page === 'battle' && game && <Battle settings={openSettings} board={settings.board} overlayOpen={!!modal || !!inspected} animations={settings.motion} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} />}
-      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={openSettings} home={() => navigate('home')} battleChanged={setOnlineBattle} recordStats={updateOnlineStats} />
+      {page === 'battle' && game && <Battle settings={openSettings} board={settings.board} overlayOpen={!!modal || !!inspected} animations={settings.motion} sound={settings.sound} volume={settings.volume} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} />}
+      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} sound={settings.sound} volume={settings.volume} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={openSettings} home={() => navigate('home')} battleChanged={setOnlineBattle} recordStats={updateOnlineStats} />
     </main>
     {page !== 'editor' && <footer className="site-footer"><div><Logo small /><span>Создано для своих.</span></div><p>Независимый фан-проект. Не связан с Blizzard Entertainment.</p><button className="text-button" onClick={() => setModal('about')}>О проекте <ArrowUpRight size={13} /></button></footer>}
     {toast && <div className="toast" role="status"><Sparkles size={18} /><span>{toast}</span><button className="icon-button" aria-label="Скрыть сообщение" onClick={() => setToast('')}><X size={15} /></button></div>}

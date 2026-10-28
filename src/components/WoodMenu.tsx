@@ -19,6 +19,6 @@ export default function WoodMenu({ resume, start, collection, help, settings, pr
     <button className="wood-side-button packs" disabled aria-label="Открыть наборы — скоро" title="Открыть наборы — скоро"><span className="wood-emblem" aria-hidden="true" /><span className="wood-side-caption"><span>Открыть наборы</span><small>Скоро</small></span></button>
     <button className="wood-side-button rules" onClick={help}><span className="wood-side-caption">Правила</span><span className="wood-emblem" aria-hidden="true" /></button>
     <button className="wood-side-button collection" onClick={collection}><span className="wood-emblem" aria-hidden="true" /><span className="wood-side-caption">Коллекция</span></button>
-    <div className="wood-bottom-note"><span>MEMESTONE · ТЕСТОВАЯ ВЕРСИЯ 0.23.0</span><span>СДЕЛАНО ДЛЯ СВОИХ</span></div>
+    <div className="wood-bottom-note"><span>MEMESTONE · ТЕСТОВАЯ ВЕРСИЯ 0.24.0</span><span>СДЕЛАНО ДЛЯ СВОИХ</span></div>
   </section>;
 }

@@ -9,8 +9,8 @@ import { validMetrics } from '../game/metrics';
 import { HEROES, knownPower } from '../game/presentation';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 
-export const ROOM_PROTOCOL = 10;
-export const ROOM_PREFIX = 'memestone-v10-';
+export const ROOM_PROTOCOL = 11;
+export const ROOM_PREFIX = 'memestone-v11-';
 export const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const normalizeCode = (value: string) => value.toUpperCase().replace(/[\s-]/g, '');
 export const validCode = (value: string) => new RegExp(`^[${ROOM_ALPHABET}]{6}$`).test(value);

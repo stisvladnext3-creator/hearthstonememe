@@ -14,8 +14,8 @@ import { HERO_CLASSES } from '../game/classes';
 import { readyDeck, type SavedDeck } from '../decks';
 import type { Game } from '../game/engine';
 
-export default function Online({ active, board, animations, overlayOpen, inspect, settings, home, battleChanged, selectedDeck, chooseDeck, recordStats }: {
-  active: boolean; board: BattlegroundId; animations: boolean; overlayOpen: boolean; inspect: Inspect;
+export default function Online({ active, board, animations, sound=false, volume=100, overlayOpen, inspect, settings, home, battleChanged, selectedDeck, chooseDeck, recordStats }: {
+  active: boolean; board: BattlegroundId; animations: boolean; sound?:boolean;volume?:number; overlayOpen: boolean; inspect: Inspect;
   settings: (actions: BattleSettingsActions) => void; home: () => void; battleChanged: (value: boolean) => void;
   selectedDeck: SavedDeck | null; chooseDeck: (done?: (deck: SavedDeck) => void, label?: string) => void;
   recordStats: (game: Game) => void;
@@ -75,7 +75,7 @@ export default function Online({ active, board, animations, overlayOpen, inspect
     catch { setCopied('Скопируй код из поля ниже.'); }
   };
   if (!active) return null;
-  if (inBattle) return <Battle game={room.game!} board={board} animations={animations} overlayOpen={overlayOpen}
+  if (inBattle) return <Battle game={room.game!} board={board} animations={animations} sound={sound} volume={volume} overlayOpen={overlayOpen}
     dispatch={action => controller.current?.action(action)} inspect={inspect} settings={settings}
     back={() => setShowLobby(true)} menu={() => { setShowLobby(true); home(); }} rematch={() => chooseDeck(deck => controller.current?.rematch(deck.cards, deck.heroClass), 'Играть ещё')}
     multiplayer={{ code: room.code, opponent: room.opponent, connected: room.connected,

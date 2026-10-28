@@ -17,7 +17,7 @@ export default function AuthDialog({close,initial='login'}:{close:()=>void;initi
    else if(mode==='forgot'){await api().request('password-forgot','POST',{email:email.trim()});setMessage('Если аккаунт с такой почтой существует, на неё придёт ссылка для нового пароля.');}
    else if(mode==='change')await account.changePassword(old,password);
    else if(mode==='name'){await account.changeName(name);close();}
-  }catch(e){setError(e instanceof Error?e.message:'Не удалось выполнить запрос.');if(e instanceof ApiError&&e.code==='email_unverified')setUnverified(true);}finally{setBusy(false);}};
+  }catch(e){setError(e instanceof Error?e.message:'Не удалось выполнить запрос.');if(e instanceof ApiError&&e.code==='email_unverified')setUnverified(true);if(e instanceof ApiError&&e.code==='session_transport'&&mode==='register')setMode('login');}finally{setBusy(false);}};
  const changeMode=(value:AuthMode)=>{setMode(value);setError('');setMessage('');setPassword('');setConfirm('');setOld('');};
  const reset=recovery?.type==='reset',register=mode==='register',passwordNeeded=reset||['login','register','change'].includes(mode),emailNeeded=['login','register','forgot'].includes(mode)&&!reset;
  const title=reset?'Новый пароль':mode==='change'?'Сменить пароль':mode==='name'?'Имя игрока':mode==='forgot'?'Восстановить пароль':'Аккаунт Memestone';

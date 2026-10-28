@@ -18,7 +18,7 @@ function safe_headers(array $c): void {
   if(!in_array($origin,$c['allowed_origins']??[],true))throw new ApiError(403,'origin_forbidden','Этот сайт не подключён к аккаунтам.');
   header('Access-Control-Allow-Origin: '.$origin);header('Vary: Origin');
  }
- header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');header('Access-Control-Allow-Headers: Authorization, Content-Type');header('Access-Control-Max-Age: 600');
+ header('Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS');header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Memestone-Session');header('Access-Control-Max-Age: 600');
  if($_SERVER['REQUEST_METHOD']==='OPTIONS'){http_response_code(204);exit;}
  if(($c['environment']??'production')!=='development'&&!in_array(strtolower((string)($_SERVER['HTTPS']??'')),['on','1'],true)&&(int)($_SERVER['SERVER_PORT']??0)!==443)throw new ApiError(400,'https_required','Для аккаунтов требуется защищённое соединение HTTPS.');
 }
@@ -46,9 +46,19 @@ function password_matches(string $password,string $hash):bool{return str_starts_
 function password_rehash(string $hash):bool{return defined('PASSWORD_ARGON2ID')?password_needs_rehash($hash,PASSWORD_ARGON2ID,['memory_cost'=>65536,'time_cost'=>3,'threads'=>1]):!str_starts_with($hash,'ms-sha256:')||password_needs_rehash(substr($hash,10),PASSWORD_BCRYPT,['cost'=>12]);}
 function display_name(mixed $v,string $fallback='Игрок'):string{$s=is_string($v)?trim(preg_replace('/[\x00-\x1F\x7F]/u','',$v)??''):'';return $s===''?$fallback:implode('',array_slice(preg_split('//u',$s,-1,PREG_SPLIT_NO_EMPTY)?:[],0,32));}
 function public_account(array $row):array{return ['id'=>$row['id'],'email'=>$row['email'],'name'=>$row['display_name'],'role'=>$row['role'],'verified'=>(bool)$row['verified'],'capabilities'=>['allCards'=>$row['role']==='admin','unlimitedResources'=>$row['role']==='admin']];}
+function session_token():string{
+ $tokens=[];$headers=function_exists('getallheaders')?getallheaders():[];
+ $authorization=[$_SERVER['HTTP_AUTHORIZATION']??'',$_SERVER['REDIRECT_HTTP_AUTHORIZATION']??'',$_SERVER['REDIRECT_REDIRECT_HTTP_AUTHORIZATION']??''];
+ $custom=[$_SERVER['HTTP_X_MEMESTONE_SESSION']??''];
+ if(is_array($headers))foreach($headers as $name=>$value){if(strcasecmp($name,'Authorization')===0)$authorization[]=$value;elseif(strcasecmp($name,'X-Memestone-Session')===0)$custom[]=$value;}
+ foreach($authorization as $value)if(is_string($value)&&preg_match('/^(?i:Bearer) ([a-f0-9]{64})$/D',trim($value),$m))$tokens[]=$m[1];
+ foreach($custom as $value)if(is_string($value)&&preg_match('/^[a-f0-9]{64}$/D',trim($value)))$tokens[]=trim($value);
+ $tokens=array_values(array_unique($tokens));if(count($tokens)>1)throw new ApiError(401,'unauthorized','Сессия недействительна. Войди в аккаунт ещё раз.');
+ if(!$tokens)throw new ApiError(401,'session_header_missing','Хостинг не передал данные сессии. Обнови сервер аккаунтов на хостинге.');
+ return $tokens[0];
+}
 function current_account(PDO $db):array{
- $header=$_SERVER['HTTP_AUTHORIZATION']??'';if(!preg_match('/^Bearer ([a-f0-9]{64})$/D',$header,$m))throw new ApiError(401,'unauthorized','Войди в аккаунт ещё раз.');
- $row=query($db,'SELECT a.* FROM account_sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires_at>?',[hash('sha256',$m[1]),time()])->fetch();if(!$row)throw new ApiError(401,'unauthorized','Войди в аккаунт ещё раз.');return $row;
+ $token=session_token();$row=query($db,'SELECT a.* FROM account_sessions s JOIN accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires_at>?',[hash('sha256',$token),time()])->fetch();if(!$row)throw new ApiError(401,'unauthorized','Сессия недействительна. Войди в аккаунт ещё раз.');return $row;
 }
 function session(PDO $db,array $account):array{$token=bin2hex(random_bytes(32));$expires=time()+30*86400;query($db,'INSERT INTO account_sessions(token_hash,account_id,expires_at,created_at) VALUES(?,?,?,?)',[hash('sha256',$token),$account['id'],$expires,time()]);return ['token'=>$token,'expiresAt'=>$expires*1000,'user'=>public_account($account)];}
 function rate_limit(PDO $db,array $c,string $bucket,int $limit,int $window):void{

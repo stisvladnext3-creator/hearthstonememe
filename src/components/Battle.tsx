@@ -1,3 +1,4 @@
+import {useCardSounds} from '../useCardSounds';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { BookOpen, ChevronRight, CircleHelp, Crown, Flag, Flame, RefreshCw, Settings, Shield, Sparkles, Swords, X, Zap } from 'lucide-react';
 import AdaptationDialog from './AdaptationDialog';
@@ -71,11 +72,12 @@ function Unit({ m, side, selected, canSelect, targetable, onClick, inspect, immu
     <span className="unit-attack">{m.attack}</span><span className={`unit-health ${m.health < m.maxHealth ? 'damaged' : ''}`}>{m.health}</span>
   </button><button className="unit-info" onClick={inspect} aria-label={`Подробнее о ${c.name}`}><CircleHelp size={11} /></button></div>;
 }
-export default function Battle({ game: inputGame, dispatch, back, menu, rematch, inspect, settings, animations, overlayOpen, board, multiplayer }: {
-  game: Game; dispatch: (action: Action) => void; back: () => void; menu?: () => void; rematch: () => void; inspect: Inspect; settings: (actions: BattleSettingsActions) => void; animations: boolean; overlayOpen: boolean; board: BattlegroundId;
+export default function Battle({ game: inputGame, dispatch, back, menu, rematch, inspect, settings, animations, sound=false, volume=100, overlayOpen, board, multiplayer }: {
+  game: Game; dispatch: (action: Action) => void; back: () => void; menu?: () => void; rematch: () => void; inspect: Inspect; settings: (actions: BattleSettingsActions) => void; animations: boolean; sound?:boolean;volume?:number; overlayOpen: boolean; board: BattlegroundId;
   multiplayer?: { code: string; opponent: string; connected: boolean; blocked: string; notice: string; rematchSelf: boolean; rematchOpponent: boolean };
 }) {
   const game=useBattleTimeline(inputGame);
+  useCardSounds(game,sound,volume);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [showLog, setShowLog] = useState(false);
   const [confirm, setConfirm] = useState(false);

@@ -21,7 +21,7 @@
 .account-link { color:#63431d;text-decoration:underline;text-underline-offset:3px;font:600 13px/1.3 var(--readable-font);padding:3px;background:none;align-self:center; }
 .account-message { padding:9px 11px;border:1px solid #b39a70;border-radius:4px;background:#fff6df;color:#51412b;font:400 13px/1.45 var(--readable-font);margin:0; }
 .account-message p { margin:0 0 8px; }.account-message.error { color:#822f25;border-color:#c2917f;background:#fae5d8; }.account-message.success { color:#315438;border-color:#90aa7b;background:#e6eed7; }
-.account-panel { display:flex;flex-direction:column;gap:13px;min-height:0;font:400 14px/1.45 var(--readable-font);color:#55442d; }
+.account-panel { display:flex;flex-direction:column;gap:13px;min-height:0;max-height:100%;overflow-y:auto;padding-right:3px;font:400 14px/1.45 var(--readable-font);color:#55442d; }
 .account-panel.guest { margin:auto 0;align-items:flex-start; }
 .account-panel h3 { font:700 23px/1.2 var(--readable-font);color:#34291c;margin:0; }
 .account-panel p { margin:0; }

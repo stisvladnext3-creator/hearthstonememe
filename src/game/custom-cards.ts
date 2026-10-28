@@ -1,10 +1,11 @@
 import { COMBAT_KEYWORDS } from './battle-keywords';
+import { profileChanged, profileKey, profileScope } from '../account/scope';
 import { CARD, CARDS,cardPlayRules, type CardDef } from './cards';
 import { CUSTOM_LIMIT, PACK_LIMIT, matchesCard, normalizeCustomCard, references, KEYWORDS, OPERATIONS, TARGETS, TRIGGERS, type CustomRule } from './custom-schema';
 
-const KEY = 'memestone.v1.custom-cards';
 const BASE_IDS = new Set(CARDS.map(c => c.id));
 let library: CardDef[] = [];
+let libraryScope=profileScope();
 export const userCards = () => [...library];
 export const isCustomHero = (id: string) => CARD[id]?.kind === 'hero';
 export const LIBRARY_LIMIT = 300;
@@ -58,14 +59,16 @@ function displayLibrary(cards: CardDef[]) {
   CARDS.splice(0, CARDS.length, ...CARDS.filter(c => !c.editor), ...cards);
 }
 export function restoreCustomCards() {
+  if(libraryScope!==profileScope()){for(const [id,card] of Object.entries(CARD))if(card.editor)delete CARD[id];libraryScope=profileScope();}
+  displayLibrary([]);
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(KEY) ?? '[]');
+    const raw: unknown = JSON.parse(localStorage.getItem(profileKey('custom-cards')) ?? '[]');
     const cards = validateCardPack(raw, 'library'); for (const c of cards) CARD[c.id] = c; displayLibrary(cards);
   } catch { /* Preserve a damaged import in storage; never execute its contents. */ }
 }
 export function saveCustomLibrary(cards: CardDef[], extra: Record<string, unknown> = {}) {
   const normalized = validateCardPack(cards, 'library');
-  const updates: Record<string, string> = { [KEY]: JSON.stringify(normalized), ...Object.fromEntries(Object.entries(extra).map(([key,value]) => ['memestone.v1.' + key, JSON.stringify(value)])) };
+  const updates: Record<string, string> = { [profileKey('custom-cards')]: JSON.stringify(normalized), ...Object.fromEntries(Object.entries(extra).map(([key,value]) => [profileKey(key), JSON.stringify(value)])) };
   const previous = new Map(Object.keys(updates).map(key => [key, localStorage.getItem(key)]));
   try { for (const [key,value] of Object.entries(updates)) localStorage.setItem(key, value); }
   catch {
@@ -75,6 +78,7 @@ export function saveCustomLibrary(cards: CardDef[], extra: Record<string, unknow
   }
   for (const card of normalized) CARD[card.id] = card;
   displayLibrary(normalized);
+  profileChanged(['custom-cards',...Object.keys(extra)]);
 }
 export function newCustomCard(): CardDef {
   return { id: 'custom-' + crypto.randomUUID(), name: 'Моя карта', cost: 2, kind: 'minion', attack: 2, health: 3, text: '', flavor: '', rarity: 'common', art: 9, custom: true,

@@ -1,7 +1,7 @@
 import {CARD} from '../game/cards';
 import {saveCustomLibrary,userCards} from '../game/custom-cards';
 import {references} from '../game/custom-schema';
-import {DECK_LIMIT,type DeckBook} from '../decks';
+import {deckLimit, deckLimitLabel,type DeckBook} from '../decks';
 import {read} from '../storage';
 import {validatePublication,type Publication} from './model';
 export interface Installation { id:string; kind:Publication['kind']; title:string; author:string; cover?:string; cardIds:string[]; deckId?:string }
@@ -12,7 +12,7 @@ export function installPublication(raw:Publication,book:DeckBook):{book:DeckBook
   const p=validatePublication(raw),items=installedItems(),previous=items.find(i=>i.id===p.id);
   const matching=p.deck?book.decks.find(d=>d.heroClass===p.deck!.heroClass&&[...d.cards].sort().join(',')===[...p.deck!.cards].sort().join(',')):undefined;
   const haveDeck=previous?.deckId&&book.decks.find(d=>d.id===previous.deckId)||matching;
-  if(p.kind==='deck'&&!haveDeck&&book.decks.length>=DECK_LIMIT)throw new Error(`Сохранено ${DECK_LIMIT} колод. Удали ненужную колоду перед добавлением новой.`);
+  if(p.kind==='deck'&&!haveDeck&&book.decks.length>=deckLimit())throw new Error(`Сохранено ${deckLimitLabel()} колод. Удали ненужную колоду перед добавлением новой.`);
   const library=userCards(),merged=new Map(library.map(c=>[c.id,c]));for(const card of p.cards)merged.set(card.id,card);
   const deckId=p.kind==='deck'?(haveDeck?haveDeck.id:crypto.randomUUID()):undefined;
   const nextBook=p.deck&&!haveDeck?{...book,decks:[...book.decks,{...p.deck,id:deckId!,cards:[...p.deck.cards]}],selectedId:deckId!}:book;

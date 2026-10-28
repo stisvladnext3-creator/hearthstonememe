@@ -1,0 +1,4 @@
+config.local.php
+.private/
+api/setup-key.php
+*.log

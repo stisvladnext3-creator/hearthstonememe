@@ -1,7 +1,7 @@
 {
   "name": "memestone",
   "private": true,
-  "version": "0.22.3",
+  "version": "0.23.0",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -42,6 +42,9 @@
     "test:battle-visuals": "vitest run src/game/card-play.test.ts src/game/battle-timeline.test.ts src/game/new-keywords.test.ts src/game/metrics.test.ts",
     "test:battle-visuals-ui": "node scripts/check-battle-visuals.mjs",
     "test:cast-rooms": "node scripts/check-cast-rooms.mjs",
+    "test:accounts": "vitest run src/account/model.test.ts src/account/api.test.ts src/decks.test.ts src/game/metrics.test.ts",
+    "test:account-server": "node scripts/check-account-server.mjs",
+    "test:accounts-ui": "node scripts/check-accounts.mjs",
     "test:boards-ui": "node scripts/check-board-picker.mjs"
   },
   "dependencies": {

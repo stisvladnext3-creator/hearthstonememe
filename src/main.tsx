@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { restoreCustomCards } from './game/custom-cards';
+import { AccountProvider } from './account/AccountProvider';
 import { ArtworkProvider } from './artwork';
 import { CardAppearanceProvider } from './card-appearance';
 import './styles.css';
@@ -34,8 +34,8 @@ import './training.css';
 import './image-framing.css';
 import './adaptation.css';
 import './battle-visuals.css';
+import './accounts.css';
 
-restoreCustomCards();
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode><ArtworkProvider><CardAppearanceProvider><App /></CardAppearanceProvider></ArtworkProvider></React.StrictMode>,
+  <React.StrictMode><AccountProvider><ArtworkProvider><CardAppearanceProvider><App /></CardAppearanceProvider></ArtworkProvider></AccountProvider></React.StrictMode>,
 );

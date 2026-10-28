@@ -1,4 +1,5 @@
 import {validAdaptation} from './game/adaptation';
+import { profileChanged, profileKey } from './account/scope';
 import { validCast } from './game/card-play';
 import { validKeywordState } from './game/battle-keywords';
 import { CARD, cardAbilities, STARTER_DECK, deckError, migrateRewardDeck } from './game/cards';
@@ -9,13 +10,12 @@ import { registerCardPack, validContinuation, validCustomCounts } from './game/c
 import type { HistoryEntity, HistoryEntry } from './game/history';
 import { emptyMetrics, validMetrics, METRIC_KEYS, type MatchMetrics } from './game/metrics';
 
-const PREFIX = 'memestone.v1.';
 export function read<T>(key: string, fallback: T): T {
-  try { const raw = localStorage.getItem(PREFIX + key); return raw ? JSON.parse(raw) as T : fallback; }
+  try { const raw = localStorage.getItem(profileKey(key)); return raw ? JSON.parse(raw) as T : fallback; }
   catch { return fallback; }
 }
 export function write(key: string, value: unknown) {
-  try { localStorage.setItem(PREFIX + key, JSON.stringify(value)); return true; }
+  try { const name=profileKey(key),raw=JSON.stringify(value);if(localStorage.getItem(name)!==raw){localStorage.setItem(name,raw);profileChanged([key]);}return true; }
   catch { return false; }
 }
 export function loadDeck(): string[] {
@@ -102,7 +102,7 @@ export function loadGame(): Game | null {
 }
 export interface Stats extends MatchMetrics {
   wins: number; games: number; lastResult: string | null;
-  matches: Record<string, MatchMetrics & { finished: boolean }>;
+  matches: Record<string, MatchMetrics & { finished: boolean; won?: boolean }>;
 }
 export function loadStats(): Stats {
   const raw = read<Partial<Stats> | null>('stats', null);
@@ -111,7 +111,7 @@ export function loadStats(): Stats {
     lastResult: typeof raw?.lastResult === 'string' ? raw.lastResult : null, matches: {} };
   if (valid) for (const key of METRIC_KEYS) if (Number.isSafeInteger(raw[key]) && raw[key]! >= 0) result[key] = raw[key]!;
   if (valid && raw.matches && typeof raw.matches === 'object') {
-    result.matches = Object.fromEntries(Object.entries(raw.matches).filter(([, m]) => validMetrics(m) && typeof m.finished === 'boolean'));
+    result.matches = Object.fromEntries(Object.entries(raw.matches).filter(([, m]) => validMetrics(m) && typeof m.finished === 'boolean' && (m.won===undefined||typeof m.won==='boolean')));
   }
   return result;
 }
@@ -128,7 +128,7 @@ export function recordMatchStats(game: Game): Stats {
   }
   if (game.winner && !previous.finished) {
     stats.games = Math.min(Number.MAX_SAFE_INTEGER, stats.games + 1); if (game.winner === 'player') stats.wins = Math.min(Number.MAX_SAFE_INTEGER, stats.wins + 1);
-    checkpoint.finished = true; stats.lastResult = game.id; changed = true;
+    checkpoint.finished = true; checkpoint.won=game.winner==='player';stats.lastResult = game.id; changed = true;
   }
   if (changed) { stats.matches = { ...stats.matches, [game.id]: checkpoint }; write('stats', stats); }
   return stats;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BookOpen, Cat, Check, ChevronLeft, ChevronRight, Layers3, Plus, Shield, Skull, Sparkles, Swords, Wind } from 'lucide-react';
 import { HERO_CLASSES, type HeroClass } from '../game/classes';
 import { powerCardId } from '../game/presentation';
-import { DECK_LIMIT, readyDeck, type SavedDeck } from '../decks';
+import { deckLimit, readyDeck, type SavedDeck } from '../decks';
 import { phoneScreen, useViewport } from '../useViewport';
 import { Art } from './Card';
 import Modal from './Modal';
@@ -17,7 +17,7 @@ export default function DeckPicker({ decks, selectedId, select, confirm, close, 
   const size = useViewport(), phone = phoneScreen(size), landscape = size.width > size.height;
   const pageSize = phone ? landscape ? 6 : 4 : 9;
   const [page, setPage] = useState(() => Math.max(0, Math.floor(decks.findIndex(d => d.id === selectedId) / pageSize)));
-  const pages = Math.max(1, Math.ceil((decks.length + (decks.length < DECK_LIMIT ? 1 : 0)) / pageSize)), shownPage = Math.min(page, pages - 1);
+  const pages = Math.max(1, Math.ceil((decks.length + (decks.length < deckLimit() ? 1 : 0)) / pageSize)), shownPage = Math.min(page, pages - 1);
   const current = decks.find(d => d.id === selectedId), hero = current ? HERO_CLASSES[current.heroClass] : null;
   const slots = Array.from({ length: pageSize }, (_, n) => decks[shownPage * pageSize + n]);
   return <Modal title="Выбор колоды" close={close} className="deck-picker-modal">

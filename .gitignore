@@ -5,3 +5,10 @@ test-results/
 playwright-report/
 .DS_Store
 *.tsbuildinfo
+server/config.local.php
+server/api/setup-key.php
+server/.private/
+private-deploy/
+.env
+.env.local
+.env.*.local

@@ -1,4 +1,4 @@
-.battle-arena .illustrated-history.readable-history {
+.illustrated-history.readable-history {
  isolation:isolate;padding:20px 17px 12px;border:6px ridge #80633f;background:#eddfbf;color:#3c2e1e;
  font-family:var(--readable-font);box-shadow:7px 0 24px #170d0899;
 }
@@ -8,13 +8,13 @@
 .readable-history .history-header>.icon-button {background:#514030;border:1px solid #a88b60;border-radius:4px;color:#fff0ca;}
 .readable-history .history-visible {display:flex;flex-direction:column;gap:8px;overflow:hidden;padding:0;margin:10px 0 7px;list-style:none;}
 .readable-history .history-measure {position:absolute;left:0;top:0;height:auto;max-height:none!important;visibility:hidden;pointer-events:none;display:block;padding:0;margin:0;list-style:none;}
-.battle-arena .readable-history li.history-entry {
+.readable-history li.history-entry {
  flex:0 0 auto;margin:0;padding:10px;border:1px solid #bba175;border-left:4px solid #ac8c57;border-radius:5px;background:#fff7e4;color:#3b2c1d;box-shadow:0 2px 4px #50391f20;
 }
-.battle-arena .readable-history li.history-entry.player {border-left-color:#5b8061;background:#fff9e9;}
-.battle-arena .readable-history li.history-entry.bot {border-left-color:#b06048;background:#fbf0da;}
-.battle-arena .readable-history li.history-entry.system {background:#e4d3ad;}
-.battle-arena .readable-history li.history-entry.history-transform {background:#efe0ee!important;}
+.readable-history li.history-entry.player {border-left-color:#5b8061;background:#fff9e9;}
+.readable-history li.history-entry.bot {border-left-color:#b06048;background:#fbf0da;}
+.readable-history li.history-entry.system {background:#e4d3ad;}
+.readable-history li.history-entry.history-transform {background:#efe0ee!important;}
 .readable-history .history-entry-heading {font:600 10px/1.35 var(--readable-font);color:#725936;gap:10px;}
 .readable-history .history-entry-heading>span:last-child {color:#725936;}
 .readable-history .history-participants {margin:8px 0;gap:7px;}
@@ -24,7 +24,7 @@
 .readable-history .history-entity.small .history-portrait {width:25px;height:27px;}
 .readable-history .history-entity.small .history-entity-name {font-size:12px;}
 .readable-history .history-caster {font-size:11px;color:#694c2d;}
-.battle-arena .readable-history .history-entry>p {font:400 13px/1.5 var(--readable-font);color:#3e3021;margin:5px 0 0;overflow-wrap:anywhere;}
+.readable-history .history-entry>p {font:400 13px/1.5 var(--readable-font);color:#3e3021;margin:5px 0 0;overflow-wrap:anywhere;}
 .readable-history .history-damage {font:500 11px/1.4 var(--readable-font);color:#5d4125;margin:7px 0;gap:10px;}
 .readable-history .history-damage>span:first-child {background:#e5c990;color:#4f351b;}
 .readable-history .history-read-more {font:600 12px/1.3 var(--readable-font);color:#74501f;text-decoration:underline;padding:3px 0;margin-top:4px;}
@@ -33,17 +33,17 @@
 .readable-history .history-tip {font:400 11px/1.4 var(--readable-font);color:#755a37;margin-top:5px;}
 .history-action-modal {height:min(600px,90dvh);font-family:var(--readable-font);}
 @media(max-width:960px),(max-height:600px) and (max-width:1180px) {
- .battle-arena .illustrated-history.readable-history {padding:20px 20px 12px;}
+ .illustrated-history.readable-history {padding:20px 20px 12px;}
  .readable-history .history-header {padding-right:76px;min-height:57px;height:auto;}
  .readable-history .history-header h3 {font-size:19px;}
  .readable-history .history-header>.icon-button {right:20px;top:18px;}
  .readable-history>.fullscreen-button {right:60px;top:18px;}
 }
 @media(max-height:600px) and (orientation:landscape) {
- .battle-arena .illustrated-history.readable-history {padding:15px 22px 9px;}
+ .illustrated-history.readable-history {padding:15px 22px 9px;}
  .readable-history .history-header {min-height:47px;padding-bottom:7px;}
  .readable-history .history-visible {margin:7px 0 5px;gap:7px;}
- .battle-arena .readable-history li.history-entry {padding:8px 11px;}
+ .readable-history li.history-entry {padding:8px 11px;}
  .readable-history .history-participants {margin:5px 0;}
  .readable-history .history-portrait {width:28px;height:34px;}
  .readable-history .history-entity.hero .history-portrait,.readable-history .history-entity.power .history-portrait {height:28px;}

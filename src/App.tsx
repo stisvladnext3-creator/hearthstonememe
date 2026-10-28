@@ -24,14 +24,21 @@ import CommunityCards from './components/CommunityCards';
 import PublishDialog from './components/PublishDialog';
 import { CommunityCatalog, EMPTY_CATALOG } from './community/catalog';
 import type { PublishSeed } from './community/model';
+import { useAccount } from './account/AccountProvider';
+import { PROFILE_REFRESHED, profileKey, profileScope } from './account/scope';
+import { restoreCustomCards } from './game/custom-cards';
+import { observeMatch } from './account/archive';
+import AuthDialog,{ type AuthMode } from './components/AuthDialog';
+import MatchArchive from './components/MatchArchive';
 import type { HeroClass } from './game/classes';
-import { createDeck, DECK_LIMIT, deckName, draftError, loadDeckBook, readyDeck, saveDeckBook, type SavedDeck } from './decks';
+import { createDeck, deckLimit, deckLimitLabel, deckName, draftError, loadDeckBook, readyDeck, saveDeckBook, type SavedDeck } from './decks';
 
 type Page = 'home' | 'collection' | 'battle' | 'rooms' | 'editor' | 'community';
 function Logo({ small = false }: { small?: boolean }) {
   return <span className={`brand ${small ? 'small' : ''}`}><span className="brand-gem"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="m20 3 15 9v17l-15 9-15-9V12Z" /><path d="m21 10 8 5-1 12-11 4-7-9 4-9 9-1 4 7-5 5-5-4 3-4 2 2" /></svg></span><span>MEME<span>STONE</span><small>ТВОИ КАРТЫ. ТВОИ ПРАВИЛА.</small></span></span>;
 }
 export default function App() {
+  const account=useAccount(),scope=profileScope();
   const viewport = useViewport();
   useEffect(() => { document.documentElement.style.setProperty('--app-height', `${viewport.height}px`); }, [viewport.height]);
   const [page, setPage] = useState<Page>(() => new URLSearchParams(location.search).has('room') ? 'rooms' : 'home');
@@ -49,7 +56,8 @@ export default function App() {
   const [cardRevision, setCardRevision] = useState(0);
   const [game, setGame] = useState(loadGame);
   const [stats, setStats] = useState(loadStats);
-  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'decks' | 'publish' | 'training' | null>(null);
+  const [modal, setModal] = useState<'help' | 'settings' | 'about' | 'decks' | 'publish' | 'training' | 'auth' | 'history' | null>(null);
+  const [authMode,setAuthMode]=useState<AuthMode>('login');
   const [deckPickerLabel, setDeckPickerLabel] = useState('Играть');
   const deckRequest = useRef<((deck: SavedDeck) => void) | null>(null);
   const [inspected, setInspected] = useState<CardDef | null>(null);
@@ -63,7 +71,8 @@ export default function App() {
   useEffect(() => () => botWorker.current?.terminate(), []);
   const botBudget = useRef({ turn: '', actions: 0 });
   const notify = useCallback((text: string) => setToast(text), []);
-  const updateStats = useCallback((match: NonNullable<typeof game>) => setStats(recordMatchStats(match)), []);
+  const updateStats = useCallback((match: NonNullable<typeof game>,online=false) => {setStats(recordMatchStats(match));void observeMatch(match,online,scope).catch(()=>notify('Не удалось сохранить историю матча на устройстве.'));}, [scope,notify]);
+  const updateOnlineStats=useCallback((match:NonNullable<typeof game>)=>updateStats(match,true),[updateStats]);
   const sound = useCallback(() => {
     if (!settings.sound || settings.volume === 0) return;
     try {
@@ -87,9 +96,11 @@ export default function App() {
     updateStats(game);
   }, [game, updateStats]);
   useEffect(() => {
-    const sync = (event: StorageEvent) => { if (event.key === 'memestone.v1.stats') setStats(loadStats()); };
+    const sync = (event: StorageEvent) => { if (event.key === profileKey('stats')) setStats(loadStats()); };
     window.addEventListener('storage', sync); return () => window.removeEventListener('storage', sync);
   }, []);
+  useEffect(()=>{const refresh=()=>{restoreCustomCards();setDeckBook(loadDeckBook());setStats(loadStats());setCardRevision(n=>n+1);const saved=read<Partial<GameSettings>>('settings',{});setSettings({sound:saved?.sound===true,volume:typeof saved?.volume==='number'&&Number.isFinite(saved.volume)?Math.max(0,Math.min(100,saved.volume)):100,motion:saved?.motion!==false,board:battleground(saved?.board).id});};window.addEventListener(PROFILE_REFRESHED,refresh);return()=>window.removeEventListener(PROFILE_REFRESHED,refresh);},[]);
+  useEffect(()=>{if(account.recovery)setModal('auth');},[account.recovery]);
   useEffect(() => {
     if (page !== 'battle' || !game || game.winner || game.casting || !game.mulligan && (modal || inspected)) return;
     if (game.mulligan ? game.mulligan.ready.bot : game.active !== 'bot') return;
@@ -161,7 +172,7 @@ export default function App() {
   };
   const selectDeck = (id: string) => setDeckBook(book => book.decks.some(d => d.id === id) ? { ...book, selectedId: id } : book);
   const addDeck = (heroClass: HeroClass, name: string, starter: boolean) => {
-    if (deckBook.decks.length >= DECK_LIMIT) { notify(`Можно сохранить до ${DECK_LIMIT} колод. Удали ненужную колоду, чтобы создать новую.`); return null; }
+    if (deckBook.decks.length >= deckLimit()) { notify(`Можно сохранить до ${deckLimitLabel()} колод. Удали ненужную колоду, чтобы создать новую.`); return null; }
     const created = createDeck(heroClass, name, starter);
     setDeckBook(book => ({ ...book, decks: [...book.decks, created], selectedId: created.id })); return created;
   };
@@ -181,16 +192,18 @@ export default function App() {
       {page === 'editor' && <CardWorkshop back={() => navigate(editorBack)} backLabel={editorBack === 'home' ? 'Главное меню' : editorBack === 'community' ? 'Пользовательские карты' : 'Коллекция'} publish={openPublish} notify={notify} changed={() => setCardRevision(n => n + 1)} deck={deckBook.decks.flatMap(d => d.cards)} />}
       {page === 'community' && catalog.current && <CommunityCards key={communityTab} initialTab={communityTab} state={catalogState} catalog={catalog.current} book={deckBook} changed={book => { setDeckBook(book); setCardRevision(n=>n+1); }} back={() => navigate('home')} editor={() => openEditor('community')} publish={openPublish} inspect={inspect} notify={notify} overlayOpen={!!modal || !!inspected} />}
       {page === 'battle' && game && <Battle settings={openSettings} board={settings.board} overlayOpen={!!modal || !!inspected} animations={settings.motion} game={game} dispatch={dispatch} back={() => navigate('home')} rematch={rematch} inspect={inspect} />}
-      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={openSettings} home={() => navigate('home')} battleChanged={setOnlineBattle} recordStats={updateStats} />
+      <Online selectedDeck={selectedDeck} chooseDeck={chooseDeck} active={page === 'rooms'} board={settings.board} animations={settings.motion} overlayOpen={!!modal || !!inspected} inspect={inspect} settings={openSettings} home={() => navigate('home')} battleChanged={setOnlineBattle} recordStats={updateOnlineStats} />
     </main>
     {page !== 'editor' && <footer className="site-footer"><div><Logo small /><span>Создано для своих.</span></div><p>Независимый фан-проект. Не связан с Blizzard Entertainment.</p><button className="text-button" onClick={() => setModal('about')}>О проекте <ArrowUpRight size={13} /></button></footer>}
     {toast && <div className="toast" role="status"><Sparkles size={18} /><span>{toast}</span><button className="icon-button" aria-label="Скрыть сообщение" onClick={() => setToast('')}><X size={15} /></button></div>}
-    {inspected && <CardDetails card={inspected} info={inspectInfo} close={closeCard} notify={notify} />}
     {modal === 'publish' && catalog.current && <PublishDialog seed={publishSeed} decks={deckBook.decks} catalog={catalog.current} close={closeModal} done={() => {closeModal();notify(publishSeed.kind==='deck'?'Колода опубликована. Другие игроки могут добавить её себе в разделе «Колоды».':'Публикация появилась в пользовательских картах.');}} />}
     {modal === 'help' && <HelpDialog close={closeModal} />}
     {modal === 'settings' && <SettingsDialog value={settings} change={setSettings} close={closeModal} help={() => setModal('help')} about={() => setModal('about')} previewSound={sound} battle={battleSettings} />}
     {modal === 'decks' && <DeckPicker decks={deckBook.decks} selectedId={deckBook.selectedId} select={selectDeck} close={() => { deckRequest.current = null; closeModal(); }} actionLabel={deckPickerLabel} confirm={chosen => { if (!readyDeck(chosen)) return; const done = deckRequest.current; deckRequest.current = null; closeModal(); done?.(chosen); }} manage={() => { deckRequest.current = null; closeModal(); navigate('collection'); }} />}
     {modal === 'training' && <TrainingPicker initial={game?.trainingBotId ?? trainingBot(read('training-bot','boris')).id} close={closeModal} confirm={startTraining} />}
-    {modal === 'about' && <AboutDialog stats={stats} deckSize={deck.length} close={closeModal} help={() => { closeModal(); setModal('help'); }} />}
+    {modal === 'about' && <AboutDialog stats={stats} deckSize={deck.length} close={closeModal} help={() => setModal('help')} auth={mode=>{setAuthMode(mode);setModal('auth');}} history={()=>setModal('history')} />}
+    {modal === 'auth' && <AuthDialog initial={authMode} close={()=>{setModal('about');account.clearRecovery();}}/>}
+    {modal === 'history' && <MatchArchive close={()=>setModal('about')} inspect={inspect}/>}
+    {inspected && <CardDetails card={inspected} info={inspectInfo} close={closeCard} notify={notify} />}
   </div>;
 }

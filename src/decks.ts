@@ -1,10 +1,14 @@
 import { CARD, STARTER_DECK, deckCopyLimit, deckError, migrateRewardDeck, classDeck } from './game/cards';
 import { belongsToClass, HERO_CLASSES, validHeroClass, type HeroClass } from './game/classes';
 import { loadDeck, read, write } from './storage';
+import { profileScope } from './account/scope';
+import { testAccount } from './account/access';
 
 export interface SavedDeck { id: string; name: string; heroClass: HeroClass; cards: string[] }
 export interface DeckBook { version: 1; decks: SavedDeck[]; selectedId: string | null }
 export const DECK_LIMIT = 18;
+export const deckLimit = () => testAccount()?Number.POSITIVE_INFINITY:DECK_LIMIT;
+export const deckLimitLabel = () => testAccount()?'∞':String(DECK_LIMIT);
 export const deckName = (value: string) => value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 32) || 'Без названия';
 export function draftError(cards: unknown, heroClass?: HeroClass): string | undefined {
   if (!Array.isArray(cards) || cards.length > 30 || cards.some(id => typeof id !== 'string' || !Object.hasOwn(CARD, id) || CARD[id].reward || !['minion', 'spell', 'hero'].includes(CARD[id].kind))) return 'В колоде есть недоступная карта.';
@@ -19,7 +23,9 @@ export function loadDeckBook(): DeckBook {
   const saved = read<unknown>('decks', null);
   if (saved && typeof saved === 'object' && 'version' in saved && saved.version === 1 && 'decks' in saved && Array.isArray(saved.decks)) {
     const ids = new Set<string>(), decks: SavedDeck[] = [];
-    for (const value of saved.decks.slice(0, DECK_LIMIT)) {
+    // Sync may preserve both versions of a concurrently edited deck. Creation
+    // limits must never silently truncate those already saved copies.
+    for (const value of profileScope()==='guest'?saved.decks.slice(0,DECK_LIMIT):saved.decks) {
       if (!value || typeof value.id !== 'string' || !value.id || value.id.length > 100 || ids.has(value.id) || typeof value.name !== 'string' || !validHeroClass(value.heroClass) || !Array.isArray(value.cards)) continue;
       const cards: string[] = [];
       // Keep a recoverable draft if a card definition was removed externally.

@@ -3,7 +3,7 @@ import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Crown, Flame, La
 import { CARDS, CARD, STARTER_DECK, deckCopyLimit, deckError, classDeck, type CardDef } from '../game/cards';
 import { Art, Card } from './Card';
 import { useViewport } from '../useViewport';
-import { DECK_LIMIT, readyDeck, type SavedDeck } from '../decks';
+import { deckLimit, deckLimitLabel, readyDeck, type SavedDeck } from '../decks';
 import { belongsToClass, HERO_CLASSES, matchesClass, type HeroClass } from '../game/classes';
 import HeroClassPicker from './HeroClassPicker';
 import { ClassSymbol } from './DeckPicker';
@@ -75,7 +75,7 @@ export default function Collection({ deckInfo, decks, selectDeck, createDeck, de
   const startEditing = (chosen: SavedDeck) => { selectDeck(chosen.id); setDraft([...chosen.cards]); setDraftName(chosen.name); setBuilding(true); setDeckPage(1); };
   const libraryPageSize = Math.min(8, Math.max(3, Math.floor((size.height - 180) / 65)));
   const libraryPages = Math.max(1, Math.ceil(decks.length / libraryPageSize)), libraryCurrent = Math.min(libraryPage, libraryPages - 1);
-  const newDeck = () => { if (decks.length >= DECK_LIMIT) { notify(`Можно сохранить до ${DECK_LIMIT} колод.`); return; } setNewName('Новая колода'); setNewClass('mage'); setStarter(true); setCreating(true); };
+  const newDeck = () => { if (decks.length >= deckLimit()) { notify(`Можно сохранить до ${deckLimitLabel()} колод.`); return; } setNewName('Новая колода'); setNewClass('mage'); setStarter(true); setCreating(true); };
   return <section className={`collection-page collection-album collection-v2 page-enter ${building ? 'collection-building' : ''}`}>
     <div className="album-layout"><div className="album-main">
       <div className="book-tabs class-book-tabs" role="tablist" aria-label="Классы карт">{(Object.keys(HERO_CLASSES) as HeroClass[]).map(id => <button key={id} role="tab" aria-selected={classFilter === id} className={`book-tab class-book-tab ${id} ${classFilter === id ? 'active' : ''}`} onClick={() => setClassFilter(id)} aria-label={`Карты класса ${HERO_CLASSES[id].name}`} title={HERO_CLASSES[id].name}><Art index={HERO_CLASSES[id].art} cardId={HERO_CLASSES[id].hero} /><ClassSymbol heroClass={id} /></button>)}
@@ -95,7 +95,7 @@ export default function Collection({ deckInfo, decks, selectDeck, createDeck, de
       </div><div className="album-caption"><span>Найдено: {filtered.length}</span><span>{building ? 'Нажми — добавить. Удерживай — описание.' : 'Нажми на карту, чтобы прочитать описание'}</span></div>
     </div>
     <aside className={`album-deck-sidebar ${building ? 'editing-deck' : 'deck-library-sidebar'}`}>
-    {!building ? <><h2>Мои колоды <small>{decks.length}/{DECK_LIMIT}</small></h2><div className="deck-library-list">{decks.slice(libraryCurrent * libraryPageSize, (libraryCurrent + 1) * libraryPageSize).map(d => <button key={d.id} className={'album-deck-banner ' + d.heroClass + (d.id === deckInfo?.id ? ' active-deck' : '')} aria-label={`Редактировать колоду ${d.name}`} onClick={() => startEditing(d)}><Art index={HERO_CLASSES[d.heroClass].art} cardId={HERO_CLASSES[d.heroClass].hero} /><span><strong>{d.name}</strong><small>{HERO_CLASSES[d.heroClass].name} · {d.cards.length}/30 · {readyDeck(d) ? 'Готова' : 'Черновик'}</small></span><ClassSymbol heroClass={d.heroClass} /></button>)}</div>
+    {!building ? <><h2>Мои колоды <small>{decks.length}/{deckLimitLabel()}</small></h2><div className="deck-library-list">{decks.slice(libraryCurrent * libraryPageSize, (libraryCurrent + 1) * libraryPageSize).map(d => <button key={d.id} className={'album-deck-banner ' + d.heroClass + (d.id === deckInfo?.id ? ' active-deck' : '')} aria-label={`Редактировать колоду ${d.name}`} onClick={() => startEditing(d)}><Art index={HERO_CLASSES[d.heroClass].art} cardId={HERO_CLASSES[d.heroClass].hero} /><span><strong>{d.name}</strong><small>{HERO_CLASSES[d.heroClass].name} · {d.cards.length}/30 · {readyDeck(d) ? 'Готова' : 'Черновик'}</small></span><ClassSymbol heroClass={d.heroClass} /></button>)}</div>
       {!decks.length && <p className="deck-empty">Создай колоду и выбери её класс.</p>}
       <div className="deck-library-pagination"><button aria-label="Предыдущие колоды" disabled={libraryCurrent === 0} onClick={() => setLibraryPage(libraryCurrent - 1)}><ChevronLeft size={18} /></button><span>{libraryCurrent + 1}/{libraryPages}</span><button aria-label="Следующие колоды" disabled={libraryCurrent + 1 === libraryPages} onClick={() => setLibraryPage(libraryCurrent + 1)}><ChevronRight size={18} /></button></div>
       <button className="button primary create-deck-button" onClick={newDeck}><Plus size={17} />Создать колоду</button><p className="deck-library-hint">У каждой колоды свой класс. Перед матчем выбирай готовую колоду.</p>

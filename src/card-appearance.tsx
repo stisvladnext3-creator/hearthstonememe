@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { CARD } from './game/cards';
 import { read, write } from './storage';
+import { PROFILE_REFRESHED } from './account/scope';
 
 export const CARD_APPEARANCES = [
   { id: 'standard', name: 'Классическое' },
@@ -19,6 +20,7 @@ const Context = createContext<{ choices: Choices; select: (id: string, appearanc
 export const useCardAppearances = () => useContext(Context);
 export function CardAppearanceProvider({ children }: { children: ReactNode }) {
   const [choices, setChoices] = useState(loadChoices);
+  useEffect(()=>{const refresh=()=>setChoices(loadChoices());window.addEventListener(PROFILE_REFRESHED,refresh);return()=>window.removeEventListener(PROFILE_REFRESHED,refresh);},[]);
   useEffect(() => { write('card-appearances', choices); }, [choices]);
   const select = (id: string, appearance: CardAppearance) => {
     if (CARD[id]?.rarity !== 'legendary' || !CARD_APPEARANCES.some(a => a.id === appearance)) return;

@@ -1,4 +1,5 @@
 import { CARD, classDeck, migrateRewardDeck, type CardDef } from '../game/cards';
+import { roomSaveKey } from '../account/scope';
 import { packForCards, registerCardPack } from '../game/custom-cards';
 import type { Peer, DataConnection } from 'peerjs';
 import { act, expireMulligan, type Action, type Game } from '../game/engine';
@@ -9,10 +10,9 @@ import { DIRECTORY_ID, RoomAdvertisement } from './directory';
 import { validHeroClass, type HeroClass } from '../game/classes';
 
 interface SavedRoom { role: 'host' | 'guest'; code: string; self: Member; guest?: Member; game?: Game; revision: number; listed?: boolean }
-const SAVE_KEY = 'memestone.room.v1';
 export function savedRoom(): SavedRoom | null {
   try {
-    const s = JSON.parse(sessionStorage.getItem(SAVE_KEY) ?? 'null') as SavedRoom | null;
+    const s = JSON.parse(sessionStorage.getItem(roomSaveKey()) ?? 'null') as SavedRoom | null;
     if (s) { registerCardPack(s.self?.cards ?? []); registerCardPack(s.guest?.cards ?? []); registerCardPack(s.game?.customCards ?? [], 'match'); }
     if (s?.self && Array.isArray(s.self.deck)) s.self.deck = classDeck(migrateRewardDeck(s.self.deck), s.self.heroClass ?? 'mage', true);
     if (s?.guest && Array.isArray(s.guest.deck)) s.guest.deck = classDeck(migrateRewardDeck(s.guest.deck), s.guest.heroClass ?? 'mage', true);
@@ -36,6 +36,7 @@ const failureText = (type: string) => ({
 } as Record<string, string>)[type] ?? 'Соединение не удалось. Проверь интернет и попробуй ещё раз.';
 
 export class PeerRoom {
+  private saveKey=roomSaveKey();
   state: RoomState = { ...EMPTY_ROOM };
   private peer?: Peer;
   private connection?: DataConnection;
@@ -70,7 +71,7 @@ export class PeerRoom {
   }
   private save() {
     if (!this.self || !this.state.role) return;
-    try { sessionStorage.setItem(SAVE_KEY, JSON.stringify({ role: this.state.role, code: this.state.code, self: this.self, guest: this.guest, game: this.canonical, revision: this.state.revision, listed: this.state.listed } satisfies SavedRoom)); } catch { /* An open room can still play without storage. */ }
+    try { sessionStorage.setItem(this.saveKey, JSON.stringify({ role: this.state.role, code: this.state.code, self: this.self, guest: this.guest, game: this.canonical, revision: this.state.revision, listed: this.state.listed } satisfies SavedRoom)); } catch { /* An open room can still play without storage. */ }
   }
   async open(role: 'host' | 'guest', name: string, deck: string[], code?: string, resume?: SavedRoom, listed = true, heroClass: HeroClass = 'mage') {
     if (!validHeroClass(heroClass)) { this.update({ phase: 'error', error: 'Выбери доступный класс героя.' }); return; }
@@ -324,6 +325,6 @@ export class PeerRoom {
     this.disposed = true; clearInterval(this.phaseTimer); clearTimeout(this.reconnectTimer); clearTimeout(this.signalingTimer); clearTimeout(this.connectTimer); clearTimeout(this.actionTimer);
     this.advertisement?.close();
     const peer = this.peer; setTimeout(() => peer?.destroy(), clearSave ? 150 : 0);
-    if (clearSave) { try { sessionStorage.removeItem(SAVE_KEY); } catch { /* Optional storage. */ } }
+    if (clearSave) { try { sessionStorage.removeItem(this.saveKey); } catch { /* Optional storage. */ } }
   }
 }

@@ -126,8 +126,10 @@ body:has(.modal-backdrop) .combat-effects { z-index:95; }
 .still-cast.spell-cast .casting-card { transform:translate(var(--spell-x),var(--spell-y)); }
 .battle-arena.board-jungle { background-image:url('/art/jungle-board.png')!important; }
 .battle-arena.board-goblin { background-image:url('/art/goblin-board.png')!important; }
+.battle-arena.board-arcane { background-image:url('/art/arcane-board.png')!important; }
 @media(orientation:portrait) { .battle-arena.board-jungle { background-image:url('/art/jungle-board-portrait.png')!important; } }
 @media(orientation:portrait) { .battle-arena.board-goblin { background-image:url('/art/goblin-board-portrait.png')!important; } }
+@media(orientation:portrait) { .battle-arena.board-arcane { background-image:url('/art/arcane-board-portrait.png')!important; } }
 @media(max-width:600px) { .battle-arena .board-unit,.battle-arena .board-unit.taunt{border-width:2px} .unit-divine-bubble{border-width:1.5px} }
 @media(prefers-reduced-motion:reduce) {
   .unit-enchantments *, .unit-aura-fire, .unit-aura-fire *, .card-play-effects * { animation:none!important; }

@@ -2,7 +2,7 @@ import { chromium, expect } from '@playwright/test';
 
 const origin = process.env.BOARD_TEST_URL || 'http://127.0.0.1:4173';
 const fixtureOrigin = process.env.FIXTURE_URL || 'http://127.0.0.1:5173';
-const boardId=process.env.BOARD_ID||'arcane';
+const boardId=process.env.BOARD_ID||'tournament';
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', args: ['--no-sandbox'] });
 const context = await browser.newContext(), page = await context.newPage(), errors = [];
 page.on('pageerror', e => errors.push(e.message));
@@ -25,7 +25,7 @@ try {
     await page.getByRole('button',{name:'Продолжить бой',exact:true}).click();
     await page.getByRole('button',{name:'Настройки',exact:true}).click();
     await firstPage();
-    await expect(page.locator('.board-option')).toHaveCount(viewport.width<=600&&viewport.height>=viewport.width?3:seed.boards.length);
+    await expect(page.locator('.board-option')).toHaveCount(Math.min(viewport.width<=600&&viewport.height>=viewport.width?3:4,seed.boards.length));
     const ids=[];
     for(;;){
       const overflow = await page.locator('.options-boards').evaluate(section => {
@@ -51,6 +51,7 @@ try {
     });
     expect(image.url).toContain(viewport.height>viewport.width?`${boardId}-board-portrait.png`:`${boardId}-board.png`);
     expect(image.width).toBeGreaterThan(700);expect(image.height).toBeGreaterThan(700);
+    expect(viewport.height>viewport.width?image.height>image.width:image.width>image.height).toBe(true);
     expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('memestone.v1.settings')).board)).toBe(boardId);
     await page.screenshot({path:`/tmp/${boardId}-battle-${viewport.width}.png`});
   }

@@ -5,7 +5,7 @@ import { useViewport } from '../useViewport';
 
 export default function BoardPicker({ value, change }: { value: BattlegroundId; change: (id: BattlegroundId) => void }) {
   const viewport=useViewport(), compact=viewport.width<=600&&viewport.height>=viewport.width;
-  const pageSize=compact?3:BATTLEGROUNDS.length, pages=Math.ceil(BATTLEGROUNDS.length/pageSize);
+  const pageSize=compact?3:4, pages=Math.ceil(BATTLEGROUNDS.length/pageSize);
   const selectedPage=Math.floor(Math.max(0,BATTLEGROUNDS.findIndex(b=>b.id===value))/pageSize);
   const [page,setPage]=useState(selectedPage);
   useEffect(()=>setPage(selectedPage),[selectedPage,value]);

@@ -113,4 +113,6 @@
   .hearth-options .board-preview { height: 19px; }
   .hearth-options .board-option > strong { font-size: 13px; }
   .options-extra > p { font-size: 10px; margin-top: 3px; }
+  .board-pages { margin-top:2px;min-height:20px; }
+  .board-pages button { height:20px;width:24px; }
 }
